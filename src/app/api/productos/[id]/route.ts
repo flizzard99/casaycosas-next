@@ -1,0 +1,52 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { getProductoById, updateProducto, deleteProducto } from '@/lib/db';
+import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
+
+function isAdminRequest() {
+  const token = cookies().get(SESSION_COOKIE_NAME)?.value;
+  return verifySessionToken(token);
+}
+
+function validarProducto(body: any): string[] {
+  const errores: string[] = [];
+  if (!body.name || !body.name.trim()) errores.push('El nombre es obligatorio');
+  if (!body.category || !body.category.trim()) errores.push('La categoría es obligatoria');
+  return errores;
+}
+
+export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const producto = await getProductoById(parseInt(params.id, 10));
+    if (!producto) return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
+    return NextResponse.json(producto);
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message || 'Error desconocido' }, { status: 500 });
+  }
+}
+
+export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+  if (!isAdminRequest()) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  try {
+    const body = await req.json();
+    const errores = validarProducto(body);
+    if (errores.length) return NextResponse.json({ error: errores.join('. ') }, { status: 400 });
+
+    const producto = await updateProducto(parseInt(params.id, 10), body);
+    if (!producto) return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
+    return NextResponse.json(producto);
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message || 'Error desconocido' }, { status: 500 });
+  }
+}
+
+export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+  if (!isAdminRequest()) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  try {
+    const ok = await deleteProducto(parseInt(params.id, 10));
+    if (!ok) return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message || 'Error desconocido' }, { status: 500 });
+  }
+}
