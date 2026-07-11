@@ -21,57 +21,68 @@ export default function InfoLocalSection() {
   ];
 
   return (
-    <section id="contacto" className="px-6 md:px-14 pb-20 pt-6">
-      <div className="flex flex-wrap gap-10 justify-center items-center max-w-4xl mx-auto">
-        {/* Mapa a la izquierda */}
-        <a
-          href={tienda.mapsUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="relative block flex-1 min-w-[240px] max-w-[360px] rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(52,78,65,0.15)] transition-transform duration-300 hover:scale-[1.05] cursor-zoom-in"
-        >
-          <Image
-            src="/direccion.png"
-            alt="Ubicación de la tienda"
-            width={360}
-            height={360}
-            className="w-full h-auto block"
-          />
-          <span className="absolute bottom-3.5 left-3.5 bg-white px-3.5 py-2 rounded text-xs font-semibold text-verde-noche shadow">
-            📍 {tienda.storeAddress}
-          </span>
-        </a>
-
-        {/* Datos + Redes a la derecha */}
-        <div className="flex-1 min-w-[280px] text-center">
-          <h3 className="font-display text-2xl text-verde-oscuro mb-2">Visítanos</h3>
-          <p className="text-verde-noche/70 mb-6 text-sm">{tienda.storeAddress}</p>
-          <div className="flex gap-2.5 flex-wrap justify-center mb-6">
-            {redes.map((r) => (
-              <a
-                key={r.nombre}
-                href={r.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-white px-5 py-3 rounded-full text-sm font-semibold transition-transform hover:-translate-y-0.5 hover:opacity-90"
-                style={{ backgroundColor: r.color }}
-              >
-                <span
-                  className="w-[18px] h-[18px] inline-block"
-                  dangerouslySetInnerHTML={{ __html: ICONS[r.nombre] }}
-                />
-                {r.nombre}
-              </a>
-            ))}
-          </div>
+    <section
+      id="contacto"
+      className="pb-20 pt-6"
+      style={{
+        backgroundImage: 'url(/patron.png)',
+        backgroundSize: 'cover',
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center'
+      }}
+    >
+      <div className="px-6 md:px-14">
+        <div className="flex flex-wrap gap-10 justify-center items-center max-w-4xl mx-auto">
+          {/* Mapa a la izquierda */}
           <a
-            href={tienda.whatsappCatalogUrl}
+            href={tienda.mapsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-block px-6 py-3 rounded-md bg-verde-noche text-white text-sm font-semibold hover:bg-verde-oscuro transition-colors"
+            className="relative block flex-1 min-w-[240px] max-w-[360px] rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(52,78,65,0.15)] transition-transform duration-300 hover:scale-[1.05] cursor-zoom-in"
           >
-            Ver catálogo completo en WhatsApp
+            <Image
+              src="/direccion.png"
+              alt="Ubicación de la tienda"
+              width={360}
+              height={360}
+              className="w-full h-auto block"
+            />
+            <span className="absolute bottom-3.5 left-3.5 bg-white px-3.5 py-2 rounded text-xs font-semibold text-verde-noche shadow">
+              📍 {tienda.storeAddress}
+            </span>
           </a>
+
+          {/* Datos + Redes a la derecha */}
+          <div className="flex-1 min-w-[280px] text-center">
+            <h3 className="font-display text-2xl text-verde-oscuro mb-2">Visítanos</h3>
+            <p className="text-verde-noche/70 mb-6 text-sm">{tienda.storeAddress}</p>
+            <div className="flex gap-2.5 flex-wrap justify-center mb-6">
+              {redes.map((r) => (
+                <a
+                  key={r.nombre}
+                  href={r.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-white px-5 py-3 rounded-full text-sm font-semibold transition-transform hover:-translate-y-0.5 hover:opacity-90"
+                  style={{ backgroundColor: r.color }}
+                >
+                  <span
+                    className="w-[18px] h-[18px] inline-block"
+                    dangerouslySetInnerHTML={{ __html: ICONS[r.nombre] }}
+                  />
+                  {r.nombre}
+                </a>
+              ))}
+            </div>
+            <a
+              href={tienda.whatsappCatalogUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block px-6 py-3 rounded-md bg-verde-noche text-white text-sm font-semibold hover:bg-verde-oscuro transition-colors"
+            >
+              Ver catálogo completo en WhatsApp
+            </a>
+          </div>
         </div>
       </div>
     </section>
