@@ -4,7 +4,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
 import FloatWhatsApp from '@/components/FloatWhatsApp';
-import ProductCard from '@/components/ProductCard';
+import CategoriaClient from '@/components/CategoriaClient';
 import { getProductosPublicos, getConfig } from '@/lib/db';
 
 export const revalidate = 60;
@@ -60,11 +60,7 @@ export default async function CategoriaPage({ params }: { params: { categoria: s
               No hay productos en esta categoría por ahora. Revisa el catálogo completo en WhatsApp.
             </p>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-              {productosCategoria.map((p) => (
-                <ProductCard key={p.id} producto={p} />
-              ))}
-            </div>
+            <CategoriaClient productos={productosCategoria} />
           )}
         </section>
       </main>

@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useState } from 'react';
 import { useCart } from '@/context/CartContext';
 import type { Producto } from '@/lib/types';
 
@@ -13,17 +14,27 @@ export default function ProductCard({ producto }: { producto: Producto }) {
   const sinStock = producto.stock <= 0;
   const tieneVarias = (producto.images?.length || 0) > 1;
 
+  // Detectar si la imagen es angosta/alta para usar object-contain en vez de object-cover
+  const [fit, setFit] = useState<'cover' | 'contain'>('cover');
+
   return (
-    <div className="bg-white rounded-md overflow-hidden shadow-[0_2px_0_rgba(52,78,65,0.08)] flex flex-col">
+    <div className="bg-white rounded-md overflow-hidden border border-verde-noche/10 shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 flex flex-col">
       <Link href={`/producto/${producto.id}`} className="block">
-        <div className="relative h-40 bg-crema">
+        <div className="relative h-40 bg-crema" style={fit === 'contain' ? { padding: '0.5rem' } : undefined}>
           {imagen ? (
             <Image
               src={imagen}
               alt={producto.name}
               fill
-              className="object-cover transition-transform duration-300 hover:scale-105"
+              className="transition-opacity duration-300 hover:opacity-90"
+              style={{ objectFit: fit }}
               sizes="(max-width: 768px) 50vw, 25vw"
+              onLoad={(e) => {
+                const img = e.currentTarget as HTMLImageElement;
+                const ratio = img.naturalHeight / img.naturalWidth;
+                if (ratio > 1.3) setFit('contain');
+                else setFit('cover');
+              }}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-verde-oscuro/40 text-sm">
