@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import type { Producto } from '@/lib/types';
 
@@ -10,24 +11,42 @@ export default function ProductCard({ producto }: { producto: Producto }) {
   const { addItem } = useCart();
   const imagen = producto.images?.[0] || producto.image_url;
   const sinStock = producto.stock <= 0;
+  const tieneVarias = (producto.images?.length || 0) > 1;
 
   return (
     <div className="bg-white rounded-md overflow-hidden shadow-[0_2px_0_rgba(52,78,65,0.08)] flex flex-col">
-      <div className="relative h-40 bg-crema">
-        {imagen ? (
-          <Image src={imagen} alt={producto.name} fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-verde-oscuro/40 text-sm">Sin imagen</div>
-        )}
-        {sinStock && (
-          <div className="absolute inset-0 bg-verde-noche/60 flex items-center justify-center">
-            <span className="text-white text-xs font-semibold uppercase tracking-wide">Agotado</span>
-          </div>
-        )}
-      </div>
+      <Link href={`/producto/${producto.id}`} className="block">
+        <div className="relative h-40 bg-crema">
+          {imagen ? (
+            <Image
+              src={imagen}
+              alt={producto.name}
+              fill
+              className="object-cover transition-transform duration-300 hover:scale-105"
+              sizes="(max-width: 768px) 50vw, 25vw"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-verde-oscuro/40 text-sm">
+              Sin imagen
+            </div>
+          )}
+          {sinStock && (
+            <div className="absolute inset-0 bg-verde-noche/60 flex items-center justify-center">
+              <span className="text-white text-xs font-semibold uppercase tracking-wide">Agotado</span>
+            </div>
+          )}
+          {tieneVarias && !sinStock && (
+            <span className="absolute top-2 right-2 bg-white/90 text-verde-noche text-[10px] font-semibold px-1.5 py-0.5 rounded">
+              {producto.images.length} fotos
+            </span>
+          )}
+        </div>
+      </Link>
       <div className="p-4 flex flex-col flex-1">
-        <div className="text-[11px] uppercase tracking-wide text-sage font-semibold">{producto.category}</div>
-        <h3 className="text-sm font-semibold mt-1 text-verde-noche">{producto.name}</h3>
+        <Link href={`/producto/${producto.id}`}>
+          <div className="text-[11px] uppercase tracking-wide text-sage font-semibold">{producto.category}</div>
+          <h3 className="text-sm font-semibold mt-1 text-verde-noche hover:text-verde transition-colors">{producto.name}</h3>
+        </Link>
         <p className="text-sm text-verde font-semibold mt-1.5">{formatoCLP.format(producto.price)}</p>
         <button
           disabled={sinStock}

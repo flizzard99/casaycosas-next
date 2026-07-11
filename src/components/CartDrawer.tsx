@@ -1,21 +1,42 @@
 'use client';
 
+import Image from 'next/image';
+import { useState } from 'react';
 import { useCart } from '@/context/CartContext';
+import { tienda } from '@/lib/config';
 
 const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 
 export default function CartDrawer() {
   const { items, isOpen, close, updateQty, removeItem, total, clear } = useCart();
-  const numeroWhatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '';
+  const [copiado, setCopiado] = useState(false);
+
+  function construirMensaje(): string {
+    const lineas = items.map((i) => `• ${i.qty}x ${i.name} — ${formatoCLP.format(i.price * i.qty)}`);
+    return ['Hola! Quisiera hacer este pedido:', '', ...lineas, '', `Total: ${formatoCLP.format(total)}`].join('\n');
+  }
 
   function enviarPorWhatsapp() {
     if (!items.length) return;
-    const lineas = items.map((i) => `• ${i.qty}x ${i.name} — ${formatoCLP.format(i.price * i.qty)}`);
-    const mensaje = [`Hola! Quisiera hacer este pedido:`, '', ...lineas, '', `Total: ${formatoCLP.format(total)}`].join(
-      '\n'
-    );
-    const url = `https://wa.me/${numeroWhatsapp}?text=${encodeURIComponent(mensaje)}`;
+    const url = `https://wa.me/${tienda.whatsappNumber}?text=${encodeURIComponent(construirMensaje())}`;
     window.open(url, '_blank');
+  }
+
+  async function copiarParaInstagram() {
+    if (!items.length) return;
+    const mensaje = construirMensaje();
+    try {
+      await navigator.clipboard.writeText(mensaje);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = mensaje;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 3000);
   }
 
   if (!isOpen) return null;
@@ -35,10 +56,9 @@ export default function CartDrawer() {
           {items.length === 0 && <p className="text-sm text-verde-noche/60">Tu carrito está vacío.</p>}
           {items.map((item) => (
             <div key={item.id} className="flex gap-3 items-center">
-              <div className="w-14 h-14 rounded bg-crema flex-shrink-0 overflow-hidden">
+              <div className="w-14 h-14 rounded bg-crema flex-shrink-0 overflow-hidden relative">
                 {item.image_url && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                  <Image src={item.image_url} alt={item.name} fill className="object-cover" sizes="56px" />
                 )}
               </div>
               <div className="flex-1 min-w-0">
@@ -72,6 +92,7 @@ export default function CartDrawer() {
             <span className="text-verde-noche/70">Total</span>
             <span className="font-semibold text-verde-noche">{formatoCLP.format(total)}</span>
           </div>
+
           <button
             onClick={enviarPorWhatsapp}
             disabled={!items.length}
@@ -79,6 +100,20 @@ export default function CartDrawer() {
           >
             Coordinar pedido por WhatsApp
           </button>
+          <button
+            onClick={copiarParaInstagram}
+            disabled={!items.length}
+            className="w-full mt-2 bg-white border border-verde-oscuro/20 text-verde-oscuro text-sm font-semibold py-3 rounded-md hover:bg-crema disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {copiado ? '¡Mensaje copiado! Pégalo en Instagram' : 'Copiar pedido para Instagram'}
+          </button>
+
+          {copiado && (
+            <p className="text-xs text-verde-oscuro/70 text-center mt-2 leading-relaxed">
+              Mensaje copiado al portapapeles. Ábrelo en el chat de Instagram de la tienda y pégalo (Ctrl+V).
+            </p>
+          )}
+
           {items.length > 0 && (
             <button onClick={clear} className="w-full text-xs text-verde-noche/50 hover:text-verde-noche mt-2">
               Vaciar carrito

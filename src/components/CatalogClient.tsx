@@ -1,49 +1,38 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import ProductCard from './ProductCard';
 import type { Producto } from '@/lib/types';
 
-export default function CatalogClient() {
-  const [productos, setProductos] = useState<Producto[]>([]);
-  const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
+type Props = {
+  productosIniciales: Producto[];
+  categoryOrder: string[];
+};
+
+export default function CatalogClient({ productosIniciales, categoryOrder }: Props) {
   const [busqueda, setBusqueda] = useState('');
   const [categoriaActiva, setCategoriaActiva] = useState<string | null>(null);
-  const [cargando, setCargando] = useState(true);
-
-  useEffect(() => {
-    async function cargar() {
-      try {
-        const [resProductos, resConfig] = await Promise.all([
-          fetch('/api/productos'),
-          fetch('/api/config')
-        ]);
-        const dataProductos = await resProductos.json();
-        const dataConfig = await resConfig.json();
-        setProductos(dataProductos);
-        setCategoryOrder(dataConfig.categoryOrder || []);
-      } finally {
-        setCargando(false);
-      }
-    }
-    cargar();
-  }, []);
 
   const categorias = useMemo(() => {
-    const set = new Set(productos.map((p) => p.category));
+    const set = new Set(productosIniciales.map((p) => p.category));
     const enOrden = categoryOrder.filter((c) => set.has(c));
     const resto = [...set].filter((c) => !categoryOrder.includes(c)).sort();
     return [...enOrden, ...resto];
-  }, [productos, categoryOrder]);
+  }, [productosIniciales, categoryOrder]);
 
   const filtrados = useMemo(() => {
     const term = busqueda.trim().toLowerCase();
-    return productos.filter((p) => {
-      const coincideBusqueda = !term || p.name.toLowerCase().includes(term) || p.category.toLowerCase().includes(term);
+    if (!term && !categoriaActiva) return productosIniciales;
+    return productosIniciales.filter((p) => {
+      const coincideBusqueda =
+        !term ||
+        p.name.toLowerCase().includes(term) ||
+        p.category.toLowerCase().includes(term) ||
+        (p.description || '').toLowerCase().includes(term);
       const coincideCategoria = !categoriaActiva || p.category === categoriaActiva;
       return coincideBusqueda && coincideCategoria;
     });
-  }, [productos, busqueda, categoriaActiva]);
+  }, [productosIniciales, busqueda, categoriaActiva]);
 
   const grupos = useMemo(() => {
     const map = new Map<string, Producto[]>();
@@ -88,12 +77,10 @@ export default function CatalogClient() {
         </div>
       </div>
 
-      {cargando && <p className="text-sm text-verde-oscuro/70">Cargando catálogo…</p>}
-
-      {!cargando && grupos.length === 0 && (
+      {grupos.length === 0 && (
         <p className="text-sm text-verde-oscuro/70">
-          No encontramos productos que coincidan con tu búsqueda. Prueba con otra palabra o revisa el catálogo
-          completo en WhatsApp.
+          No encontramos productos que coincidan con tu búsqueda. Prueba con otra palabra o revisa el
+          catálogo completo en WhatsApp.
         </p>
       )}
 
