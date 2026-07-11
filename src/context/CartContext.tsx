@@ -8,6 +8,7 @@ export type CartItem = {
   price: number;
   image_url: string;
   qty: number;
+  stock?: number;
 };
 
 type CartContextType = {
@@ -31,18 +32,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
-  // Carga el carrito guardado al montar (solo en el navegador)
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) setItems(JSON.parse(raw));
     } catch {
-      // localStorage no disponible o corrupto: seguimos con carrito vacío
+      // localStorage no disponible o corrupto
     }
     setHydrated(true);
   }, []);
 
-  // Guarda cada vez que cambia
   useEffect(() => {
     if (!hydrated) return;
     try {
@@ -55,10 +54,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
   function addItem(item: Omit<CartItem, 'qty'>, qty = 1) {
     setItems((prev) => {
       const existente = prev.find((p) => p.id === item.id);
+      const maxStock = item.stock ?? Infinity;
       if (existente) {
-        return prev.map((p) => (p.id === item.id ? { ...p, qty: p.qty + qty } : p));
+        const newQty = Math.min(existente.qty + qty, maxStock);
+        return prev.map((p) => (p.id === item.id ? { ...p, qty: newQty } : p));
       }
-      return [...prev, { ...item, qty }];
+      return [...prev, { ...item, qty: Math.min(qty, maxStock) }];
     });
     setIsOpen(true);
   }
@@ -69,7 +70,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   function updateQty(id: number, qty: number) {
     if (qty <= 0) return removeItem(id);
-    setItems((prev) => prev.map((p) => (p.id === id ? { ...p, qty } : p)));
+    setItems((prev) =>
+      prev.map((p) => {
+        if (p.id !== id) return p;
+        const maxStock = p.stock ?? Infinity;
+        return { ...p, qty: Math.min(qty, maxStock) };
+      })
+    );
   }
 
   function clear() {

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useCart } from '@/context/CartContext';
 import ProductCarousel from './ProductCarousel';
 import type { Producto } from '@/lib/types';
@@ -11,6 +12,9 @@ export default function ProductDetailClient({ producto }: { producto: Producto }
   const { addItem } = useCart();
   const sinStock = producto.stock <= 0;
   const imagenes = producto.images?.length ? producto.images : producto.image_url ? [producto.image_url] : [];
+
+  const [qty, setQty] = useState(1);
+  const maxQty = producto.stock || 1;
 
   return (
     <div className="max-w-4xl mx-auto px-6 md:px-0 py-8">
@@ -40,17 +44,41 @@ export default function ProductDetailClient({ producto }: { producto: Producto }
             <p className="text-sm text-verde-noche/80 leading-relaxed mt-5">{producto.description}</p>
           )}
 
+          {!sinStock && (
+            <div className="flex items-center gap-3 mt-6">
+              <span className="text-sm text-verde-noche/70">Cantidad:</span>
+              <div className="flex items-center border border-verde-noche/20 rounded-md">
+                <button
+                  onClick={() => setQty((q) => Math.max(1, q - 1))}
+                  className="w-9 h-9 flex items-center justify-center text-lg font-medium hover:bg-crema transition-colors rounded-l-md"
+                >
+                  −
+                </button>
+                <span className="w-10 text-center font-medium">{qty}</span>
+                <button
+                  onClick={() => setQty((q) => Math.min(maxQty, q + 1))}
+                  disabled={qty >= maxQty}
+                  className="w-9 h-9 flex items-center justify-center text-lg font-medium hover:bg-crema transition-colors rounded-r-md disabled:opacity-30"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          )}
+
           <button
             disabled={sinStock}
-            onClick={() =>
+            onClick={() => {
               addItem({
                 id: producto.id,
                 name: producto.name,
                 price: producto.price,
-                image_url: imagenes[0] || ''
-              })
-            }
-            className="mt-6 w-full md:w-auto px-8 py-3 rounded-md bg-verde text-white text-sm font-semibold uppercase tracking-wide hover:bg-verde-oscuro transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                image_url: imagenes[0] || '',
+                stock: producto.stock
+              }, qty);
+              setQty(1);
+            }}
+            className="mt-4 w-full md:w-auto px-8 py-3 rounded-md bg-verde text-white text-sm font-semibold uppercase tracking-wide hover:bg-verde-oscuro transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
             {sinStock ? 'Sin stock' : 'Agregar al carrito'}
           </button>
@@ -71,8 +99,7 @@ export default function ProductDetailClient({ producto }: { producto: Producto }
               ¿Dudas? Escríbenos por{' '}
               <a href={tienda.whatsappUrl} target="_blank" rel="noopener noreferrer" className="text-verde hover:underline">
                 WhatsApp
-              </a>
-              .
+              </a>.
             </p>
           </div>
         </div>

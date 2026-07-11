@@ -54,37 +54,42 @@ export default function CartDrawer() {
 
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {items.length === 0 && <p className="text-sm text-verde-noche/60">Tu carrito está vacío.</p>}
-          {items.map((item) => (
-            <div key={item.id} className="flex gap-3 items-center">
-              <div className="w-14 h-14 rounded bg-crema flex-shrink-0 overflow-hidden relative">
-                {item.image_url && (
-                  <Image src={item.image_url} alt={item.name} fill className="object-cover" sizes="56px" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-verde-noche truncate">{item.name}</p>
-                <p className="text-xs text-verde">{formatoCLP.format(item.price)}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <button
-                    onClick={() => updateQty(item.id, item.qty - 1)}
-                    className="w-6 h-6 rounded border border-verde-noche/20 text-sm"
-                  >
-                    −
-                  </button>
-                  <span className="text-sm w-5 text-center">{item.qty}</span>
-                  <button
-                    onClick={() => updateQty(item.id, item.qty + 1)}
-                    className="w-6 h-6 rounded border border-verde-noche/20 text-sm"
-                  >
-                    +
-                  </button>
-                  <button onClick={() => removeItem(item.id)} className="ml-auto text-xs text-red-500 hover:underline">
-                    Quitar
-                  </button>
+          {items.map((item) => {
+            const maxStock = item.stock ?? Infinity;
+            const atMax = item.qty >= maxStock;
+            return (
+              <div key={item.id} className="flex gap-3 items-center">
+                <div className="w-14 h-14 rounded bg-crema flex-shrink-0 overflow-hidden relative">
+                  {item.image_url && (
+                    <Image src={item.image_url} alt={item.name} fill className="object-cover" sizes="56px" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-verde-noche truncate">{item.name}</p>
+                  <p className="text-xs text-verde">{formatoCLP.format(item.price)}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <button
+                      onClick={() => updateQty(item.id, item.qty - 1)}
+                      className="w-6 h-6 rounded border border-verde-noche/20 text-sm"
+                    >
+                      −
+                    </button>
+                    <span className="text-sm w-5 text-center">{item.qty}</span>
+                    <button
+                      onClick={() => updateQty(item.id, item.qty + 1)}
+                      disabled={atMax}
+                      className="w-6 h-6 rounded border border-verde-noche/20 text-sm disabled:opacity-30"
+                    >
+                      +
+                    </button>
+                    <button onClick={() => removeItem(item.id)} className="ml-auto text-xs text-red-500 hover:underline">
+                      Quitar
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="px-5 py-4 border-t border-verde-noche/10">
