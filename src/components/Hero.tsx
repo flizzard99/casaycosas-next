@@ -17,7 +17,7 @@ export default function Hero() {
           canal de comunicación y coordinamos tu pedido.
         </p>
         <a
-          href="#catalogo"
+          href="/catalogo"
           className="inline-block mt-8 px-6 py-3 rounded-md bg-white text-verde-oscuro text-sm font-semibold uppercase tracking-wide hover:bg-crema transition-colors"
         >
           Ver catálogo

@@ -23,6 +23,12 @@ export type ProductoInput = {
   images?: string[];
 };
 
+export type FeaturedConfig = {
+  productIds: number[];
+  title: string;
+};
+
 export type Config = {
   categoryOrder: string[];
+  featured: FeaturedConfig;
 };

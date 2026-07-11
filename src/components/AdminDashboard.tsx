@@ -3,13 +3,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import ProductForm from './ProductForm';
 import CategoryOrderEditor from './CategoryOrderEditor';
-import type { Producto } from '@/lib/types';
+import FeaturedEditor from './FeaturedEditor';
+import type { Producto, FeaturedConfig } from '@/lib/types';
 
 const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
+
+const FEATURED_DEFAULT: FeaturedConfig = { productIds: [], title: 'Productos más vendidos' };
 
 export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
+  const [featured, setFeatured] = useState<FeaturedConfig>(FEATURED_DEFAULT);
   const [busqueda, setBusqueda] = useState('');
   const [cargando, setCargando] = useState(true);
   const [editando, setEditando] = useState<Producto | null>(null);
@@ -22,6 +26,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       setProductos(await resProductos.json());
       const config = await resConfig.json();
       setCategoryOrder(config.categoryOrder || []);
+      setFeatured(config.featured || FEATURED_DEFAULT);
     } finally {
       setCargando(false);
     }
@@ -175,9 +180,12 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           )}
         </div>
 
-        <div>
+        <div className="space-y-6">
           {categorias.length > 0 && (
             <CategoryOrderEditor categorias={categorias} ordenInicial={categoryOrder} onGuardado={setCategoryOrder} />
+          )}
+          {!cargando && productos.length > 0 && (
+            <FeaturedEditor productos={productos} featureConfigInicial={featured} onGuardado={setFeatured} />
           )}
         </div>
       </main>

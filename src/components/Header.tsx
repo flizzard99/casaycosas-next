@@ -5,9 +5,14 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useCart } from '@/context/CartContext';
 
+function categoriaHref(cat: string) {
+  return `/catalogo/${encodeURIComponent(cat)}`;
+}
+
 export default function Header({ categorias = [] }: { categorias?: string[] }) {
   const { count, open } = useCart();
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const [catAbierto, setCatAbierto] = useState(false);
 
   return (
     <header className="bg-verde-noche sticky top-0 z-40">
@@ -18,32 +23,47 @@ export default function Header({ categorias = [] }: { categorias?: string[] }) {
         </Link>
 
         <nav className="hidden md:flex items-center gap-6 md:gap-8">
-          <a href="/#catalogo" className="text-white text-xs md:text-sm uppercase tracking-wide opacity-95 hover:opacity-100">
+          <Link href="/catalogo" className="text-white text-xs md:text-sm uppercase tracking-wide opacity-95 hover:opacity-100">
             Catálogo
-          </a>
+          </Link>
           {categorias.length > 0 && (
-            <div className="relative group">
-              <button className="text-white text-xs md:text-sm uppercase tracking-wide opacity-95 hover:opacity-100">
-                Categorías
+            <div
+              className="relative"
+              onMouseEnter={() => setCatAbierto(true)}
+              onMouseLeave={() => setCatAbierto(false)}
+            >
+              <button
+                onClick={() => setCatAbierto((v) => !v)}
+                className="text-white text-xs md:text-sm uppercase tracking-wide opacity-95 hover:opacity-100"
+              >
+                Categorías ▾
               </button>
-              <div className="absolute left-0 top-full mt-2 hidden group-hover:flex group-hover:flex-col bg-white rounded-md shadow-xl py-2 min-w-[180px] border border-verde-noche/10">
-                {categorias.map((cat) => (
-                  <a
-                    key={cat}
-                    href={`/#catalogo`}
-                    className="px-4 py-1.5 text-sm text-verde-noche hover:bg-crema capitalize whitespace-nowrap"
+              {catAbierto && (
+                <div className="absolute left-0 top-full bg-white rounded-md shadow-xl py-2 min-w-[200px] border border-verde-noche/10">
+                  <Link
+                    href="/catalogo"
+                    className="block px-4 py-1.5 text-sm text-verde-noche hover:bg-crema font-semibold"
+                    onClick={() => setCatAbierto(false)}
                   >
-                    {cat}
-                  </a>
-                ))}
-              </div>
+                    Todos los productos
+                  </Link>
+                  <div className="border-t border-verde-noche/10 my-1" />
+                  {categorias.map((cat) => (
+                    <Link
+                      key={cat}
+                      href={categoriaHref(cat)}
+                      className="block px-4 py-1.5 text-sm text-verde-noche hover:bg-crema capitalize whitespace-nowrap"
+                      onClick={() => setCatAbierto(false)}
+                    >
+                      {cat}
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           )}
-          <a href="/#ubicacion" className="text-white text-xs md:text-sm uppercase tracking-wide opacity-95 hover:opacity-100">
-            Ubicación
-          </a>
           <a href="/#contacto" className="text-white text-xs md:text-sm uppercase tracking-wide opacity-95 hover:opacity-100">
-            Contacto
+            Visítanos
           </a>
           <button
             onClick={open}
@@ -69,36 +89,39 @@ export default function Header({ categorias = [] }: { categorias?: string[] }) {
 
       {menuAbierto && (
         <div className="md:hidden border-t border-white/10 px-6 py-4 space-y-3">
-          <a
-            href="/#catalogo"
+          <Link
+            href="/catalogo"
             className="block text-white text-sm uppercase tracking-wide"
             onClick={() => setMenuAbierto(false)}
           >
             Catálogo
-          </a>
-          {categorias.map((cat) => (
-            <a
-              key={cat}
-              href="/#catalogo"
-              className="block text-white/80 text-sm capitalize pl-4"
+          </Link>
+          <div className="pl-4 space-y-2">
+            <p className="text-white/50 text-xs uppercase tracking-wide">Categorías</p>
+            <Link
+              href="/catalogo"
+              className="block text-white/80 text-sm font-semibold"
               onClick={() => setMenuAbierto(false)}
             >
-              {cat}
-            </a>
-          ))}
-          <a
-            href="/#ubicacion"
-            className="block text-white text-sm uppercase tracking-wide"
-            onClick={() => setMenuAbierto(false)}
-          >
-            Ubicación
-          </a>
+              Todos los productos
+            </Link>
+            {categorias.map((cat) => (
+              <Link
+                key={cat}
+                href={categoriaHref(cat)}
+                className="block text-white/80 text-sm capitalize"
+                onClick={() => setMenuAbierto(false)}
+              >
+                {cat}
+              </Link>
+            ))}
+          </div>
           <a
             href="/#contacto"
             className="block text-white text-sm uppercase tracking-wide"
             onClick={() => setMenuAbierto(false)}
           >
-            Contacto
+            Visítanos
           </a>
           <button
             onClick={() => {

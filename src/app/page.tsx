@@ -1,35 +1,37 @@
 import Header from '@/components/Header';
 import Hero from '@/components/Hero';
-import CatalogClient from '@/components/CatalogClient';
-import RedesSection from '@/components/RedesSection';
-import MapSection from '@/components/MapSection';
+import FeaturedGrid from '@/components/FeaturedGrid';
+import InfoLocalSection from '@/components/InfoLocalSection';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
 import FloatWhatsApp from '@/components/FloatWhatsApp';
-import { getProductosPublicos, getConfig } from '@/lib/db';
+import { getFeaturedProducts, getConfig, getProductosPublicos } from '@/lib/db';
 
-// Revalida cada 60 segundos (ISR): productos frescos sin sacrificar SSR/SEO
 export const revalidate = 60;
 
 export default async function HomePage() {
-  let productos: Awaited<ReturnType<typeof getProductosPublicos>> = [];
-  let categoryOrder: string[] = [];
+  let featured: Awaited<ReturnType<typeof getFeaturedProducts>> = [];
+  let featuredTitle = 'Productos más vendidos';
+  let categorias: string[] = [];
   try {
-    const [p, config] = await Promise.all([getProductosPublicos(), getConfig()]);
-    productos = p;
-    categoryOrder = config.categoryOrder;
+    const [feat, config, productos] = await Promise.all([
+      getFeaturedProducts(),
+      getConfig(),
+      getProductosPublicos()
+    ]);
+    featured = feat;
+    featuredTitle = config.featured.title || 'Productos más vendidos';
+    categorias = Array.from(new Set(productos.map((p) => p.category)));
   } catch {
-    // Sin DB disponible (ej. build local sin DATABASE_URL): renderiza vacío.
-    // En producción con DB configurada se pobla en build time (SSR + ISR).
+    // Sin DB disponible
   }
 
   return (
     <>
-      <Header categorias={Array.from(new Set(productos.map((p) => p.category)))} />
+      <Header categorias={categorias} />
       <Hero />
-      <CatalogClient productosIniciales={productos} categoryOrder={categoryOrder} />
-      <RedesSection />
-      <MapSection />
+      <FeaturedGrid productos={featured} titulo={featuredTitle} />
+      <InfoLocalSection />
       <Footer />
       <CartDrawer />
       <FloatWhatsApp />

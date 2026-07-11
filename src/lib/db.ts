@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import type { Producto, ProductoInput, Config } from './types';
+import type { Producto, ProductoInput, Config, FeaturedConfig } from './types';
 
 // Reutilizamos el pool entre recargas en desarrollo (patrón recomendado para Next.js)
 const globalForPg = globalThis as unknown as { pgPool?: Pool };
@@ -210,16 +210,51 @@ export async function eliminarImagen(id: number, index: number): Promise<Product
 export async function getConfig(): Promise<Config> {
   await ensureSchema();
   const pool = getPool();
-  const result = await pool.query(`SELECT value FROM config WHERE key = 'category_order'`);
-  return { categoryOrder: result.rows.length ? result.rows[0].value : [] };
+  const [resCat, resFeat] = await Promise.all([
+    pool.query(`SELECT value FROM config WHERE key = 'category_order'`),
+    pool.query(`SELECT value FROM config WHERE key = 'featured'`)
+  ]);
+  const featured: FeaturedConfig = resFeat.rows.length
+    ? resFeat.rows[0].value
+    : { productIds: [], title: 'Productos más vendidos' };
+  return {
+    categoryOrder: resCat.rows.length ? resCat.rows[0].value : [],
+    featured: {
+      productIds: Array.isArray(featured.productIds) ? featured.productIds.slice(0, 4) : [],
+      title: featured.title || 'Productos más vendidos'
+    }
+  };
 }
 
 export async function saveConfig(config: Config): Promise<void> {
   await ensureSchema();
   const pool = getPool();
-  await pool.query(
-    `INSERT INTO config (key, value) VALUES ('category_order', $1)
-     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
-    [JSON.stringify(config.categoryOrder)]
+  await Promise.all([
+    pool.query(
+      `INSERT INTO config (key, value) VALUES ('category_order', $1)
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+      [JSON.stringify(config.categoryOrder)]
+    ),
+    pool.query(
+      `INSERT INTO config (key, value) VALUES ('featured', $1)
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+      [JSON.stringify(config.featured)]
+    )
+  ]);
+}
+
+/** Devuelve hasta 4 productos visibles correspondientes a los IDs destacados, en orden */
+export async function getFeaturedProducts(): Promise<Producto[]> {
+  await ensureSchema();
+  const pool = getPool();
+  const config = await getConfig();
+  const ids = config.featured.productIds.filter((id) => Number.isFinite(id));
+  if (!ids.length) return [];
+  const result = await pool.query(
+    `SELECT id, name, description, category, image_url, instagram_url, price, stock, visible, created_at, images[1:1] AS images
+     FROM productos WHERE id = ANY($1) AND visible = TRUE`,
+    [ids]
   );
+  const byId = new Map(result.rows.map((r) => [r.id, formatProducto(r)]));
+  return ids.map((id) => byId.get(id)).filter((p): p is Producto => !!p);
 }
