@@ -67,9 +67,14 @@ export default function Header({ categorias = [] }: { categorias?: string[] }) {
           </a>
           <button
             onClick={open}
-            className="relative text-white text-xs md:text-sm uppercase tracking-wide border border-white/40 rounded px-3 py-1.5 hover:bg-white/10"
+            className="relative text-white border border-white/40 rounded p-2 hover:bg-white/10 transition-colors"
+            aria-label="Abrir carrito"
           >
-            Carrito
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-5 h-5">
+              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" strokeLinejoin="round" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <path d="M16 10a4 4 0 0 1-8 0" strokeLinecap="round" />
+            </svg>
             {count > 0 && (
               <span className="absolute -top-2 -right-2 bg-sage text-verde-noche text-[11px] font-semibold rounded-full w-5 h-5 flex items-center justify-center">
                 {count}
@@ -128,9 +133,19 @@ export default function Header({ categorias = [] }: { categorias?: string[] }) {
               setMenuAbierto(false);
               open();
             }}
-            className="relative text-white text-sm uppercase tracking-wide border border-white/40 rounded px-3 py-1.5"
+            className="relative text-white border border-white/40 rounded p-2 inline-flex"
+            aria-label="Abrir carrito"
           >
-            Carrito {count > 0 && `(${count})`}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-5 h-5">
+              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" strokeLinejoin="round" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <path d="M16 10a4 4 0 0 1-8 0" strokeLinecap="round" />
+            </svg>
+            {count > 0 && (
+              <span className="absolute -top-2 -right-2 bg-sage text-verde-noche text-[11px] font-semibold rounded-full w-5 h-5 flex items-center justify-center">
+                {count}
+              </span>
+            )}
           </button>
         </div>
       )}

@@ -50,6 +50,31 @@ cp .env.example .env.local
 - Las variables `NEXT_PUBLIC_*`: datos de contacto de la tienda (WhatsApp, Instagram,
   Facebook, TikTok, dirección y link de Google Maps).
 
+### Tabla de referencia (para Vercel → Settings → Environment Variables)
+
+| Variable | Descripción | Obligatoria | Valor de ejemplo |
+|---|---|---|---|
+| `DATABASE_URL` | Cadena de conexión Postgres (Supabase) | ✅ Sí | `postgresql://usuario:password@host:5432/postgres` |
+| `SUPABASE_URL` | URL del proyecto Supabase (subir imágenes) | ✅ Sí\* | `https://tu-proyecto.supabase.co` |
+| `SUPABASE_SERVICE_KEY` | Service role key de Supabase | ✅ Sí\* | `eyJhbGciOiJIUzI1NiIs...` |
+| `ADMIN_PASSWORD` | Contraseña del panel `/admin` | ✅ Sí | `elige-una-contrasena-segura` |
+| `SESSION_SECRET` | Clave HMAC para firmar sesión admin | ✅ Sí | `openssl rand -base64 32` |
+| `NEXT_PUBLIC_SITE_URL` | URL pública del sitio (OpenGraph/metadata) | Recomendada | `https://casaycosas-next.vercel.app` |
+| `NEXT_PUBLIC_WHATSAPP_NUMBER` | Número WhatsApp (sin + ni espacios) | Opcional† | `56992139709` |
+| `NEXT_PUBLIC_WHATSAPP_CATALOG_URL` | URL catálogo WhatsApp Business | Opcional† | `https://wa.me/c/56992139709` |
+| `NEXT_PUBLIC_INSTAGRAM_URL` | URL del perfil de Instagram | Opcional† | `https://www.instagram.com/casaycosas.panguipulli/` |
+| `NEXT_PUBLIC_FACEBOOK_URL` | URL del perfil de Facebook | Opcional† | `https://www.facebook.com/people/Tienda-Casa-y-Cosas-Panguipulli/61582181283916/` |
+| `NEXT_PUBLIC_TIKTOK_URL` | URL del perfil de TikTok | Opcional† | `https://www.tiktok.com/@tiendacasaycosas` |
+| `NEXT_PUBLIC_MAPS_URL` | URL de Google Maps de la tienda | Opcional† | `https://maps.app.goo.gl/t4b9KeWEd7U4MDPc6` |
+| `NEXT_PUBLIC_STORE_ADDRESS` | Dirección física de la tienda | Opcional† | `Martínez de Rosas 498, Local C, Panguipulli` |
+
+> \* Solo obligatorias si el admin sube imágenes de productos. Sin ellas, el panel funciona
+> pero la subida de imágenes fallará.
+>
+> † Las variables `NEXT_PUBLIC_*` tienen **valores de respaldo** hardcoded en
+> `src/lib/config.ts` con los datos reales de la tienda. Si no las configuras, el sitio
+> funciona con esos valores. Las configuras solo si quieres **cambiarlos**.
+
 ## 2. Instalación y desarrollo local
 
 Requiere Node.js 18 o superior.
