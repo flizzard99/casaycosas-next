@@ -229,18 +229,16 @@ export async function getConfig(): Promise<Config> {
 export async function saveConfig(config: Config): Promise<void> {
   await ensureSchema();
   const pool = getPool();
-  await Promise.all([
-    pool.query(
-      `INSERT INTO config (key, value) VALUES ('category_order', $1::jsonb)
-       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value::jsonb`,
-      [JSON.stringify(config.categoryOrder)]
-    ),
-    pool.query(
-      `INSERT INTO config (key, value) VALUES ('featured', $1::jsonb)
-       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value::jsonb`,
-      [JSON.stringify(config.featured)]
-    )
-  ]);
+  await pool.query(
+    `INSERT INTO config (key, value) VALUES ('category_order', $1::jsonb)
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+    [JSON.stringify(config.categoryOrder)]
+  );
+  await pool.query(
+    `INSERT INTO config (key, value) VALUES ('featured', $1::jsonb)
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+    [JSON.stringify(config.featured)]
+  );
 }
 
 /** Devuelve hasta 4 productos visibles correspondientes a los IDs destacados, en orden */

@@ -66,12 +66,13 @@ export default function FeaturedEditor({ productos, featureConfigInicial, onGuar
         body: JSON.stringify({ featured: { productIds: seleccionados, title: titulo.trim() || 'Productos más vendidos' } })
       });
       if (!res.ok) {
-        let msg = 'Error al guardar';
+        const text = await res.text();
+        let msg = `Error al guardar (HTTP ${res.status})`;
         try {
-          const data = await res.json();
+          const data = JSON.parse(text);
           msg = data.error || msg;
         } catch {
-          // respuesta vacía o no-JSON del servidor
+          if (text) msg += `: ${text.slice(0, 200)}`;
         }
         throw new Error(msg);
       }
