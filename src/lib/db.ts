@@ -55,18 +55,35 @@ export async function ensureSchema() {
   schemaReady = true;
 }
 
+/** Filtra imágenes que son data URLs base64 (inflan el HTML/ISR) o strings inválidos */
+function limpiarImagenes(images: any[]): string[] {
+  if (!Array.isArray(images)) return [];
+  return images
+    .filter((img): img is string => typeof img === 'string' && img.length > 0)
+    .filter((img) => !img.startsWith('data:'))
+    .filter((img) => img.length < 500)
+    .slice(0, 20);
+}
+
+function limpiarImageUrl(url: string | undefined | null): string {
+  if (!url || typeof url !== 'string') return '';
+  if (url.startsWith('data:') || url.length >= 500) return '';
+  return url;
+}
+
 function formatProducto(row: any): Producto {
+  const images = limpiarImagenes(row.images);
   return {
     id: row.id,
     name: row.name,
     description: row.description || '',
     category: row.category,
-    image_url: row.image_url || '',
+    image_url: limpiarImageUrl(row.image_url) || images[0] || '',
     instagram_url: row.instagram_url || '',
     visible: row.visible !== false,
     price: row.price || 0,
     stock: row.stock || 0,
-    images: row.images || [],
+    images,
     created_at: row.created_at
   };
 }
@@ -93,7 +110,11 @@ export async function getProductosAdmin(): Promise<Producto[]> {
 export async function getProductoById(id: number): Promise<Producto | null> {
   await ensureSchema();
   const pool = getPool();
-  const result = await pool.query(`SELECT * FROM productos WHERE id = $1`, [id]);
+  const result = await pool.query(
+    `SELECT id, name, description, category, image_url, instagram_url, price, stock, visible, created_at, images[1:10] AS images
+     FROM productos WHERE id = $1`,
+    [id]
+  );
   return result.rows.length ? formatProducto(result.rows[0]) : null;
 }
 

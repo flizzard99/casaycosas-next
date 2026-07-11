@@ -96,7 +96,30 @@ No es necesario migrar productos: este proyecto usa las mismas tablas `productos
 `config` que tu sitio actual en Supabase. Al conectar el mismo `DATABASE_URL`, verás tus
 312 productos tal cual están hoy.
 
-## 6. Próximos pasos sugeridos (opcionales)
+## 6. Migración de imágenes base64 (importante)
+
+Los productos heredados del sitio antiguo pueden tener imágenes guardadas como **data URLs
+base64** directamente en la columna `images` o `image_url` de la base de datos. Esto hace que
+las páginas del catálogo pesen varios MB y rompe el ISR en Vercel.
+
+Hay un script que las migra automáticamente a Supabase Storage y reemplaza los base64 por URLs
+públicas:
+
+```bash
+# 1. Previsualizar qué se migraría (sin tocar la DB)
+npm run migrate:images:dry-run
+
+# 2. Ejecutar la migración real
+npm run migrate:images
+```
+
+El script requiere `.env.local` con `DATABASE_URL`, `SUPABASE_URL` y `SUPABASE_SERVICE_KEY`.
+
+> Aunque no migres las imágenes, la app filtra automáticamente los base64 en runtime
+> (`src/lib/db.ts`), así que el sitio no se rompe — pero las imágenes base64 no se mostrarán.
+> Ejecuta la migración para que todas las fotos queden visibles vía Supabase Storage.
+
+## 7. Próximos pasos sugeridos (opcionales)
 
 - Cambiar `ADMIN_PASSWORD` por un sistema multiusuario si más de una persona administra la
   tienda.

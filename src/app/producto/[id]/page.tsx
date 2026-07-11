@@ -7,16 +7,7 @@ import CartDrawer from '@/components/CartDrawer';
 import FloatWhatsApp from '@/components/FloatWhatsApp';
 import { getProductoById, getProductosPublicos } from '@/lib/db';
 
-export const revalidate = 60;
-
-export async function generateStaticParams() {
-  try {
-    const productos = await getProductosPublicos();
-    return productos.map((p) => ({ id: String(p.id) }));
-  } catch {
-    return [];
-  }
-}
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   try {

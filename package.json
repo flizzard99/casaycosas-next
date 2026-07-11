@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "migrate:images": "tsx scripts/migrate-base64-images.ts",
+    "migrate:images:dry-run": "tsx scripts/migrate-base64-images.ts --dry-run"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.1",
@@ -25,6 +27,7 @@
     "eslint-config-next": "^14.2.5",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.4",
+    "tsx": "^4.23.0",
     "typescript": "^5.5.2"
   }
 }
