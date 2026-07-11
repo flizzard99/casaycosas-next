@@ -13,11 +13,12 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  const token = cookies().get(SESSION_COOKIE_NAME)?.value;
-  if (!verifySessionToken(token)) {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-  }
   try {
+    const token = cookies().get(SESSION_COOKIE_NAME)?.value;
+    if (!verifySessionToken(token)) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
     const body = await req.json();
 
     if (body.featured) {

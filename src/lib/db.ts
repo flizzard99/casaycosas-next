@@ -231,13 +231,13 @@ export async function saveConfig(config: Config): Promise<void> {
   const pool = getPool();
   await Promise.all([
     pool.query(
-      `INSERT INTO config (key, value) VALUES ('category_order', $1)
-       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+      `INSERT INTO config (key, value) VALUES ('category_order', $1::jsonb)
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value::jsonb`,
       [JSON.stringify(config.categoryOrder)]
     ),
     pool.query(
-      `INSERT INTO config (key, value) VALUES ('featured', $1)
-       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+      `INSERT INTO config (key, value) VALUES ('featured', $1::jsonb)
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value::jsonb`,
       [JSON.stringify(config.featured)]
     )
   ]);

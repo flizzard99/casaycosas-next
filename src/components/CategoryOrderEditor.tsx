@@ -14,6 +14,7 @@ export default function CategoryOrderEditor({
   const inicial = [...ordenInicial.filter((c) => categorias.includes(c)), ...categorias.filter((c) => !ordenInicial.includes(c))];
   const [orden, setOrden] = useState<string[]>(inicial);
   const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState('');
 
   function mover(index: number, direccion: -1 | 1) {
     const destino = index + direccion;
@@ -25,13 +26,26 @@ export default function CategoryOrderEditor({
 
   async function guardar() {
     setGuardando(true);
+    setError('');
     try {
-      await fetch('/api/config', {
+      const res = await fetch('/api/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ categoryOrder: orden })
       });
+      if (!res.ok) {
+        let msg = 'Error al guardar el orden';
+        try {
+          const data = await res.json();
+          msg = data.error || msg;
+        } catch {
+          // respuesta vacía o no-JSON
+        }
+        throw new Error(msg);
+      }
       onGuardado(orden);
+    } catch (err: any) {
+      setError(err.message || 'Error de conexión');
     } finally {
       setGuardando(false);
     }
@@ -67,6 +81,7 @@ export default function CategoryOrderEditor({
           </li>
         ))}
       </ul>
+      {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
       <button
         onClick={guardar}
         disabled={guardando}

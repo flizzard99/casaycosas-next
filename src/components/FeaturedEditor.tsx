@@ -65,8 +65,16 @@ export default function FeaturedEditor({ productos, featureConfigInicial, onGuar
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ featured: { productIds: seleccionados, title: titulo.trim() || 'Productos más vendidos' } })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error al guardar');
+      if (!res.ok) {
+        let msg = 'Error al guardar';
+        try {
+          const data = await res.json();
+          msg = data.error || msg;
+        } catch {
+          // respuesta vacía o no-JSON del servidor
+        }
+        throw new Error(msg);
+      }
       setOk(true);
       onGuardado({ productIds: seleccionados, title: titulo.trim() || 'Productos más vendidos' });
     } catch (err: any) {

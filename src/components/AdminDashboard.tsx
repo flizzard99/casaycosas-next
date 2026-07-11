@@ -23,10 +23,13 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     setCargando(true);
     try {
       const [resProductos, resConfig] = await Promise.all([fetch('/api/productos'), fetch('/api/config')]);
+      if (!resProductos.ok || !resConfig.ok) throw new Error('Error al cargar datos');
       setProductos(await resProductos.json());
       const config = await resConfig.json();
       setCategoryOrder(config.categoryOrder || []);
       setFeatured(config.featured || FEATURED_DEFAULT);
+    } catch {
+      // sin datos disponibles, seguimos con listas vacías
     } finally {
       setCargando(false);
     }
@@ -115,6 +118,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               <table className="w-full text-sm">
                 <thead className="bg-crema/70 text-verde-noche/70 text-xs uppercase">
                   <tr>
+                    <th className="text-left px-4 py-3">Imagen</th>
                     <th className="text-left px-4 py-3">Producto</th>
                     <th className="text-left px-4 py-3">Categoría</th>
                     <th className="text-left px-4 py-3">Precio</th>
@@ -126,6 +130,22 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 <tbody>
                   {filtrados.map((p) => (
                     <tr key={p.id} className="border-t border-verde-noche/10">
+                      <td className="px-4 py-3">
+                        <div className="w-10 h-10 rounded bg-crema overflow-hidden flex-shrink-0">
+                          {(p.image_url || (p.images && p.images[0])) ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={p.image_url || p.images[0]}
+                              alt={p.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[10px] text-verde-noche/30">
+                              s/i
+                            </div>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-4 py-3 font-medium text-verde-noche max-w-[200px] truncate">{p.name}</td>
                       <td className="px-4 py-3 capitalize text-verde-noche/80">{p.category}</td>
                       <td className="px-4 py-3 text-verde-noche/80">{formatoCLP.format(p.price)}</td>
