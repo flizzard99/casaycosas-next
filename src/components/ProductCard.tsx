@@ -61,34 +61,36 @@ export default function ProductCard({ producto }: { producto: Producto }) {
           <h3 className="text-sm font-semibold mt-1 text-verde-noche hover:text-verde transition-colors">{producto.name}</h3>
         </Link>
         <p className="text-sm text-verde font-semibold mt-1.5">{formatoCLP.format(producto.price)}</p>
-        {!sinStock && (
-          <div className="flex items-center justify-center gap-2 mt-3">
-            <button
-              onClick={() => setQty((q) => Math.max(1, q - 1))}
-              className="w-7 h-7 rounded border border-verde-noche/20 text-sm font-medium hover:bg-crema transition-colors"
-            >
-              −
-            </button>
-            <span className="text-sm w-5 text-center font-medium">{qty}</span>
-            <button
-              onClick={() => setQty((q) => Math.min(maxQty, q + 1))}
-              disabled={qty >= maxQty}
-              className="w-7 h-7 rounded border border-verde-noche/20 text-sm font-medium hover:bg-crema transition-colors disabled:opacity-30"
-            >
-              +
-            </button>
-          </div>
-        )}
-        <button
-          disabled={sinStock}
-          onClick={() => {
-            addItem({ id: producto.id, name: producto.name, price: producto.price, image_url: imagen, stock: producto.stock }, qty);
-            setQty(1);
-          }}
-          className="mt-2 text-xs font-semibold uppercase tracking-wide py-2 rounded bg-verde text-white hover:bg-verde-oscuro transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-        >
-          {sinStock ? 'Sin stock' : 'Agregar al carrito'}
-        </button>
+        <div className="mt-auto">
+          {!sinStock && (
+            <div className="flex items-center justify-center gap-2 mt-3">
+              <button
+                onClick={() => setQty((q) => Math.max(1, q - 1))}
+                className="w-7 h-7 rounded border border-verde-noche/20 text-sm font-medium hover:bg-crema transition-colors"
+              >
+                −
+              </button>
+              <span className="text-sm w-5 text-center font-medium">{qty}</span>
+              <button
+                onClick={() => setQty((q) => Math.min(maxQty, q + 1))}
+                disabled={qty >= maxQty}
+                className="w-7 h-7 rounded border border-verde-noche/20 text-sm font-medium hover:bg-crema transition-colors disabled:opacity-30"
+              >
+                +
+              </button>
+            </div>
+          )}
+          <button
+            disabled={sinStock}
+            onClick={() => {
+              addItem({ id: producto.id, name: producto.name, price: producto.price, image_url: imagen, stock: producto.stock }, qty);
+              setQty(1);
+            }}
+            className="mt-2 text-xs font-semibold uppercase tracking-wide py-2 rounded bg-verde text-white hover:bg-verde-oscuro transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+          >
+            {sinStock ? 'Sin stock' : 'Agregar al carrito'}
+          </button>
+        </div>
       </div>
     </div>
   );
