@@ -7,8 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
     "migrate:images": "tsx scripts/migrate-base64-images.ts",
     "migrate:images:dry-run": "tsx scripts/migrate-base64-images.ts --dry-run"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.1",

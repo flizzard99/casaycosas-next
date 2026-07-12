@@ -40,6 +40,7 @@ export const metadata: Metadata = {
     icon: '/oveja-logo.png',
     apple: '/oveja-logo.png'
   },
+  manifest: '/manifest.json',
   robots: { index: true, follow: true }
 };
 

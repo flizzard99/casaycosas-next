@@ -1,0 +1,13 @@
+{
+  "name": "Casa y Cosas",
+  "short_name": "Casa y Cosas",
+  "description": "Tienda de hogar, mate, artesanías, perfumes y más en Panguipulli",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#DAD7CD",
+  "theme_color": "#344E41",
+  "icons": [
+    { "src": "/oveja-logo.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/oveja-logo.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
