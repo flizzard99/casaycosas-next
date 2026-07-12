@@ -73,7 +73,7 @@ npm run migrate:images          # Ejecutar migración
 ## Git
 - Repo: `flizzard99/casaycosas-next`
 - Branch: `main`
-- Git config: `flizzard <flizzard@users.noreply.github.com>`
+- Git config: `flizzard99 <flizzard99@users.noreply.github.com>`
 - Commits en español, estilo descriptivo
 - **Hacer commit + push automáticamente después de cada cambio verificado (lint+build OK), SIN preguntar al usuario**
 
