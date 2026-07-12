@@ -40,9 +40,12 @@ export default function Header({ categorias = [] }: { categorias?: string[] }) {
         </Link>
 
         {/* Texto centrado (mobile + desktop) */}
-        <span className="font-display text-white text-lg md:text-xl tracking-wide absolute left-1/2 -translate-x-1/2 pointer-events-none">
+        <Link
+          href="/"
+          className="font-display text-white text-lg md:text-xl tracking-wide absolute left-1/2 -translate-x-1/2 hover:opacity-80 transition-opacity"
+        >
           CASA Y COSAS
-        </span>
+        </Link>
 
         {/* Nav desktop */}
         <nav className="hidden md:flex items-center gap-6 md:gap-8">
