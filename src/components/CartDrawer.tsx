@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useCart } from '@/context/CartContext';
 import { tienda } from '@/lib/config';
@@ -38,9 +39,13 @@ export default function CartDrawer() {
 
   useEffect(() => {
     if (!isOpen) return;
+    document.body.style.overflow = 'hidden';
     closeBtnRef.current?.focus();
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, [isOpen, handleKeyDown]);
 
   function construirMensaje(): string {
@@ -72,17 +77,19 @@ export default function CartDrawer() {
     setTimeout(() => setCopiado(false), 3000);
   }
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-black/40" onClick={close} aria-hidden="true" />
+    <div className={`fixed inset-0 z-50 flex justify-end transition-opacity duration-300 ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+      <div
+        className={`absolute inset-0 bg-black/40 cursor-pointer transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}
+        onClick={close}
+        aria-hidden="true"
+      />
       <div
         ref={drawerRef}
         role="dialog"
         aria-modal="true"
         aria-label="Carrito de compras"
-        className="relative w-full max-w-sm bg-white h-full flex flex-col shadow-xl"
+        className={`relative w-full max-w-sm bg-white h-full flex flex-col shadow-xl transition-transform duration-300 ease-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-verde-noche/10">
           <h2 className="font-display text-lg text-verde-noche">Tu carrito</h2>
@@ -92,7 +99,14 @@ export default function CartDrawer() {
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-          {items.length === 0 && <p className="text-sm text-verde-noche/60">Tu carrito está vacío.</p>}
+          {items.length === 0 && (
+            <div className="text-center py-10">
+              <p className="text-sm text-verde-noche/60 mb-3">Tu carrito está vacío.</p>
+              <Link href="/catalogo" className="text-sm text-verde hover:text-verde-oscuro font-medium">
+                Explora nuestro catálogo →
+              </Link>
+            </div>
+          )}
           {items.map((item) => {
             const maxStock = item.stock ?? Infinity;
             const atMax = item.qty >= maxStock;
@@ -123,7 +137,11 @@ export default function CartDrawer() {
                     >
                       +
                     </button>
-                    <button onClick={() => removeItem(item.id)} className="ml-auto text-xs text-red-500 hover:underline">
+                    <button
+                      onClick={() => removeItem(item.id)}
+                      aria-label={`Quitar ${item.name} del carrito`}
+                      className="ml-auto text-xs text-red-500 hover:underline"
+                    >
                       Quitar
                     </button>
                   </div>

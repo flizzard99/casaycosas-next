@@ -16,6 +16,7 @@ export default function ProductDetailClient({ producto, relacionados = [] }: { p
   const imagenes = producto.images?.length ? producto.images : producto.image_url ? [producto.image_url] : [];
 
   const [qty, setQty] = useState(1);
+  const [agregado, setAgregado] = useState(false);
   const maxQty = producto.stock || 1;
 
   function comprarAhora() {
@@ -25,9 +26,9 @@ export default function ProductDetailClient({ producto, relacionados = [] }: { p
 
   return (
     <div className="max-w-4xl mx-auto px-6 md:px-0 py-8">
-      <a href="/catalogo" className="text-sm text-verde hover:text-verde-oscuro mb-6 inline-block">
+      <Link href="/catalogo" className="text-sm text-verde hover:text-verde-oscuro mb-6 inline-block">
         ← Volver al catálogo
-      </a>
+      </Link>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="relative h-80 md:h-[28rem] rounded-lg overflow-hidden shadow-sm">
@@ -85,10 +86,14 @@ export default function ProductDetailClient({ producto, relacionados = [] }: { p
                   stock: producto.stock
                 }, qty);
                 setQty(1);
+                setAgregado(true);
+                setTimeout(() => setAgregado(false), 1500);
               }}
-              className="flex-1 px-6 py-3 rounded-md bg-verde text-white text-sm font-semibold uppercase tracking-wide hover:bg-verde-oscuro transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className={`flex-1 px-6 py-3 rounded-md text-sm font-semibold uppercase tracking-wide transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed ${
+                agregado ? 'bg-verde-oscuro text-white' : 'bg-verde text-white hover:bg-verde-oscuro'
+              }`}
             >
-              {sinStock ? 'Sin stock' : 'Agregar al carrito'}
+              {sinStock ? 'Sin stock' : agregado ? '✓ Agregado al carrito' : 'Agregar al carrito'}
             </button>
             {!sinStock && (
               <button

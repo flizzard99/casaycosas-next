@@ -1,11 +1,36 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 
 export default function ProductCarousel({ images, alt }: { images: string[]; alt: string }) {
   const [indice, setIndice] = useState(0);
   const total = images.length;
+  const touchStartX = useRef(0);
+
+  const anterior = useCallback(() => {
+    setIndice((i) => (i - 1 + total) % total);
+  }, [total]);
+
+  const siguiente = useCallback(() => {
+    setIndice((i) => (i + 1) % total);
+  }, [total]);
+
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX;
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    const delta = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(delta) > 50) {
+      delta > 0 ? anterior() : siguiente();
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'ArrowLeft') anterior();
+    if (e.key === 'ArrowRight') siguiente();
+  }
 
   if (total === 0) {
     return (
@@ -15,16 +40,17 @@ export default function ProductCarousel({ images, alt }: { images: string[]; alt
     );
   }
 
-  function anterior() {
-    setIndice((i) => (i - 1 + total) % total);
-  }
-
-  function siguiente() {
-    setIndice((i) => (i + 1) % total);
-  }
-
   return (
-    <div className="relative w-full h-full bg-crema">
+    <div
+      className="relative w-full h-full bg-crema"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      role="region"
+      aria-label={`Galería de fotos de ${alt}`}
+      aria-roledescription="carrusel"
+    >
       <Image
         src={images[indice]}
         alt={`${alt} — foto ${indice + 1}`}

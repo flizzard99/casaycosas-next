@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import Link from 'next/link';
 
 export default function Hero() {
   return (
@@ -35,6 +36,12 @@ export default function Hero() {
           Un catálogo armado para recorrer con calma. Agrega tus artículos al carrito, selecciona el
           canal de comunicación y coordinamos tu pedido.
         </p>
+        <Link
+          href="/catalogo"
+          className="inline-block mt-8 px-8 py-3 rounded-md bg-white text-verde-noche text-sm font-semibold uppercase tracking-wide hover:bg-crema transition-colors"
+        >
+          Ver catálogo
+        </Link>
       </div>
     </section>
   );

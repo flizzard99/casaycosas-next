@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import ProductCard from './ProductCard';
 import type { Producto } from '@/lib/types';
 
@@ -14,12 +15,12 @@ export default function FeaturedGrid({ productos, titulo }: { productos: Product
           ))}
         </div>
         <div className="text-center mt-10">
-          <a
+          <Link
             href="/catalogo"
             className="inline-block px-6 py-3 rounded-md bg-verde-noche text-white text-sm font-semibold uppercase tracking-wide hover:bg-verde-oscuro transition-colors"
           >
             Ver catálogo completo
-          </a>
+          </Link>
         </div>
       </div>
     </section>

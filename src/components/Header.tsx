@@ -96,9 +96,9 @@ export default function Header({ categorias = [] }: { categorias?: string[] }) {
               )}
             </div>
           )}
-          <a href="/#contacto" className="text-white text-xs md:text-sm uppercase tracking-wide opacity-95 hover:opacity-100">
+          <Link href="/#contacto" className="text-white text-xs md:text-sm uppercase tracking-wide opacity-95 hover:opacity-100">
             Visítanos
-          </a>
+          </Link>
           <button
             onClick={open}
             className="relative text-white border border-white/40 rounded p-2 hover:bg-white/10 transition-colors"
@@ -151,13 +151,13 @@ export default function Header({ categorias = [] }: { categorias?: string[] }) {
               ))}
             </div>
           )}
-          <a
+          <Link
             href="/#contacto"
             className="block text-white text-sm uppercase tracking-wide"
             onClick={() => setMenuAbierto(false)}
           >
             Visítanos
-          </a>
+          </Link>
         </div>
       )}
     </header>

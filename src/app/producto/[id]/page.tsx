@@ -15,15 +15,6 @@ const getProducto = cache((id: number) => getProductoById(id));
 export const revalidate = 60;
 export const dynamicParams = true;
 
-export async function generateStaticParams() {
-  try {
-    const productos = await getProductosPublicos();
-    return productos.map((p) => ({ id: String(p.id) }));
-  } catch {
-    return [];
-  }
-}
-
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   try {
     const producto = await getProducto(Number(params.id));
@@ -88,7 +79,7 @@ export default async function ProductoPage({ params }: { params: { id: string } 
       <main className="min-h-[60vh] bg-crema/40">
         <ProductDetailClient producto={producto} relacionados={relacionados} />
       </main>
-      <Footer />
+      <Footer categorias={categorias} />
       <CartDrawer />
       <FloatWhatsApp />
     </>

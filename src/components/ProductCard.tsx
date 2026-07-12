@@ -15,6 +15,7 @@ export default function ProductCard({ producto }: { producto: Producto }) {
   const tieneVarias = (producto.images?.length || 0) > 1;
 
   const [qty, setQty] = useState(1);
+  const [agregado, setAgregado] = useState(false);
 
   const maxQty = producto.stock || 1;
 
@@ -79,10 +80,14 @@ export default function ProductCard({ producto }: { producto: Producto }) {
             onClick={() => {
               addItem({ id: producto.id, name: producto.name, price: producto.price, image_url: imagen, stock: producto.stock }, qty);
               setQty(1);
+              setAgregado(true);
+              setTimeout(() => setAgregado(false), 1500);
             }}
-            className="mt-2 text-xs font-semibold uppercase tracking-wide py-2 rounded bg-verde text-white hover:bg-verde-oscuro transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+            className={`mt-2 text-xs font-semibold uppercase tracking-wide py-2 rounded transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed ${
+              agregado ? 'bg-verde-oscuro text-white' : 'bg-verde text-white hover:bg-verde-oscuro'
+            }`}
           >
-            {sinStock ? 'Sin stock' : 'Agregar al carrito'}
+            {sinStock ? 'Sin stock' : agregado ? '✓ Agregado' : 'Agregar al carrito'}
           </button>
       </div>
     </div>
