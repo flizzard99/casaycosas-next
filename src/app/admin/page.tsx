@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import AdminLogin from '@/components/AdminLogin';
-import AdminDashboard from '@/components/AdminDashboard';
+
+const AdminDashboard = dynamic(() => import('@/components/AdminDashboard'), { ssr: false });
 
 export default function AdminPage() {
   const [autenticado, setAutenticado] = useState<boolean | null>(null);

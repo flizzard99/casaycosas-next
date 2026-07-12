@@ -36,8 +36,8 @@ export default async function CategoriaPage({ params }: { params: { categoria: s
   let productos: Awaited<ReturnType<typeof getProductosPublicos>> = [];
   try {
     productos = await getProductosPublicos();
-  } catch {
-    // Sin DB
+  } catch (error) {
+    console.error('Error al cargar productos:', error);
   }
 
   const todos = Array.from(new Set(productos.map((p) => p.category)));
@@ -47,8 +47,8 @@ export default async function CategoriaPage({ params }: { params: { categoria: s
   try {
     const config = await getConfig();
     categoryOrder = config.categoryOrder;
-  } catch {
-    // ignore
+  } catch (error) {
+    console.error('Error al cargar configuración:', error);
   }
 
   const productosCategoria = productos.filter((p) => p.category === categoria);

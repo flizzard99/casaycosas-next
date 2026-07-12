@@ -1,11 +1,13 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import ProductDetailClient from '@/components/ProductDetailClient';
+import dynamic from 'next/dynamic';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
 import FloatWhatsApp from '@/components/FloatWhatsApp';
 import { getProductoById, getProductosPublicos } from '@/lib/db';
+
+const ProductDetailClient = dynamic(() => import('@/components/ProductDetailClient'), { ssr: false });
 
 export const revalidate = 60;
 export const dynamicParams = true;

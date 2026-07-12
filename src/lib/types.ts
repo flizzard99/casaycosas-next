@@ -10,6 +10,7 @@ export type Producto = {
   stock: number;
   images: string[];
   created_at: string;
+  updated_at?: string;
 };
 
 export type ProductoInput = {

@@ -25,8 +25,8 @@ export default async function HomePage() {
     const enOrden = config.categoryOrder.filter((c) => set.has(c));
     const resto = [...set].filter((c) => !config.categoryOrder.includes(c)).sort();
     categorias = [...enOrden, ...resto];
-  } catch {
-    // Sin DB disponible
+  } catch (error) {
+    console.error('Error al cargar datos del home:', error);
   }
 
   return (

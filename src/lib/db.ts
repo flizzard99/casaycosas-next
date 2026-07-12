@@ -47,11 +47,33 @@ export async function ensureSchema() {
     pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS price INTEGER DEFAULT 0`),
     pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS stock INTEGER DEFAULT 0`),
     pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS images TEXT[] DEFAULT '{}'`),
-    pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS visible BOOLEAN DEFAULT TRUE`)
+    pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS visible BOOLEAN DEFAULT TRUE`),
+    pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`)
   ]);
   await pool.query(
     `CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value JSONB DEFAULT '{}'::jsonb)`
   );
+  await pool.query(`
+    CREATE OR REPLACE FUNCTION update_updated_at()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      NEW.updated_at = NOW();
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql
+  `);
+  await pool.query(`
+    DO $$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'set_updated_at'
+      ) THEN
+        CREATE TRIGGER set_updated_at
+          BEFORE UPDATE ON productos
+          FOR EACH ROW
+          EXECUTE FUNCTION update_updated_at();
+      END IF;
+    END $$
+  `);
   schemaReady = true;
 }
 
