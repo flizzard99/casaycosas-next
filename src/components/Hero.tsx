@@ -8,6 +8,18 @@ export default function Hero() {
         <div className="absolute -top-10 -left-10 w-60 h-60 rounded-full bg-sage blur-3xl" />
         <div className="absolute -bottom-16 -right-10 w-72 h-72 rounded-full bg-verde-oscuro blur-3xl" />
       </div>
+      <div
+        className="absolute inset-0 flex items-center justify-center pointer-events-none"
+        style={{ opacity: 0.18 }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/ovejafondo.png"
+          alt=""
+          aria-hidden="true"
+          className="max-w-[45%] max-h-[80%] w-auto h-auto object-contain"
+        />
+      </div>
       <div className="relative">
         <div className="text-xs md:text-sm tracking-[0.2em] uppercase text-white/90 mb-4">
           Tienda en Panguipulli
