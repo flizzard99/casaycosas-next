@@ -75,6 +75,7 @@ npm run migrate:images          # Ejecutar migración
 - Branch: `main`
 - Git config: `flizzard <flizzard@users.noreply.github.com>`
 - Commits en español, estilo descriptivo
+- **Hacer commit + push automáticamente después de cada cambio verificado (lint+build OK), SIN preguntar al usuario**
 
 ## Pendiente / Próximos pasos
 - Logo: el usuario quiere oveja blanca pero el intento anterior falló. Esperar a que el usuario proporcione una imagen o idea más clara.
