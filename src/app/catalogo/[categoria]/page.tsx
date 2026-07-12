@@ -22,9 +22,10 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: { categoria: string } }): Promise<Metadata> {
   const categoria = decodeURIComponent(params.categoria);
+  const capitalizada = categoria.charAt(0).toUpperCase() + categoria.slice(1);
   return {
-    title: `${categoria} — Catálogo`,
-    description: `Productos de la categoría "${categoria}" en Casa y Cosas, Panguipulli.`,
+    title: `${capitalizada} — Catálogo`,
+    description: `Productos de la categoría "${capitalizada}" en Casa y Cosas, Panguipulli.`,
     alternates: { canonical: `/catalogo/${encodeURIComponent(categoria)}` }
   };
 }
