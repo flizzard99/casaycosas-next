@@ -1,3 +1,5 @@
+import Image from 'next/image';
+
 export default function Hero() {
   return (
     <section
@@ -12,12 +14,14 @@ export default function Hero() {
         className="absolute inset-0 flex items-center justify-center pointer-events-none"
         style={{ opacity: 0.18 }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src="/ovejafondo.png"
           alt=""
           aria-hidden="true"
-          className="max-w-[90%] max-h-[95%] w-auto h-auto object-contain"
+          fill
+          priority
+          className="object-contain"
+          sizes="90vw"
         />
       </div>
       <div className="relative">

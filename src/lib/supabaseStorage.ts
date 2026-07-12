@@ -19,7 +19,7 @@ const EXT_BY_MIME: Record<string, string> = {
   'image/webp': 'webp',
   'image/gif': 'gif'
 };
-const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
+import { MAX_UPLOAD_BYTES } from '@/lib/uploadLimits';
 
 /** Sube una imagen en formato data URL (data:image/png;base64,...) y devuelve la URL pública */
 export async function subirImagen(dataUrl: string): Promise<string> {

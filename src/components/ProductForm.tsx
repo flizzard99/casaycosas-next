@@ -68,8 +68,8 @@ export default function ProductForm({ producto, categorias, onGuardado, onCancel
         name: name.trim(),
         description,
         category: categoriaFinal.trim(),
-        price: parseInt(price, 10) || 0,
-        stock: parseInt(stock, 10) || 0,
+        price: Math.max(0, parseInt(price, 10) || 0),
+        stock: Math.max(0, parseInt(stock, 10) || 0),
         instagram_url: instagramUrl,
         image_url: imagenes[0] || '',
         images: imagenes

@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import { cache } from 'react';
 import dynamic from 'next/dynamic';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -8,6 +9,8 @@ import FloatWhatsApp from '@/components/FloatWhatsApp';
 import { getProductoById, getProductosPublicos } from '@/lib/db';
 
 const ProductDetailClient = dynamic(() => import('@/components/ProductDetailClient'), { ssr: false });
+
+const getProducto = cache((id: number) => getProductoById(id));
 
 export const revalidate = 60;
 export const dynamicParams = true;
@@ -23,7 +26,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   try {
-    const producto = await getProductoById(Number(params.id));
+    const producto = await getProducto(Number(params.id));
     if (!producto) return { title: 'Producto no encontrado' };
     return {
       title: `${producto.name} — Casa y Cosas`,
@@ -42,7 +45,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 }
 
 export default async function ProductoPage({ params }: { params: { id: string } }) {
-  const producto = await getProductoById(Number(params.id));
+  const producto = await getProducto(Number(params.id));
   if (!producto || !producto.visible) notFound();
 
   let categorias: string[] = [];

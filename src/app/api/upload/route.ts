@@ -6,8 +6,7 @@ import { cookies } from 'next/headers';
 import { subirImagen } from '@/lib/supabaseStorage';
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 import { verifyCsrf } from '@/lib/csrf';
-
-const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
+import { MAX_UPLOAD_BYTES } from '@/lib/uploadLimits';
 
 export async function POST(req: NextRequest) {
   const token = cookies().get(SESSION_COOKIE_NAME)?.value;

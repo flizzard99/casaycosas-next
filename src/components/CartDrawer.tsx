@@ -11,6 +11,7 @@ export default function CartDrawer() {
   const { items, isOpen, close, updateQty, removeItem, total, clear } = useCart();
   const [copiado, setCopiado] = useState(false);
   const [nombre, setNombre] = useState('');
+  const [bloqueado, setBloqueado] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -49,13 +50,17 @@ export default function CartDrawer() {
   }
 
   function enviarPorWhatsapp() {
-    if (!items.length) return;
+    if (!items.length || bloqueado) return;
+    setBloqueado(true);
+    setTimeout(() => setBloqueado(false), 1000);
     const url = `https://wa.me/${tienda.whatsappNumber}?text=${encodeURIComponent(construirMensaje())}`;
     window.open(url, '_blank');
   }
 
   async function copiarParaInstagram() {
-    if (!items.length) return;
+    if (!items.length || bloqueado) return;
+    setBloqueado(true);
+    setTimeout(() => setBloqueado(false), 1000);
     const mensaje = construirMensaje();
     try {
       await navigator.clipboard.writeText(mensaje);
@@ -151,14 +156,14 @@ export default function CartDrawer() {
 
           <button
             onClick={enviarPorWhatsapp}
-            disabled={!items.length}
+            disabled={!items.length || bloqueado}
             className="w-full bg-verde text-white text-sm font-semibold py-3 rounded-md hover:bg-verde-oscuro disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
             Reservar pedido por WhatsApp
           </button>
           <button
             onClick={copiarParaInstagram}
-            disabled={!items.length}
+            disabled={!items.length || bloqueado}
             className="w-full mt-2 bg-white border border-verde-oscuro/20 text-verde-oscuro text-sm font-semibold py-3 rounded-md hover:bg-crema disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {copiado ? '¡Mensaje copiado! Pégalo en Instagram' : 'Copiar pedido para Instagram'}

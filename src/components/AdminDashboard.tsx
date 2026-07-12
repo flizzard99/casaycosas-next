@@ -116,6 +116,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             <p className="text-sm text-verde-noche/60">Cargando productos…</p>
           ) : (
             <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-crema/70 text-verde-noche/70 text-xs uppercase">
                   <tr>
@@ -197,6 +198,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
         </div>

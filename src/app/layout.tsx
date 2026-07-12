@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Anton, Work_Sans } from 'next/font/google';
 import { CartProvider } from '@/context/CartContext';
 import { Analytics } from '@vercel/analytics/react';
+import { tienda } from '@/lib/config';
 import './globals.css';
 
 const anton = Anton({ subsets: ['latin'], weight: '400', variable: '--font-anton' });
@@ -53,11 +54,11 @@ const localBusinessJsonLd = {
   description: 'Tienda de hogar, mate, artesanías, perfumes y más en Panguipulli, Región de Los Ríos.',
   image: [`${siteUrl}/og-image.png`],
   url: siteUrl,
-  telephone: '+56992139709',
+  telephone: `+56${tienda.whatsappNumber}`,
   priceRange: '$$',
   address: {
     '@type': 'PostalAddress',
-    streetAddress: 'Martínez de Rosas 498, Local C',
+    streetAddress: tienda.storeAddress,
     addressLocality: 'Panguipulli',
     addressRegion: 'Los Ríos',
     addressCountry: 'CL'
@@ -75,11 +76,11 @@ const localBusinessJsonLd = {
       closes: '20:00'
     }
   ],
-  hasMap: 'https://maps.app.goo.gl/t4b9KeWEd7U4MDPc6',
+  hasMap: tienda.mapsUrl,
   sameAs: [
-    'https://www.instagram.com/casaycosas.panguipulli/',
-    'https://www.facebook.com/people/Tienda-Casa-y-Cosas-Panguipulli/61582181283916/',
-    'https://www.tiktok.com/@tiendacasaycosas'
+    tienda.instagramUrl,
+    tienda.facebookUrl,
+    tienda.tiktokUrl
   ]
 };
 
