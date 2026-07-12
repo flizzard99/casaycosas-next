@@ -13,7 +13,7 @@ const securityHeaders = [
     value:
       [
         "default-src 'self'",
-        "img-src 'self' https://*.supabase.co data: blob:",
+        "img-src 'self' https://*.supabase.co https://acdn-us.mitiendanube.com https://cdn.sd.com.py https://cdn11.bigcommerce.com https://fimgs.net https://mates.cl https://tangofoodsusa.com https://www.google.com https://www.mundobiblia.com https://www.schwarzenbach.ch data: blob:",
         "script-src 'self' 'unsafe-inline'",
         "style-src 'self' 'unsafe-inline'",
         "font-src 'self' data:",
@@ -31,7 +31,15 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [
       { protocol: 'https', hostname: '**.supabase.co' },
-      { protocol: 'https', hostname: 'cdn11.bigcommerce.com' }
+      { protocol: 'https', hostname: 'cdn11.bigcommerce.com' },
+      { protocol: 'https', hostname: 'acdn-us.mitiendanube.com' },
+      { protocol: 'https', hostname: 'cdn.sd.com.py' },
+      { protocol: 'https', hostname: 'fimgs.net' },
+      { protocol: 'https', hostname: 'mates.cl' },
+      { protocol: 'https', hostname: 'tangofoodsusa.com' },
+      { protocol: 'https', hostname: 'www.google.com' },
+      { protocol: 'https', hostname: 'www.mundobiblia.com' },
+      { protocol: 'https', hostname: 'www.schwarzenbach.ch' }
     ]
   },
   poweredByHeader: false,
