@@ -1,6 +1,11 @@
 import { Pool } from 'pg';
 import type { Producto, ProductoInput, Config, FeaturedConfig } from './types';
 
+export function parseIdOrBadRequest(id: string): number | null {
+  const parsed = parseInt(id, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
 // Reutilizamos el pool entre recargas en desarrollo (patrón recomendado para Next.js)
 const globalForPg = globalThis as unknown as { pgPool?: Pool };
 
@@ -255,16 +260,26 @@ export async function getConfig(): Promise<Config> {
 export async function saveConfig(config: Config): Promise<void> {
   await ensureSchema();
   const pool = getPool();
-  await pool.query(
-    `INSERT INTO config (key, value) VALUES ('category_order', $1::jsonb)
-     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
-    [JSON.stringify(config.categoryOrder)]
-  );
-  await pool.query(
-    `INSERT INTO config (key, value) VALUES ('featured', $1::jsonb)
-     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
-    [JSON.stringify(config.featured)]
-  );
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      `INSERT INTO config (key, value) VALUES ('category_order', $1::jsonb)
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+      [JSON.stringify(config.categoryOrder)]
+    );
+    await client.query(
+      `INSERT INTO config (key, value) VALUES ('featured', $1::jsonb)
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+      [JSON.stringify(config.featured)]
+    );
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
 }
 
 /** Devuelve hasta 4 productos visibles correspondientes a los IDs destacados, en orden */

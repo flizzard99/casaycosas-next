@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { randomUUID } from 'crypto';
 
 const BUCKET_NAME = 'product-images';
 let bucketChecked = false;
@@ -36,7 +37,7 @@ export async function subirImagen(dataUrl: string): Promise<string> {
     throw new Error('La imagen supera 4 MB.');
   }
   const ext = EXT_BY_MIME[mime];
-  const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const filename = `${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
 
   if (!bucketChecked) {
     const { data: buckets } = await supabase.storage.listBuckets();

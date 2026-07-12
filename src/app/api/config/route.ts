@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache';
 import { getConfig, saveConfig } from '@/lib/db';
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 import { verifyCsrf } from '@/lib/csrf';
+import { checkAdminRateLimit } from '@/lib/adminRateLimit';
 import type { FeaturedConfig } from '@/lib/types';
 
 export async function GET() {
@@ -14,12 +15,13 @@ export async function GET() {
     const config = await getConfig();
     return NextResponse.json(config);
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'Error desconocido';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('[API Error] config GET:', e);
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
 
 export async function PUT(req: NextRequest) {
+  if (!checkAdminRateLimit(req)) return NextResponse.json({ error: 'Demasiadas solicitudes' }, { status: 429 });
   try {
     const token = cookies().get(SESSION_COOKIE_NAME)?.value;
     if (!verifySessionToken(token) || !verifyCsrf(req)) {
@@ -56,7 +58,7 @@ export async function PUT(req: NextRequest) {
     revalidatePath('/catalogo');
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'Error desconocido en el servidor';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('[API Error] config PUT:', e);
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }

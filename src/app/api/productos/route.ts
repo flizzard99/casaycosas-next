@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache';
 import { getProductosPublicos, getProductosAdmin, createProducto } from '@/lib/db';
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 import { verifyCsrf } from '@/lib/csrf';
+import { checkAdminRateLimit } from '@/lib/adminRateLimit';
 
 function isAdminRequest() {
   const token = cookies().get(SESSION_COOKIE_NAME)?.value;
@@ -30,12 +31,13 @@ export async function GET() {
       headers: { 'Cache-Control': 'no-store' }
     });
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'Error desconocido';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('[API Error] productos GET:', e);
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
+  if (!checkAdminRateLimit(req)) return NextResponse.json({ error: 'Demasiadas solicitudes' }, { status: 429 });
   if (!isAdminRequest() || !verifyCsrf(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
@@ -50,7 +52,7 @@ export async function POST(req: NextRequest) {
     revalidatePath('/sitemap.xml');
     return NextResponse.json(producto, { status: 201 });
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'Error desconocido';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('[API Error] productos POST:', e);
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }

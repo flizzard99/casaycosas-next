@@ -55,7 +55,7 @@ const localBusinessJsonLd = {
   description: 'Tienda de hogar, mate, artesanías, perfumes y más en Panguipulli, Región de Los Ríos.',
   image: [`${siteUrl}/og-image.png`],
   url: siteUrl,
-  telephone: `+56${tienda.whatsappNumber}`,
+  telephone: `+${tienda.whatsappNumber}`,
   priceRange: '$$',
   address: {
     '@type': 'PostalAddress',

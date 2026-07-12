@@ -7,8 +7,10 @@ import { subirImagen } from '@/lib/supabaseStorage';
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 import { verifyCsrf } from '@/lib/csrf';
 import { MAX_UPLOAD_BYTES } from '@/lib/uploadLimits';
+import { checkAdminRateLimit } from '@/lib/adminRateLimit';
 
 export async function POST(req: NextRequest) {
+  if (!checkAdminRateLimit(req)) return NextResponse.json({ error: 'Demasiadas solicitudes' }, { status: 429 });
   const token = cookies().get(SESSION_COOKIE_NAME)?.value;
   if (!verifySessionToken(token) || !verifyCsrf(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
@@ -30,7 +32,7 @@ export async function POST(req: NextRequest) {
     const url = await subirImagen(image);
     return NextResponse.json({ url });
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'Error al subir la imagen';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('[API Error] upload:', e);
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
