@@ -27,9 +27,8 @@ async function checkRateLimit(ip: string): Promise<boolean> {
   if (!redis) return true;
   try {
     const key = `rl:login:${ip}`;
-    const count = await redis.incr(key);
-    if (count === 1) await redis.expire(key, VENTANA_SEG);
-    return count <= MAX_INTENTOS;
+    const count = (await redis.get<number>(key)) ?? 0;
+    return count < MAX_INTENTOS;
   } catch {
     return true;
   }
@@ -40,8 +39,8 @@ async function registerFailedAttempt(ip: string) {
   if (!redis) return;
   try {
     const key = `rl:login:${ip}`;
-    await redis.incr(key);
-    await redis.expire(key, VENTANA_SEG);
+    const count = await redis.incr(key);
+    if (count === 1) await redis.expire(key, VENTANA_SEG);
   } catch {
     // no-op
   }
@@ -75,6 +74,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!process.env.ADMIN_PASSWORD) {
+    await registerFailedAttempt(ip);
     return NextResponse.json({ error: 'ADMIN_PASSWORD no configurada en el servidor' }, { status: 500 });
   }
 
