@@ -9,7 +9,7 @@ export default function NotFound() {
         Puede que el producto haya sido retirado o el enlace ya no sea válido.
       </p>
       <Link
-        href="/"
+        href="/catalogo"
         className="px-6 py-3 rounded-md bg-verde text-white text-sm font-semibold uppercase tracking-wide hover:bg-verde-oscuro transition-colors"
       >
         ← Volver al catálogo

@@ -8,12 +8,24 @@ import CategoriaClient from '@/components/CategoriaClient';
 import { getProductosPublicos, getConfig } from '@/lib/db';
 
 export const revalidate = 60;
+export const dynamicParams = true;
+
+export async function generateStaticParams() {
+  try {
+    const productos = await getProductosPublicos();
+    const categorias = Array.from(new Set(productos.map((p) => p.category)));
+    return categorias.map((cat) => ({ categoria: encodeURIComponent(cat) }));
+  } catch {
+    return [];
+  }
+}
 
 export async function generateMetadata({ params }: { params: { categoria: string } }): Promise<Metadata> {
   const categoria = decodeURIComponent(params.categoria);
   return {
     title: `${categoria} — Catálogo`,
-    description: `Productos de la categoría "${categoria}" en Casa y Cosas, Panguipulli.`
+    description: `Productos de la categoría "${categoria}" en Casa y Cosas, Panguipulli.`,
+    alternates: { canonical: `/catalogo/${encodeURIComponent(categoria)}` }
   };
 }
 
@@ -54,15 +66,7 @@ export default async function CategoriaPage({ params }: { params: { categoria: s
           </p>
         </div>
 
-        <section className="px-6 md:px-14 py-10 md:py-14">
-          {productosCategoria.length === 0 ? (
-            <p className="text-sm text-verde-oscuro/70">
-              No hay productos en esta categoría por ahora. Revisa el catálogo completo en WhatsApp.
-            </p>
-          ) : (
-            <CategoriaClient productos={productosCategoria} />
-          )}
-        </section>
+        <CategoriaClient key={categoria} productos={productosCategoria} />
       </main>
       <Footer />
       <CartDrawer />
