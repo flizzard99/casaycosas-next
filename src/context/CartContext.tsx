@@ -61,7 +61,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
       return [...prev, { ...item, qty: Math.min(qty, maxStock) }];
     });
-    setIsOpen(true);
   }
 
   function removeItem(id: number) {

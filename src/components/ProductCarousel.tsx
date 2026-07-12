@@ -29,7 +29,7 @@ export default function ProductCarousel({ images, alt }: { images: string[]; alt
         src={images[indice]}
         alt={`${alt} — foto ${indice + 1}`}
         fill
-        className="object-cover"
+        className="object-contain"
         sizes="(max-width: 768px) 100vw, 50vw"
         priority
       />

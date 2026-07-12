@@ -14,7 +14,6 @@ export default function ProductCard({ producto }: { producto: Producto }) {
   const sinStock = producto.stock <= 0;
   const tieneVarias = (producto.images?.length || 0) > 1;
 
-  const [fit, setFit] = useState<'cover' | 'contain'>('cover');
   const [qty, setQty] = useState(1);
 
   const maxQty = producto.stock || 1;
@@ -22,21 +21,15 @@ export default function ProductCard({ producto }: { producto: Producto }) {
   return (
     <div className="bg-white rounded-md overflow-hidden border border-verde-noche/10 shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 flex flex-col">
       <Link href={`/producto/${producto.id}`} className="block">
-        <div className="relative h-40 bg-crema" style={fit === 'contain' ? { padding: '0.5rem' } : undefined}>
+        <div className="relative aspect-square bg-crema p-2">
           {imagen ? (
             <Image
               src={imagen}
               alt={producto.name}
               fill
               className="transition-opacity duration-300 hover:opacity-90"
-              style={{ objectFit: fit }}
+              style={{ objectFit: 'contain' }}
               sizes="(max-width: 768px) 50vw, 25vw"
-              onLoad={(e) => {
-                const img = e.currentTarget as HTMLImageElement;
-                const ratio = img.naturalHeight / img.naturalWidth;
-                if (ratio > 1.3) setFit('contain');
-                else setFit('cover');
-              }}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-verde-oscuro/40 text-sm">
