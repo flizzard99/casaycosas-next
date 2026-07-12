@@ -60,7 +60,7 @@ export default async function CategoriaPage({ params }: { params: { categoria: s
 
         <CategoriaClient key={categoria} productos={productosCategoria} />
       </main>
-      <Footer categorias={todos} />
+      <Footer />
       <CartDrawer />
       <FloatWhatsApp />
     </>

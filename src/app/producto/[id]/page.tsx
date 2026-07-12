@@ -79,7 +79,7 @@ export default async function ProductoPage({ params }: { params: { id: string } 
       <main className="min-h-[60vh] bg-crema/40">
         <ProductDetailClient producto={producto} relacionados={relacionados} />
       </main>
-      <Footer categorias={categorias} />
+      <Footer />
       <CartDrawer />
       <FloatWhatsApp />
     </>

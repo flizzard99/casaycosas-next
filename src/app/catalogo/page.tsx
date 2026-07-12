@@ -42,7 +42,7 @@ export default async function CatalogoPage() {
         </div>
         <CatalogClient productosIniciales={productos} categoryOrder={categoryOrder} />
       </main>
-      <Footer categorias={categorias} />
+      <Footer />
       <CartDrawer />
       <FloatWhatsApp />
     </>

@@ -44,7 +44,7 @@ export default async function HomePage() {
         <FeaturedGrid productos={featured} titulo={featuredTitle} />
         <InfoLocalSection />
       </div>
-      <Footer categorias={categorias} />
+      <Footer />
       <CartDrawer />
       <FloatWhatsApp />
     </>
