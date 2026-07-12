@@ -1,6 +1,9 @@
 export default function Hero() {
   return (
-    <section className="bg-sage text-white text-center px-6 md:px-14 py-20 md:py-24 relative overflow-hidden">
+    <section
+      className="text-white text-center px-6 md:px-14 py-20 md:py-24 relative overflow-hidden"
+      style={{ backgroundColor: '#766153' }}
+    >
       <div className="absolute inset-0 opacity-10 pointer-events-none">
         <div className="absolute -top-10 -left-10 w-60 h-60 rounded-full bg-sage blur-3xl" />
         <div className="absolute -bottom-16 -right-10 w-72 h-72 rounded-full bg-verde-oscuro blur-3xl" />

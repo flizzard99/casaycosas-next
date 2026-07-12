@@ -37,14 +37,10 @@ export default function Header({ categorias = [] }: { categorias?: string[] }) {
         {/* Logo (izquierda) */}
         <Link href="/" className="flex items-center gap-3 z-10">
           <Image src="/logo.png" alt="Casa y Cosas" width={40} height={40} className="rounded-md" priority />
-          {/* Texto centrado en mobile, inline en desktop */}
-          <span className="hidden md:inline font-display text-white text-lg md:text-xl tracking-wide">
-            CASA Y COSAS
-          </span>
         </Link>
 
-        {/* Texto centrado en mobile */}
-        <span className="md:hidden font-display text-white text-lg tracking-wide absolute left-1/2 -translate-x-1/2 pointer-events-none">
+        {/* Texto centrado (mobile + desktop) */}
+        <span className="font-display text-white text-lg md:text-xl tracking-wide absolute left-1/2 -translate-x-1/2 pointer-events-none">
           CASA Y COSAS
         </span>
 
