@@ -9,8 +9,8 @@ export default function FeaturedGrid({ productos, titulo }: { productos: Product
       className="py-14 md:py-20"
       style={{
         backgroundImage: 'url(/patron-seamless.png)',
-        backgroundRepeat: 'repeat',
-        backgroundSize: '1500px 846px',
+        backgroundRepeat: 'repeat-x',
+        backgroundSize: 'auto 100%',
         backgroundPosition: 'top left'
       }}
     >

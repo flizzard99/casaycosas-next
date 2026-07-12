@@ -26,8 +26,8 @@ export default function InfoLocalSection() {
       className="pb-20 pt-6"
       style={{
         backgroundImage: 'url(/patron-seamless.png)',
-        backgroundRepeat: 'repeat',
-        backgroundSize: '1500px 846px',
+        backgroundRepeat: 'repeat-x',
+        backgroundSize: 'auto 100%',
         backgroundPosition: 'top left'
       }}
     >
