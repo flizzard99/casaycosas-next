@@ -17,7 +17,7 @@ export default function Hero() {
           src="/ovejafondo.png"
           alt=""
           aria-hidden="true"
-          className="max-w-[70%] max-h-[90%] w-auto h-auto object-contain"
+          className="max-w-[90%] max-h-[95%] w-auto h-auto object-contain"
         />
       </div>
       <div className="relative">

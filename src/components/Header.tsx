@@ -36,7 +36,7 @@ export default function Header({ categorias = [] }: { categorias?: string[] }) {
       <div className="flex items-center justify-between px-4 md:px-14 py-4 relative">
         {/* Logo (izquierda) */}
         <Link href="/" className="flex items-center gap-3 z-10">
-          <Image src="/logo.png" alt="Casa y Cosas" width={40} height={40} className="rounded-md" priority />
+          <Image src="/oveja-logo.png" alt="Casa y Cosas" width={40} height={40} className="rounded-md" priority />
         </Link>
 
         {/* Texto centrado (mobile + desktop) */}
