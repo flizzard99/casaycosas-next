@@ -26,9 +26,9 @@ export default function InfoLocalSection() {
       className="pb-20 pt-6"
       style={{
         backgroundImage: 'url(/patron.png)',
-        backgroundSize: 'cover',
-        backgroundRepeat: 'no-repeat',
-        backgroundPosition: 'center'
+        backgroundRepeat: 'repeat',
+        backgroundSize: '2259px 1356px',
+        backgroundPosition: 'top left'
       }}
     >
       <div className="px-6 md:px-14">
