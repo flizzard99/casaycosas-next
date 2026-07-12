@@ -5,6 +5,7 @@ import ProductForm from './ProductForm';
 import CategoryOrderEditor from './CategoryOrderEditor';
 import FeaturedEditor from './FeaturedEditor';
 import type { Producto, FeaturedConfig } from '@/lib/types';
+import { adminFetch } from '@/lib/adminFetch';
 
 const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 
@@ -48,7 +49,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   }, [productos, busqueda]);
 
   async function ajustarStock(id: number, delta: number) {
-    const res = await fetch(`/api/productos/${id}/stock`, {
+    const res = await adminFetch(`/api/productos/${id}/stock`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ delta })
@@ -60,7 +61,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   }
 
   async function toggleVisibilidad(id: number, visible: boolean) {
-    const res = await fetch(`/api/productos/${id}/visibility`, {
+    const res = await adminFetch(`/api/productos/${id}/visibility`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ visible: !visible })
@@ -73,12 +74,12 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
   async function eliminarProducto(id: number) {
     if (!confirm('¿Eliminar este producto? Esta acción no se puede deshacer.')) return;
-    const res = await fetch(`/api/productos/${id}`, { method: 'DELETE' });
+    const res = await adminFetch(`/api/productos/${id}`, { method: 'DELETE' });
     if (res.ok) setProductos((prev) => prev.filter((p) => p.id !== id));
   }
 
   async function handleLogout() {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await adminFetch('/api/auth/logout', { method: 'POST' });
     onLogout();
   }
 

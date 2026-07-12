@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { Producto, FeaturedConfig } from '@/lib/types';
+import { adminFetch } from '@/lib/adminFetch';
 
 type Props = {
   productos: Producto[];
@@ -60,7 +61,7 @@ export default function FeaturedEditor({ productos, featureConfigInicial, onGuar
     setOk(false);
     setGuardando(true);
     try {
-      const res = await fetch('/api/config', {
+      const res = await adminFetch('/api/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ featured: { productIds: seleccionados, title: titulo.trim() || 'Productos más vendidos' } })

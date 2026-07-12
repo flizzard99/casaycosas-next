@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { adminFetch } from '@/lib/adminFetch';
 
 export default function CategoryOrderEditor({
   categorias,
@@ -28,7 +29,7 @@ export default function CategoryOrderEditor({
     setGuardando(true);
     setError('');
     try {
-      const res = await fetch('/api/config', {
+      const res = await adminFetch('/api/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ categoryOrder: orden })

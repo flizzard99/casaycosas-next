@@ -3,18 +3,71 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { checkPassword, createSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
+import { Redis } from '@upstash/redis';
+import {
+  checkPassword,
+  createSessionToken,
+  createCsrfToken,
+  SESSION_COOKIE_NAME,
+  CSRF_COOKIE_NAME
+} from '@/lib/auth';
 
-// Limita intentos de login por IP (protección simple contra fuerza bruta)
-const intentos = new Map<string, { count: number; resetAt: number }>();
-const MAX_INTENTOS = 8;
-const VENTANA_MS = 10 * 60 * 1000;
+const MAX_INTENTOS = 5;
+const VENTANA_SEG = 15 * 60;
+
+function getRedis(): Redis | null {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return null;
+  return new Redis({ url, token });
+}
+
+async function checkRateLimit(ip: string): Promise<boolean> {
+  const redis = getRedis();
+  if (!redis) return true;
+  try {
+    const key = `rl:login:${ip}`;
+    const count = await redis.incr(key);
+    if (count === 1) await redis.expire(key, VENTANA_SEG);
+    return count <= MAX_INTENTOS;
+  } catch {
+    return true;
+  }
+}
+
+async function registerFailedAttempt(ip: string) {
+  const redis = getRedis();
+  if (!redis) return;
+  try {
+    const key = `rl:login:${ip}`;
+    await redis.incr(key);
+    await redis.expire(key, VENTANA_SEG);
+  } catch {
+    // no-op
+  }
+}
+
+async function clearAttempts(ip: string) {
+  const redis = getRedis();
+  if (!redis) return;
+  try {
+    await redis.del(`rl:login:${ip}`);
+  } catch {
+    // no-op
+  }
+}
+
+function getClientIp(req: NextRequest): string {
+  const forwarded = req.headers.get('x-forwarded-for');
+  if (forwarded) return forwarded.split(',')[0].trim();
+  return 'unknown';
+}
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get('x-forwarded-for') || 'unknown';
-  const ahora = Date.now();
-  const registro = intentos.get(ip);
-  if (registro && registro.resetAt > ahora && registro.count >= MAX_INTENTOS) {
+  const ip = getClientIp(req);
+
+  const permitido = await checkRateLimit(ip);
+  if (!permitido) {
     return NextResponse.json(
       { error: 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.' },
       { status: 429 }
@@ -27,19 +80,27 @@ export async function POST(req: NextRequest) {
 
   const { password } = await req.json();
   if (!password || !checkPassword(password)) {
-    const actual = registro && registro.resetAt > ahora ? registro.count + 1 : 1;
-    intentos.set(ip, { count: actual, resetAt: ahora + VENTANA_MS });
+    await registerFailedAttempt(ip);
     return NextResponse.json({ error: 'Contraseña incorrecta' }, { status: 401 });
   }
 
-  intentos.delete(ip);
+  await clearAttempts(ip);
   const token = createSessionToken();
-  cookies().set(SESSION_COOKIE_NAME, token, {
+  const csrf = createCsrfToken();
+  const cookieOpts = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: 'strict' as const,
     path: '/',
-    maxAge: 60 * 60 * 12 // 12 horas
+    maxAge: 60 * 60 * 12
+  };
+  cookies().set(SESSION_COOKIE_NAME, token, cookieOpts);
+  cookies().set(CSRF_COOKIE_NAME, csrf, {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict' as const,
+    path: '/',
+    maxAge: 60 * 60 * 12
   });
   return NextResponse.json({ ok: true });
 }

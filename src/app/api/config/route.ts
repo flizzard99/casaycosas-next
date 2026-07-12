@@ -6,6 +6,7 @@ import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { getConfig, saveConfig } from '@/lib/db';
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
+import { verifyCsrf } from '@/lib/csrf';
 
 export async function GET() {
   try {
@@ -19,7 +20,7 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   try {
     const token = cookies().get(SESSION_COOKIE_NAME)?.value;
-    if (!verifySessionToken(token)) {
+    if (!verifySessionToken(token) || !verifyCsrf(req)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 

@@ -12,15 +12,30 @@ function getClient() {
   return createClient(url, key);
 }
 
+const MIME_ALLOW = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+const EXT_BY_MIME: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif'
+};
+const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
+
 /** Sube una imagen en formato data URL (data:image/png;base64,...) y devuelve la URL pública */
 export async function subirImagen(dataUrl: string): Promise<string> {
   const supabase = getClient();
-  const match = dataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
+  const match = dataUrl.match(/^data:(image\/[\w.+-]+);base64,(.+)$/);
   if (!match) throw new Error('Formato de imagen inválido, se espera un data URL base64.');
 
-  const mime = match[1];
+  const mime = match[1].toLowerCase();
+  if (!MIME_ALLOW.has(mime)) {
+    throw new Error(`Tipo de imagen no permitido: ${mime}. Solo JPG, PNG, WebP y GIF.`);
+  }
   const buffer = Buffer.from(match[2], 'base64');
-  const ext = mime.split('/')[1] || 'jpg';
+  if (buffer.length > MAX_UPLOAD_BYTES) {
+    throw new Error('La imagen supera 4 MB.');
+  }
+  const ext = EXT_BY_MIME[mime];
   const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
   if (!bucketChecked) {

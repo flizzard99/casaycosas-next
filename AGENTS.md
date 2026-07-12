@@ -8,7 +8,11 @@ Tienda online para **Casa y Cosas** en Panguipulli, Chile. Vende artículos del 
 - **DB:** Supabase Postgres (tablas: `productos`, `config`)
 - **Imágenes:** Supabase Storage bucket `product-images`
 - **Deploy:** Vercel (`casaycosas-next.vercel.app`) — auto-deploy desde `main`
-- **Auth admin:** Cookie httpOnly firmada con HMAC (`SESSION_SECRET`), expira 12h
+- **Auth admin:** Cookie httpOnly firmada con HMAC (`SESSION_SECRET`), expira 12h. `SameSite=Strict` (anti-CSRF).
+- **CSRF:** Cookie `cyc_admin_csrf` (HMAC-signed, no httpOnly para que JS la lea) + header `X-CSRF-Token`. `src/lib/csrf.ts` valida server-side; `src/lib/adminFetch.ts` adjunta client-side. Toda mutación admin (POST/PUT/PATCH/DELETE) valida session + CSRF.
+- **Rate-limit login:** Upstash Redis (5 intentos / 15 min / IP). Sin env vars de Upstash → degrada a sin rate-limit (no rompe).
+- **Security headers:** `next.config.js` define CSP, HSTS, X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy.
+- **`limpiarImagenes` solo filtra prefijo `data:`** (no más por longitud ≥500 — URLs Supabase con token firmado largas eran descartadas).
 
 ## Modelo de datos clave
 - `productos`: id, name, description, category, image_url, instagram_url, price, stock, visible, images[], created_at
@@ -17,7 +21,9 @@ Tienda online para **Casa y Cosas** en Panguipulli, Chile. Vende artículos del 
 
 ## Arquitectura importante
 - **Todas las rutas API** tienen `export const runtime = 'nodejs'` y `export const dynamic = 'force-dynamic'` para evitar 405 en Vercel
-- `/producto/[id]` es dynamic (no ISR) para evitar FALLBACK_BODY_TOO_LARGE
+- `/producto/[id]` y `/catalogo/[categoria]` usan ISR (`revalidate = 60s`, `dynamicParams = true`) — pre-render estático en build + refresco incremental
+- `getProductosPublicos` ordena `created_at DESC` (productos nuevos primero)
+- El header del home usa `config.categoryOrder` (curado por admin), no orden de inserción
 - `src/lib/config.ts` exporta objeto `tienda` con fallbacks hardcoded (WhatsApp, Instagram, etc.)
 - `src/lib/db.ts` tiene `limpiarImagenes()` y `limpiarImageUrl()` que filtran base64
 - `ProductCard` auto-detecta ratio de imagen (`naturalHeight/naturalWidth > 1.3`) para elegir object-cover vs object-contain
@@ -58,6 +64,7 @@ Tienda online para **Casa y Cosas** en Panguipulli, Chile. Vende artículos del 
 Ver `.env.example` y `README.md` para tabla completa. Las más importantes:
 - `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`
 - `ADMIN_PASSWORD`, `SESSION_SECRET`
+- `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (rate-limit login; optional pero recomendado)
 - `NEXT_PUBLIC_SITE_URL`
 - Las `NEXT_PUBLIC_*` de contacto tienen fallbacks en `config.ts`
 

@@ -45,10 +45,30 @@ export function verifySessionToken(token: string | undefined | null): boolean {
 export function checkPassword(password: string): boolean {
   const adminPassword = process.env.ADMIN_PASSWORD;
   if (!adminPassword) return false;
-  const a = Buffer.from(password);
-  const b = Buffer.from(adminPassword);
-  if (a.length !== b.length) return false;
+  const a = createHmac('sha256', getSecret()).update(String(password)).digest();
+  const b = createHmac('sha256', getSecret()).update(String(adminPassword)).digest();
   return timingSafeEqual(a, b);
 }
+
+const CSRF_COOKIE = 'cyc_admin_csrf';
+
+export function createCsrfToken(): string {
+  const payload = `${Date.now()}.${Math.random().toString(36).slice(2, 10)}`;
+  const payloadB64 = Buffer.from(payload).toString('base64url');
+  const signature = sign(payloadB64);
+  return `${payloadB64}.${signature}`;
+}
+
+export function verifyCsrfToken(token: string | undefined | null): boolean {
+  if (!token) return false;
+  const [payloadB64, signature] = token.split('.');
+  if (!payloadB64 || !signature) return false;
+  const expected = sign(payloadB64);
+  const a = Buffer.from(signature);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+export const CSRF_COOKIE_NAME = CSRF_COOKIE;
 
 export const SESSION_COOKIE_NAME = SESSION_COOKIE;

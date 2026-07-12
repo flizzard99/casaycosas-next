@@ -6,6 +6,7 @@ import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { getProductoById, updateProducto, deleteProducto } from '@/lib/db';
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
+import { verifyCsrf } from '@/lib/csrf';
 
 function isAdminRequest() {
   const token = cookies().get(SESSION_COOKIE_NAME)?.value;
@@ -30,7 +31,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  if (!isAdminRequest()) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  if (!isAdminRequest() || !verifyCsrf(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   try {
     const body = await req.json();
     const errores = validarProducto(body);
@@ -47,8 +48,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  if (!isAdminRequest()) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  if (!isAdminRequest() || !verifyCsrf(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   try {
     const ok = await deleteProducto(parseInt(params.id, 10));
     if (!ok) return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });

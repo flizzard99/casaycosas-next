@@ -6,6 +6,7 @@ import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { getProductosPublicos, getProductosAdmin, createProducto } from '@/lib/db';
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
+import { verifyCsrf } from '@/lib/csrf';
 
 function isAdminRequest() {
   const token = cookies().get(SESSION_COOKIE_NAME)?.value;
@@ -23,11 +24,10 @@ function validarProducto(body: any): string[] {
 
 export async function GET() {
   try {
-    // El panel admin manda la cookie de sesión y ve todo (incluso ocultos)
     const admin = isAdminRequest();
     const productos = admin ? await getProductosAdmin() : await getProductosPublicos();
     return NextResponse.json(productos, {
-      headers: admin ? {} : { 'Cache-Control': 'public, max-age=60, s-maxage=120' }
+      headers: { 'Cache-Control': 'no-store' }
     });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Error desconocido' }, { status: 500 });
@@ -35,7 +35,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  if (!isAdminRequest()) {
+  if (!isAdminRequest() || !verifyCsrf(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
   try {
