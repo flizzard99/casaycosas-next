@@ -20,6 +20,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
     const producto = await ajustarStock(parseInt(params.id, 10), delta);
     if (!producto) return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
+    revalidatePath('/', 'layout');
+    revalidatePath('/catalogo');
     revalidatePath(`/producto/${params.id}`, 'page');
     return NextResponse.json(producto);
   } catch (e: any) {

@@ -36,8 +36,8 @@ export const metadata: Metadata = {
     images: ['/logo.png']
   },
   icons: {
-    icon: '/logo.png',
-    apple: '/logo.png'
+    icon: '/oveja-logo.png',
+    apple: '/oveja-logo.png'
   },
   robots: { index: true, follow: true }
 };
