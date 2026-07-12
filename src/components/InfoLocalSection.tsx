@@ -25,9 +25,9 @@ export default function InfoLocalSection() {
       id="contacto"
       className="pb-20 pt-6"
       style={{
-        backgroundImage: 'url(/patron.png)',
+        backgroundImage: 'url(/patron-seamless.png)',
         backgroundRepeat: 'repeat',
-        backgroundSize: '2259px 1356px',
+        backgroundSize: '1500px 846px',
         backgroundPosition: 'top left'
       }}
     >
