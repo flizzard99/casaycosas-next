@@ -30,8 +30,17 @@ export default async function HomePage() {
     <>
       <Header categorias={categorias} />
       <Hero />
-      <FeaturedGrid productos={featured} titulo={featuredTitle} />
-      <InfoLocalSection />
+      <div
+        style={{
+          backgroundImage: 'url(/patron-seamless.png)',
+          backgroundSize: 'cover',
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'center'
+        }}
+      >
+        <FeaturedGrid productos={featured} titulo={featuredTitle} />
+        <InfoLocalSection />
+      </div>
       <Footer />
       <CartDrawer />
       <FloatWhatsApp />

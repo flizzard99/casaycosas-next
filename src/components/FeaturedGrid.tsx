@@ -5,15 +5,7 @@ export default function FeaturedGrid({ productos, titulo }: { productos: Product
   if (!productos.length) return null;
 
   return (
-    <section
-      className="py-14 md:py-20"
-      style={{
-        backgroundImage: 'url(/patron-seamless.png)',
-        backgroundRepeat: 'repeat-x',
-        backgroundSize: 'auto 100%',
-        backgroundPosition: 'top left'
-      }}
-    >
+    <section className="py-14 md:py-20">
       <div className="px-6 md:px-14">
         <h2 className="font-display text-2xl md:text-3xl text-verde-oscuro mb-8 text-center">{titulo}</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-5 max-w-5xl mx-auto">

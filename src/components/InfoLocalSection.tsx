@@ -21,16 +21,7 @@ export default function InfoLocalSection() {
   ];
 
   return (
-    <section
-      id="contacto"
-      className="pb-20 pt-6"
-      style={{
-        backgroundImage: 'url(/patron-seamless.png)',
-        backgroundRepeat: 'repeat-x',
-        backgroundSize: 'auto 100%',
-        backgroundPosition: 'top left'
-      }}
-    >
+    <section id="contacto" className="pb-20 pt-6">
       <div className="px-6 md:px-14">
         <div className="flex flex-wrap gap-10 justify-center items-center max-w-4xl mx-auto">
           {/* Mapa a la izquierda */}
