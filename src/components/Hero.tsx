@@ -1,7 +1,7 @@
 export default function Hero() {
   return (
     <section
-      className="text-white text-center px-6 md:px-14 py-20 md:py-24 relative overflow-hidden"
+      className="text-white text-center px-6 md:px-14 py-14 md:py-16 relative overflow-hidden"
       style={{ backgroundColor: '#766153' }}
     >
       <div className="absolute inset-0 opacity-10 pointer-events-none">
@@ -31,12 +31,6 @@ export default function Hero() {
           Un catálogo armado para recorrer con calma. Agrega tus artículos al carrito, selecciona el
           canal de comunicación y coordinamos tu pedido.
         </p>
-        <a
-          href="/catalogo"
-          className="inline-block mt-8 px-6 py-3 rounded-md bg-white text-verde-oscuro text-sm font-semibold uppercase tracking-wide hover:bg-crema transition-colors"
-        >
-          Ver catálogo
-        </a>
       </div>
     </section>
   );

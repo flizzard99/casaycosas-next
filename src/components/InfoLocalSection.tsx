@@ -65,14 +65,6 @@ export default function InfoLocalSection() {
                 </a>
               ))}
             </div>
-            <a
-              href={tienda.whatsappCatalogUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block px-6 py-3 rounded-md bg-verde-noche text-white text-sm font-semibold hover:bg-verde-oscuro transition-colors"
-            >
-              Ver catálogo completo en WhatsApp
-            </a>
           </div>
         </div>
       </div>

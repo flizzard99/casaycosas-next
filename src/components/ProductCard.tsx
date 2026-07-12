@@ -58,12 +58,11 @@ export default function ProductCard({ producto }: { producto: Producto }) {
       <div className="p-4 flex flex-col flex-1">
         <Link href={`/producto/${producto.id}`}>
           <div className="text-[11px] uppercase tracking-wide text-sage font-semibold">{producto.category}</div>
-          <h3 className="text-sm font-semibold mt-1 text-verde-noche hover:text-verde transition-colors">{producto.name}</h3>
+          <h3 className="text-sm font-semibold mt-1 text-verde-noche hover:text-verde transition-colors line-clamp-2 min-h-[2.5rem]">{producto.name}</h3>
         </Link>
         <p className="text-sm text-verde font-semibold mt-1.5">{formatoCLP.format(producto.price)}</p>
-        <div className="mt-auto">
-          {!sinStock && (
-            <div className="flex items-center justify-center gap-2 mt-3">
+        {!sinStock && (
+          <div className="flex items-center justify-center gap-2 mt-3">
               <button
                 onClick={() => setQty((q) => Math.max(1, q - 1))}
                 className="w-7 h-7 rounded border border-verde-noche/20 text-sm font-medium hover:bg-crema transition-colors"
@@ -90,7 +89,6 @@ export default function ProductCard({ producto }: { producto: Producto }) {
           >
             {sinStock ? 'Sin stock' : 'Agregar al carrito'}
           </button>
-        </div>
       </div>
     </div>
   );
