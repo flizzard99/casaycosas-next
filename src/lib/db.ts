@@ -78,7 +78,7 @@ export async function ensureSchema() {
 }
 
 /** Filtra imágenes que son data URLs base64 (inflan el HTML/ISR) o strings inválidos */
-function limpiarImagenes(images: any[]): string[] {
+function limpiarImagenes(images: (string | null | undefined)[]): string[] {
   if (!Array.isArray(images)) return [];
   return images
     .filter((img): img is string => typeof img === 'string' && img.length > 0)
@@ -92,20 +92,21 @@ function limpiarImageUrl(url: string | undefined | null): string {
   return url;
 }
 
-function formatProducto(row: any): Producto {
-  const images = limpiarImagenes(row.images);
+function formatProducto(row: Record<string, unknown>): Producto {
+  const images = limpiarImagenes(row.images as (string | null | undefined)[]);
   return {
-    id: row.id,
-    name: row.name,
-    description: row.description || '',
-    category: row.category,
-    image_url: limpiarImageUrl(row.image_url) || images[0] || '',
-    instagram_url: row.instagram_url || '',
+    id: row.id as number,
+    name: row.name as string,
+    description: (row.description as string) || '',
+    category: row.category as string,
+    image_url: limpiarImageUrl(row.image_url as string) || images[0] || '',
+    instagram_url: (row.instagram_url as string) || '',
     visible: row.visible !== false,
-    price: row.price || 0,
-    stock: row.stock || 0,
+    price: (row.price as number) || 0,
+    stock: (row.stock as number) || 0,
     images,
-    created_at: row.created_at
+    created_at: row.created_at as string,
+    updated_at: row.updated_at as string | undefined
   };
 }
 

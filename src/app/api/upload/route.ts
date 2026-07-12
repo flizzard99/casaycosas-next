@@ -29,7 +29,8 @@ export async function POST(req: NextRequest) {
     }
     const url = await subirImagen(image);
     return NextResponse.json({ url });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Error al subir la imagen' }, { status: 500 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Error al subir la imagen';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

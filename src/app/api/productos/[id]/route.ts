@@ -13,10 +13,10 @@ function isAdminRequest() {
   return verifySessionToken(token);
 }
 
-function validarProducto(body: any): string[] {
+function validarProducto(body: Record<string, unknown>): string[] {
   const errores: string[] = [];
-  if (!body.name || !body.name.trim()) errores.push('El nombre es obligatorio');
-  if (!body.category || !body.category.trim()) errores.push('La categoría es obligatoria');
+  if (!body.name || !(body.name as string).trim()) errores.push('El nombre es obligatorio');
+  if (!body.category || !(body.category as string).trim()) errores.push('La categoría es obligatoria');
   return errores;
 }
 
@@ -25,8 +25,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     const producto = await getProductoById(parseInt(params.id, 10));
     if (!producto) return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
     return NextResponse.json(producto);
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Error desconocido' }, { status: 500 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Error desconocido';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -43,8 +44,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     revalidatePath('/catalogo');
     revalidatePath(`/producto/${params.id}`, 'page');
     return NextResponse.json(producto);
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Error desconocido' }, { status: 500 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Error desconocido';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -58,7 +60,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     revalidatePath(`/producto/${params.id}`, 'page');
     revalidatePath('/sitemap.xml');
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Error desconocido' }, { status: 500 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Error desconocido';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

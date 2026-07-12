@@ -42,8 +42,9 @@ export default function ProductForm({ producto, categorias, onGuardado, onCancel
       if (!res.ok) throw new Error(data.error || 'Error al subir la imagen');
 
       setImagenes((prev) => [...prev, data.url]);
-    } catch (err: any) {
-      setError(err.message || 'Error al subir la imagen');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al subir la imagen';
+      setError(message);
     } finally {
       setSubiendo(false);
       e.target.value = '';
@@ -84,8 +85,9 @@ export default function ProductForm({ producto, categorias, onGuardado, onCancel
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al guardar el producto');
       onGuardado();
-    } catch (err: any) {
-      setError(err.message || 'Error al guardar el producto');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al guardar el producto';
+      setError(message);
     } finally {
       setGuardando(false);
     }

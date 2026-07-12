@@ -22,7 +22,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (!producto) return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
     revalidatePath(`/producto/${params.id}`, 'page');
     return NextResponse.json(producto);
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Error desconocido' }, { status: 500 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Error al agregar imágenes';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

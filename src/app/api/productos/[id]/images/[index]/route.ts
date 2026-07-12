@@ -20,7 +20,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     if (!producto) return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
     revalidatePath(`/producto/${params.id}`, 'page');
     return NextResponse.json(producto);
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Error desconocido' }, { status: 500 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Error al eliminar imagen';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -13,12 +13,12 @@ function isAdminRequest() {
   return verifySessionToken(token);
 }
 
-function validarProducto(body: any): string[] {
+function validarProducto(body: Record<string, unknown>): string[] {
   const errores: string[] = [];
-  if (!body.name || !body.name.trim()) errores.push('El nombre es obligatorio');
-  if (!body.category || !body.category.trim()) errores.push('La categoría es obligatoria');
-  if (body.name && body.name.length > 200) errores.push('El nombre no puede superar 200 caracteres');
-  if (body.description && body.description.length > 2000) errores.push('La descripción no puede superar 2000 caracteres');
+  if (!body.name || !(body.name as string).trim()) errores.push('El nombre es obligatorio');
+  if (!body.category || !(body.category as string).trim()) errores.push('La categoría es obligatoria');
+  if (body.name && (body.name as string).length > 200) errores.push('El nombre no puede superar 200 caracteres');
+  if (body.description && (body.description as string).length > 2000) errores.push('La descripción no puede superar 2000 caracteres');
   return errores;
 }
 
@@ -29,8 +29,9 @@ export async function GET() {
     return NextResponse.json(productos, {
       headers: { 'Cache-Control': 'no-store' }
     });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Error desconocido' }, { status: 500 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Error desconocido';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -48,7 +49,8 @@ export async function POST(req: NextRequest) {
     revalidatePath('/catalogo');
     revalidatePath('/sitemap.xml');
     return NextResponse.json(producto, { status: 201 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Error desconocido' }, { status: 500 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Error desconocido';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

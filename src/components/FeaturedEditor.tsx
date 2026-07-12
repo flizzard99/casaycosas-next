@@ -79,8 +79,9 @@ export default function FeaturedEditor({ productos, featureConfigInicial, onGuar
       }
       setOk(true);
       onGuardado({ productIds: seleccionados, title: titulo.trim() || 'Productos más vendidos' });
-    } catch (err: any) {
-      setError(err.message || 'Error al guardar');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al guardar';
+      setError(message);
     } finally {
       setGuardando(false);
     }

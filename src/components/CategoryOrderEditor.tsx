@@ -45,8 +45,9 @@ export default function CategoryOrderEditor({
         throw new Error(msg);
       }
       onGuardado(orden);
-    } catch (err: any) {
-      setError(err.message || 'Error de conexión');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error de conexión';
+      setError(message);
     } finally {
       setGuardando(false);
     }

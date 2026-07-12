@@ -24,7 +24,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     revalidatePath('/catalogo');
     revalidatePath(`/producto/${params.id}`, 'page');
     return NextResponse.json(producto);
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Error desconocido' }, { status: 500 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Error al ajustar stock';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
