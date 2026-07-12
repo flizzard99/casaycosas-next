@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useCart } from '@/context/CartContext';
 import { tienda } from '@/lib/config';
 
@@ -11,6 +11,36 @@ export default function CartDrawer() {
   const { items, isOpen, close, updateQty, removeItem, total, clear } = useCart();
   const [copiado, setCopiado] = useState(false);
   const [nombre, setNombre] = useState('');
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      close();
+      return;
+    }
+    if (e.key !== 'Tab' || !drawerRef.current) return;
+    const focusable = drawerRef.current.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }, [close]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    closeBtnRef.current?.focus();
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, handleKeyDown]);
 
   function construirMensaje(): string {
     const lineas = items.map((i) => `• ${i.qty}x ${i.name} — ${formatoCLP.format(i.price * i.qty)}`);
@@ -45,11 +75,17 @@ export default function CartDrawer() {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-black/40" onClick={close} />
-      <div className="relative w-full max-w-sm bg-white h-full flex flex-col shadow-xl">
+      <div className="absolute inset-0 bg-black/40" onClick={close} aria-hidden="true" />
+      <div
+        ref={drawerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Carrito de compras"
+        className="relative w-full max-w-sm bg-white h-full flex flex-col shadow-xl"
+      >
         <div className="flex items-center justify-between px-5 py-4 border-b border-verde-noche/10">
           <h2 className="font-display text-lg text-verde-noche">Tu carrito</h2>
-          <button onClick={close} className="text-verde-noche/60 hover:text-verde-noche text-xl leading-none">
+          <button ref={closeBtnRef} onClick={close} aria-label="Cerrar carrito" className="text-verde-noche/60 hover:text-verde-noche text-xl leading-none">
             ×
           </button>
         </div>
@@ -72,14 +108,16 @@ export default function CartDrawer() {
                   <div className="flex items-center gap-2 mt-1">
                     <button
                       onClick={() => updateQty(item.id, item.qty - 1)}
+                      aria-label={`Reducir ${item.name}`}
                       className="w-6 h-6 rounded border border-verde-noche/20 text-sm"
                     >
                       −
                     </button>
-                    <span className="text-sm w-5 text-center">{item.qty}</span>
+                    <span className="text-sm w-5 text-center" aria-live="polite">{item.qty}</span>
                     <button
                       onClick={() => updateQty(item.id, item.qty + 1)}
                       disabled={atMax}
+                      aria-label={`Aumentar ${item.name}`}
                       className="w-6 h-6 rounded border border-verde-noche/20 text-sm disabled:opacity-30"
                     >
                       +

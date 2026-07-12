@@ -57,12 +57,23 @@ export default function Header({ categorias = [] }: { categorias?: string[] }) {
             >
               <button
                 onClick={() => setCatAbierto((v) => !v)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') setCatAbierto(false);
+                }}
+                aria-expanded={catAbierto}
+                aria-haspopup="menu"
                 className="text-white text-xs md:text-sm uppercase tracking-wide opacity-95 hover:opacity-100"
               >
                 Categorías ▾
               </button>
               {catAbierto && (
-                <div className="absolute left-0 top-full bg-white rounded-md shadow-xl py-2 min-w-[200px] border border-verde-noche/10">
+                <div
+                  role="menu"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setCatAbierto(false);
+                  }}
+                  className="absolute left-0 top-full bg-white rounded-md shadow-xl py-2 min-w-[200px] border border-verde-noche/10"
+                >
                   <Link
                     href="/catalogo"
                     className="block px-4 py-1.5 text-sm text-verde-noche hover:bg-crema font-semibold"

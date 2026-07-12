@@ -27,13 +27,13 @@ export const metadata: Metadata = {
     title: 'Casa y Cosas — Panguipulli',
     description:
       'Detalles especiales para Ti y para tu Hogar. Catálogo online, retiro en tienda y pedidos por WhatsApp.',
-    images: [{ url: '/logo.png', width: 400, height: 400, alt: 'Casa y Cosas' }]
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Casa y Cosas — Panguipulli' }]
   },
   twitter: {
-    card: 'summary',
+    card: 'summary_large_image',
     title: 'Casa y Cosas — Panguipulli',
     description: 'Tienda de hogar, mate, artesanías y más en Panguipulli.',
-    images: ['/logo.png']
+    images: ['/og-image.png']
   },
   icons: {
     icon: '/oveja-logo.png',
@@ -51,9 +51,10 @@ const localBusinessJsonLd = {
   '@type': 'Store',
   name: 'Casa y Cosas',
   description: 'Tienda de hogar, mate, artesanías, perfumes y más en Panguipulli, Región de Los Ríos.',
-  image: `${siteUrl}/logo.png`,
+  image: [`${siteUrl}/og-image.png`],
   url: siteUrl,
   telephone: '+56992139709',
+  priceRange: '$$',
   address: {
     '@type': 'PostalAddress',
     streetAddress: 'Martínez de Rosas 498, Local C',
@@ -61,6 +62,19 @@ const localBusinessJsonLd = {
     addressRegion: 'Los Ríos',
     addressCountry: 'CL'
   },
+  geo: {
+    '@type': 'GeoCoordinates',
+    latitude: -39.6476,
+    longitude: -72.4717
+  },
+  openingHoursSpecification: [
+    {
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+      opens: '10:00',
+      closes: '20:00'
+    }
+  ],
   hasMap: 'https://maps.app.goo.gl/t4b9KeWEd7U4MDPc6',
   sameAs: [
     'https://www.instagram.com/casaycosas.panguipulli/',

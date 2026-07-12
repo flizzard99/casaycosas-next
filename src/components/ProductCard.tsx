@@ -58,14 +58,16 @@ export default function ProductCard({ producto }: { producto: Producto }) {
           <div className="flex items-center justify-center gap-2 mt-3">
               <button
                 onClick={() => setQty((q) => Math.max(1, q - 1))}
+                aria-label="Reducir cantidad"
                 className="w-7 h-7 rounded border border-verde-noche/20 text-sm font-medium hover:bg-crema transition-colors"
               >
                 −
               </button>
-              <span className="text-sm w-5 text-center font-medium">{qty}</span>
+              <span className="text-sm w-5 text-center font-medium" aria-live="polite">{qty}</span>
               <button
                 onClick={() => setQty((q) => Math.min(maxQty, q + 1))}
                 disabled={qty >= maxQty}
+                aria-label="Aumentar cantidad"
                 className="w-7 h-7 rounded border border-verde-noche/20 text-sm font-medium hover:bg-crema transition-colors disabled:opacity-30"
               >
                 +

@@ -7,7 +7,7 @@ import { subirImagen } from '@/lib/supabaseStorage';
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 import { verifyCsrf } from '@/lib/csrf';
 
-const MAX_DATA_URL_BYTES = 6 * 1024 * 1024;
+const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
   const token = cookies().get(SESSION_COOKIE_NAME)?.value;
@@ -20,8 +20,13 @@ export async function POST(req: NextRequest) {
     if (typeof image !== 'string' || !image.startsWith('data:image/')) {
       return NextResponse.json({ error: 'Falta la imagen o el formato es inválido' }, { status: 400 });
     }
-    if (Buffer.byteLength(image) > MAX_DATA_URL_BYTES) {
-      return NextResponse.json({ error: 'La imagen supera el tamaño máximo permitido (4.5 MB)' }, { status: 413 });
+    const base64Data = image.split(',')[1];
+    if (!base64Data) {
+      return NextResponse.json({ error: 'Formato data URL inválido' }, { status: 400 });
+    }
+    const buffer = Buffer.from(base64Data, 'base64');
+    if (buffer.length > MAX_UPLOAD_BYTES) {
+      return NextResponse.json({ error: 'La imagen supera el tamaño máximo permitido (4 MB)' }, { status: 413 });
     }
     const url = await subirImagen(image);
     return NextResponse.json({ url });
