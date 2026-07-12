@@ -10,10 +10,12 @@ const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency:
 export default function CartDrawer() {
   const { items, isOpen, close, updateQty, removeItem, total, clear } = useCart();
   const [copiado, setCopiado] = useState(false);
+  const [nombre, setNombre] = useState('');
 
   function construirMensaje(): string {
     const lineas = items.map((i) => `• ${i.qty}x ${i.name} — ${formatoCLP.format(i.price * i.qty)}`);
-    return ['Hola! Quisiera hacer este pedido:', '', ...lineas, '', `Total: ${formatoCLP.format(total)}`].join('\n');
+    const saludo = nombre.trim() ? `Hola! Soy ${nombre.trim()}, quisiera reservar este pedido para retiro en tienda:` : 'Hola! Quisiera reservar este pedido para retiro en tienda:';
+    return [saludo, '', ...lineas, '', `Total: ${formatoCLP.format(total)}`].join('\n');
   }
 
   function enviarPorWhatsapp() {
@@ -98,12 +100,23 @@ export default function CartDrawer() {
             <span className="font-semibold text-verde-noche">{formatoCLP.format(total)}</span>
           </div>
 
+          {items.length > 0 && (
+            <input
+              type="text"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              placeholder="Tu nombre (opcional)"
+              className="w-full mb-3 px-3 py-2 rounded-md border border-verde-noche/20 bg-crema/30 text-sm focus:outline-none focus:ring-2 focus:ring-verde"
+              maxLength={50}
+            />
+          )}
+
           <button
             onClick={enviarPorWhatsapp}
             disabled={!items.length}
             className="w-full bg-verde text-white text-sm font-semibold py-3 rounded-md hover:bg-verde-oscuro disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
-            Coordinar pedido por WhatsApp
+            Reservar pedido por WhatsApp
           </button>
           <button
             onClick={copiarParaInstagram}

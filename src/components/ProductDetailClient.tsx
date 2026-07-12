@@ -1,14 +1,16 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import ProductCarousel from './ProductCarousel';
+import ProductCard from './ProductCard';
 import type { Producto } from '@/lib/types';
 import { tienda } from '@/lib/config';
 
 const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 
-export default function ProductDetailClient({ producto }: { producto: Producto }) {
+export default function ProductDetailClient({ producto, relacionados = [] }: { producto: Producto; relacionados?: Producto[] }) {
   const { addItem } = useCart();
   const sinStock = producto.stock <= 0;
   const imagenes = producto.images?.length ? producto.images : producto.image_url ? [producto.image_url] : [];
@@ -16,9 +18,14 @@ export default function ProductDetailClient({ producto }: { producto: Producto }
   const [qty, setQty] = useState(1);
   const maxQty = producto.stock || 1;
 
+  function comprarAhora() {
+    const msg = `Hola! Quisiera reservar: ${qty}x ${producto.name} — ${formatoCLP.format(producto.price * qty)} (retiro en tienda)`;
+    window.open(`https://wa.me/${tienda.whatsappNumber}?text=${encodeURIComponent(msg)}`, '_blank');
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-6 md:px-0 py-8">
-      <a href="/" className="text-sm text-verde hover:text-verde-oscuro mb-6 inline-block">
+      <a href="/catalogo" className="text-sm text-verde hover:text-verde-oscuro mb-6 inline-block">
         ← Volver al catálogo
       </a>
 
@@ -66,22 +73,32 @@ export default function ProductDetailClient({ producto }: { producto: Producto }
             </div>
           )}
 
-          <button
-            disabled={sinStock}
-            onClick={() => {
-              addItem({
-                id: producto.id,
-                name: producto.name,
-                price: producto.price,
-                image_url: imagenes[0] || '',
-                stock: producto.stock
-              }, qty);
-              setQty(1);
-            }}
-            className="mt-4 w-full md:w-auto px-8 py-3 rounded-md bg-verde text-white text-sm font-semibold uppercase tracking-wide hover:bg-verde-oscuro transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-          >
-            {sinStock ? 'Sin stock' : 'Agregar al carrito'}
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3 mt-4">
+            <button
+              disabled={sinStock}
+              onClick={() => {
+                addItem({
+                  id: producto.id,
+                  name: producto.name,
+                  price: producto.price,
+                  image_url: imagenes[0] || '',
+                  stock: producto.stock
+                }, qty);
+                setQty(1);
+              }}
+              className="flex-1 px-6 py-3 rounded-md bg-verde text-white text-sm font-semibold uppercase tracking-wide hover:bg-verde-oscuro transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+            >
+              {sinStock ? 'Sin stock' : 'Agregar al carrito'}
+            </button>
+            {!sinStock && (
+              <button
+                onClick={comprarAhora}
+                className="flex-1 px-6 py-3 rounded-md bg-verde-noche text-white text-sm font-semibold uppercase tracking-wide hover:bg-verde-oscuro transition-colors"
+              >
+                Comprar ahora
+              </button>
+            )}
+          </div>
 
           {producto.instagram_url && (
             <a
@@ -104,6 +121,17 @@ export default function ProductDetailClient({ producto }: { producto: Producto }
           </div>
         </div>
       </div>
+
+      {relacionados.length > 0 && (
+        <div className="mt-16">
+          <h2 className="font-display text-2xl text-verde-oscuro mb-6">Te puede interesar</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+            {relacionados.map((p) => (
+              <ProductCard key={p.id} producto={p} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { revalidatePath } from 'next/cache';
 import { getProductoById, updateProducto, deleteProducto } from '@/lib/db';
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 
@@ -37,6 +38,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     const producto = await updateProducto(parseInt(params.id, 10), body);
     if (!producto) return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
+    revalidatePath('/', 'layout');
+    revalidatePath('/catalogo');
+    revalidatePath(`/producto/${params.id}`, 'page');
     return NextResponse.json(producto);
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Error desconocido' }, { status: 500 });
@@ -48,6 +52,10 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   try {
     const ok = await deleteProducto(parseInt(params.id, 10));
     if (!ok) return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
+    revalidatePath('/', 'layout');
+    revalidatePath('/catalogo');
+    revalidatePath(`/producto/${params.id}`, 'page');
+    revalidatePath('/sitemap.xml');
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Error desconocido' }, { status: 500 });

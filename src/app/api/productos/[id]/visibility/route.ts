@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { revalidatePath } from 'next/cache';
 import { setVisibilidad } from '@/lib/db';
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 
@@ -18,6 +19,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
     const producto = await setVisibilidad(parseInt(params.id, 10), visible);
     if (!producto) return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
+    revalidatePath('/', 'layout');
+    revalidatePath('/catalogo');
+    revalidatePath(`/producto/${params.id}`, 'page');
     return NextResponse.json(producto);
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Error desconocido' }, { status: 500 });

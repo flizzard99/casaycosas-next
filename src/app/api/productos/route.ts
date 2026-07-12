@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { revalidatePath } from 'next/cache';
 import { getProductosPublicos, getProductosAdmin, createProducto } from '@/lib/db';
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 
@@ -43,6 +44,9 @@ export async function POST(req: NextRequest) {
     if (errores.length) return NextResponse.json({ error: errores.join('. ') }, { status: 400 });
 
     const producto = await createProducto(body);
+    revalidatePath('/', 'layout');
+    revalidatePath('/catalogo');
+    revalidatePath('/sitemap.xml');
     return NextResponse.json(producto, { status: 201 });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Error desconocido' }, { status: 500 });
