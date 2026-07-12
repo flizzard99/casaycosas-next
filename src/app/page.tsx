@@ -21,7 +21,10 @@ export default async function HomePage() {
     ]);
     featured = feat;
     featuredTitle = config.featured.title || 'Productos más vendidos';
-    categorias = Array.from(new Set(productos.map((p) => p.category)));
+    const set = new Set(productos.map((p) => p.category));
+    const enOrden = config.categoryOrder.filter((c) => set.has(c));
+    const resto = [...set].filter((c) => !config.categoryOrder.includes(c)).sort();
+    categorias = [...enOrden, ...resto];
   } catch {
     // Sin DB disponible
   }

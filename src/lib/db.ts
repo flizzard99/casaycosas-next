@@ -61,13 +61,12 @@ function limpiarImagenes(images: any[]): string[] {
   return images
     .filter((img): img is string => typeof img === 'string' && img.length > 0)
     .filter((img) => !img.startsWith('data:'))
-    .filter((img) => img.length < 500)
     .slice(0, 20);
 }
 
 function limpiarImageUrl(url: string | undefined | null): string {
   if (!url || typeof url !== 'string') return '';
-  if (url.startsWith('data:') || url.length >= 500) return '';
+  if (url.startsWith('data:')) return '';
   return url;
 }
 
@@ -94,7 +93,7 @@ export async function getProductosPublicos(): Promise<Producto[]> {
   const pool = getPool();
   const result = await pool.query(
     `SELECT id, name, description, category, image_url, instagram_url, price, stock, visible, created_at, images[1:1] AS images
-     FROM productos WHERE visible = TRUE ORDER BY created_at ASC`
+     FROM productos WHERE visible = TRUE ORDER BY created_at DESC`
   );
   return result.rows.map(formatProducto);
 }
@@ -142,18 +141,20 @@ export async function createProducto(data: ProductoInput): Promise<Producto> {
 export async function updateProducto(id: number, data: ProductoInput): Promise<Producto | null> {
   await ensureSchema();
   const pool = getPool();
+  const images = data.images && data.images.length ? data.images : data.image_url ? [data.image_url] : [];
   const result = await pool.query(
-    `UPDATE productos SET name = $1, description = $2, category = $3, image_url = $4, instagram_url = $5, price = $7, stock = $8
+    `UPDATE productos SET name = $1, description = $2, category = $3, image_url = $4, instagram_url = $5, price = $7, stock = $8, images = $9
      WHERE id = $6 RETURNING *`,
     [
       data.name,
       data.description || '',
       data.category,
-      data.image_url || '',
+      data.image_url || images[0] || '',
       data.instagram_url || '',
       id,
       data.price || 0,
-      data.stock || 0
+      data.stock || 0,
+      images
     ]
   );
   return result.rows.length ? formatProducto(result.rows[0]) : null;

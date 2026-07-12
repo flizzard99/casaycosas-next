@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { fileToDataUrl } from '@/lib/fileToDataUrl';
 import type { Producto } from '@/lib/types';
+import { adminFetch } from '@/lib/adminFetch';
 
 type Props = {
   producto?: Producto | null;
@@ -32,7 +33,7 @@ export default function ProductForm({ producto, categorias, onGuardado, onCancel
     setError('');
     try {
       const dataUrl = await fileToDataUrl(archivo);
-      const res = await fetch('/api/upload', {
+      const res = await adminFetch('/api/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: dataUrl })
@@ -40,15 +41,6 @@ export default function ProductForm({ producto, categorias, onGuardado, onCancel
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al subir la imagen');
 
-      if (esEdicion && producto) {
-        // Guardamos de inmediato en el producto existente
-        const resImg = await fetch(`/api/productos/${producto.id}/images`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ images: [data.url] })
-        });
-        if (!resImg.ok) throw new Error('Error al asociar la imagen al producto');
-      }
       setImagenes((prev) => [...prev, data.url]);
     } catch (err: any) {
       setError(err.message || 'Error al subir la imagen');
@@ -59,13 +51,6 @@ export default function ProductForm({ producto, categorias, onGuardado, onCancel
   }
 
   async function handleQuitarImagen(index: number) {
-    if (esEdicion && producto) {
-      try {
-        await fetch(`/api/productos/${producto.id}/images/${index}`, { method: 'DELETE' });
-      } catch {
-        // si falla la sincronización con el servidor, igual la quitamos de la vista
-      }
-    }
     setImagenes((prev) => prev.filter((_, i) => i !== index));
   }
 
@@ -91,7 +76,7 @@ export default function ProductForm({ producto, categorias, onGuardado, onCancel
       };
       const url = esEdicion ? `/api/productos/${producto!.id}` : '/api/productos';
       const method = esEdicion ? 'PUT' : 'POST';
-      const res = await fetch(url, {
+      const res = await adminFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
