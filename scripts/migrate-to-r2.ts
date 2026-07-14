@@ -8,13 +8,12 @@
  *   npx tsx scripts/migrate-to-r2.ts --run
  *   npx tsx scripts/migrate-to-r2.ts              (dry-run por defecto)
  *
- * Requiere: DATABASE_URL, SUPABASE_URL, SUPABASE_SERVICE_KEY,
+ * Requiere: DATABASE_URL, SUPABASE_URL,
  *           R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY,
  *           R2_BUCKET_NAME, R2_PUBLIC_URL
  */
 
 import { Pool } from 'pg';
-import { createClient } from '@supabase/supabase-js';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { S3Client } from '@aws-sdk/client-s3';
 import { readFileSync } from 'fs';
@@ -44,13 +43,6 @@ function loadEnv() {
   }
 }
 
-function getSupabaseClient() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key) throw new Error('SUPABASE_URL / SUPABASE_SERVICE_KEY no configuradas');
-  return createClient(url, key);
-}
-
 function getR2Client(): S3Client {
   const accountId = process.env.R2_ACCOUNT_ID;
   const accessKeyId = process.env.R2_ACCESS_KEY_ID;
@@ -70,12 +62,20 @@ function extractStoragePath(url: string): string | null {
   return match ? match[1] : null;
 }
 
+async function downloadFromSupabase(publicUrl: string): Promise<{ buffer: Buffer; contentType: string }> {
+  const res = await fetch(publicUrl);
+  if (!res.ok) throw new Error(`HTTP ${res.status} descargando ${publicUrl}`);
+  const contentType = res.headers.get('content-type') || 'image/jpeg';
+  const arrayBuf = await res.arrayBuffer();
+  return { buffer: Buffer.from(arrayBuf), contentType };
+}
+
 async function main() {
   loadEnv();
 
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-  const supabase = getSupabaseClient();
   const r2 = getR2Client();
+  const supabaseUrl = process.env.SUPABASE_URL || '';
 
   const res = await pool.query(
     `SELECT id, name, image_url, images FROM productos
@@ -127,14 +127,9 @@ async function main() {
       }
 
       try {
-        const { data, error } = await supabase.storage.from('product-images').download(storagePath);
-        if (error || !data) {
-          console.log(`  ERROR descargando: ${error?.message || 'sin datos'}`);
-          errors++;
-          continue;
-        }
+        const downloadUrl = `${supabaseUrl}/storage/v1/object/public/${storagePath}`;
+        const { buffer, contentType } = await downloadFromSupabase(downloadUrl);
 
-        const buffer = Buffer.from(await data.arrayBuffer());
         const filename = storagePath.split('/').pop() || `${Date.now()}.jpg`;
         const key = `product-images/${filename}`;
 
@@ -142,7 +137,7 @@ async function main() {
           Bucket: BUCKET_NAME_R2,
           Key: key,
           Body: buffer,
-          ContentType: data.type || 'image/jpeg',
+          ContentType: contentType,
         }));
 
         const newUrl = `${R2_PUBLIC_URL}/${key}`;
