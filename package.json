@@ -11,7 +11,9 @@
     "migrate:images": "tsx scripts/migrate-base64-images.ts",
     "migrate:images:dry-run": "tsx scripts/migrate-base64-images.ts --dry-run",
     "reset:stock": "tsx scripts/reset-stock.ts --run",
-    "reset:stock:dry-run": "tsx scripts/reset-stock.ts"
+    "reset:stock:dry-run": "tsx scripts/reset-stock.ts",
+    "migrate:urls": "tsx scripts/migrate-storage-urls.ts --run",
+    "migrate:urls:dry-run": "tsx scripts/migrate-storage-urls.ts"
   },
   "engines": {
     "node": ">=18"

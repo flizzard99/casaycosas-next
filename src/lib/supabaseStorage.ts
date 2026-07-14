@@ -4,6 +4,7 @@ import sharp from 'sharp';
 import { MAX_UPLOAD_DIRECT_BYTES } from '@/lib/uploadLimits';
 
 const BUCKET_NAME = 'product-images';
+const SUPABASE_CDN_DOMAIN = process.env.SUPABASE_CDN_DOMAIN || '';
 let bucketChecked = false;
 
 function getClient() {
@@ -43,6 +44,12 @@ const EXT_BY_MIME: Record<string, string> = {
 };
 
 const MIME_NEEDS_CONVERT = new Set(['image/heic', 'image/heif', 'image/avif']);
+
+function rewritePublicUrl(publicUrl: string): string {
+  if (!SUPABASE_CDN_DOMAIN) return publicUrl;
+  const url = new URL(publicUrl);
+  return publicUrl.replace(url.origin, `https://${SUPABASE_CDN_DOMAIN}`);
+}
 
 async function procesarImagen(mime: string, buffer: Buffer): Promise<Procesada> {
   if (!MIME_NEEDS_CONVERT.has(mime)) {
@@ -90,7 +97,7 @@ export async function subirImagen(dataUrl: string): Promise<string> {
   const {
     data: { publicUrl }
   } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filename);
-  return publicUrl;
+  return rewritePublicUrl(publicUrl);
 }
 
 const MIME_SIGN_ALLOW = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
@@ -128,5 +135,5 @@ export async function createSignedUploadUrl(contentType: string): Promise<{ sign
     data: { publicUrl }
   } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filename);
 
-  return { signedUrl: data.signedUrl, publicUrl };
+  return { signedUrl: data.signedUrl, publicUrl: rewritePublicUrl(publicUrl) };
 }
