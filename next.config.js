@@ -17,7 +17,7 @@ const securityHeaders = [
         "script-src 'self' 'unsafe-inline'",
         "style-src 'self' 'unsafe-inline'",
         "font-src 'self' data:",
-        "connect-src 'self' https://*.supabase.co https://*.vercel-analytics.com wss://*.supabase.co",
+        "connect-src 'self' https://*.supabase.co https://*.r2.cloudflarestorage.com https://images.casaycosas.qzz.io https://*.vercel-analytics.com wss://*.supabase.co",
         "frame-ancestors 'none'",
         "base-uri 'self'",
         "form-action 'self'",
