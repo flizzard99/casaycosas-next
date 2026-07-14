@@ -7,7 +7,7 @@ import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 import { verifyCsrf } from '@/lib/csrf';
 import { checkAdminRateLimit } from '@/lib/adminRateLimit';
 import { MAX_UPLOAD_BYTES } from '@/lib/uploadLimits';
-import { createSignedUploadUrl } from '@/lib/supabaseStorage';
+import { createSignedUploadUrl } from '@/lib/imageStorage';
 
 export async function POST(req: NextRequest) {
   if (!checkAdminRateLimit(req)) return NextResponse.json({ error: 'Demasiadas solicitudes' }, { status: 429 });

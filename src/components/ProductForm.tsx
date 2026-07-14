@@ -105,7 +105,7 @@ export default function ProductForm({ producto, categorias, onGuardado, onCancel
           body: file,
           headers: { 'Content-Type': file.type }
         });
-        if (!putRes.ok) throw new Error('Error al subir a Supabase Storage');
+        if (!putRes.ok) throw new Error('Error al subir la imagen');
         url = signData.publicUrl;
       }
       setImagenes((prev) => [...prev, url]);

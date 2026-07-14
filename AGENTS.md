@@ -6,7 +6,7 @@ Tienda online para **Casa y Cosas** en Panguipulli, Chile. Vende artículos del 
 ## Stack
 - **Framework:** Next.js 14 (App Router) + TypeScript + Tailwind CSS
 - **DB:** Supabase Postgres (tablas: `productos`, `config`, `pedidos`, `pedido_items`)
-- **Imágenes:** Supabase Storage bucket `product-images` — subida directa vía signed URLs (hasta 25 MB) o data URL → conversión sharp server-side (HEIC, hasta 4 MB)
+- **Imágenes:** Cloudflare R2 bucket `casaycosas-images` — subida directa vía presigned URLs (hasta 25 MB) o data URL → conversión sharp server-side (HEIC, hasta 4 MB). Dominio: `images.casaycosas.qzz.io`. Egress: $0 siempre.
 - **Deploy:** Vercel (`casaycosas-next.vercel.app`) — auto-deploy desde `main`
 - **Auth admin:** Cookie httpOnly firmada con HMAC (`SESSION_SECRET`), expira 12h. `SameSite=Strict` (anti-CSRF).
 - **CSRF:** Cookie `cyc_admin_csrf` (HMAC-signed, no httpOnly para que JS la lea) + header `X-CSRF-Token`. `src/lib/csrf.ts` valida server-side; `src/lib/adminFetch.ts` adjunta client-side. Toda mutación admin (POST/PUT/PATCH/DELETE) valida session + CSRF.
@@ -30,6 +30,8 @@ Tienda online para **Casa y Cosas** en Panguipulli, Chile. Vende artículos del 
 - El header del home usa `config.categoryOrder` (curado por admin), no orden de inserción
 - `src/lib/config.ts` exporta objeto `tienda` con fallbacks hardcoded (WhatsApp, Instagram, etc.)
 - `src/lib/db.ts` tiene `limpiarImagenes()` y `limpiarImageUrl()` que filtran base64
+- `src/lib/r2.ts` configura el cliente S3-compatible para Cloudflare R2
+- `src/lib/imageStorage.ts` maneja subida a R2 (presigned URLs + data URL con sharp)
 - `ProductCard` auto-detecta ratio de imagen (`naturalHeight/naturalWidth > 1.3`) para elegir object-cover vs object-contain
 - `CartContext` tiene campo `stock?: number` en CartItem para limitar cantidades
 
@@ -67,6 +69,7 @@ Tienda online para **Casa y Cosas** en Panguipulli, Chile. Vende artículos del 
 ## Variables de entorno
 Ver `.env.example` y `README.md` para tabla completa. Las más importantes:
 - `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`
+- `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`
 - `ADMIN_PASSWORD`, `SESSION_SECRET`
 - `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (rate-limit login; optional pero recomendado)
 - `RESEND_API_KEY`, `RESEND_FROM` (email de pedidos; optional, degrada a sin-email si no están)
@@ -83,6 +86,8 @@ npm run migrate:images:dry-run  # Preview migración base64→Storage
 npm run migrate:images          # Ejecutar migración
 npm run reset:stock:dry-run     # Preview reset stock ≥1 → 10
 npm run reset:stock             # Ejecutar reset stock
+npm run migrate:to-r2:dry-run   # Preview migración Supabase→R2
+npm run migrate:to-r2           # Ejecutar migración a R2
 ```
 
 ## Git

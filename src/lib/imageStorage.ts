@@ -1,20 +1,11 @@
-import { createClient } from '@supabase/supabase-js';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 import sharp from 'sharp';
-import { MAX_UPLOAD_DIRECT_BYTES } from '@/lib/uploadLimits';
+import { r2Client, R2_BUCKET_NAME, R2_PUBLIC_URL } from './r2';
+import { MAX_UPLOAD_DIRECT_BYTES } from './uploadLimits';
 
-const BUCKET_NAME = 'product-images';
-
-let bucketChecked = false;
-
-function getClient() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key) {
-    throw new Error('SUPABASE_URL / SUPABASE_SERVICE_KEY no configuradas.');
-  }
-  return createClient(url, key);
-}
+const BUCKET_NAME = R2_BUCKET_NAME;
 
 export type Procesada = { buffer: Buffer; mime: string; ext: string };
 
@@ -57,8 +48,11 @@ async function procesarImagen(mime: string, buffer: Buffer): Promise<Procesada> 
   return { buffer: convertido, mime: 'image/jpeg', ext: 'jpg' };
 }
 
+function publicUrl(key: string): string {
+  return `${R2_PUBLIC_URL}/${key}`;
+}
+
 export async function subirImagen(dataUrl: string): Promise<string> {
-  const supabase = getClient();
   const match = dataUrl.match(/^data:(image\/[\w.+-]+);base64,(.+)$/);
   if (!match) throw new Error('Formato de imagen inválido, se espera un data URL base64.');
 
@@ -73,25 +67,18 @@ export async function subirImagen(dataUrl: string): Promise<string> {
   }
 
   const { buffer: finalBuffer, mime: finalMime, ext } = await procesarImagen(mime, buffer);
-  const filename = `${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
+  const key = `product-images/${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
 
-  if (!bucketChecked) {
-    const { data: buckets } = await supabase.storage.listBuckets();
-    if (!buckets?.find((b) => b.name === BUCKET_NAME)) {
-      await supabase.storage.createBucket(BUCKET_NAME, { public: true });
-    }
-    bucketChecked = true;
-  }
+  await r2Client.send(
+    new PutObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: key,
+      Body: finalBuffer,
+      ContentType: finalMime,
+    })
+  );
 
-  const { error } = await supabase.storage
-    .from(BUCKET_NAME)
-    .upload(filename, finalBuffer, { contentType: finalMime, upsert: false });
-  if (error) throw error;
-
-  const {
-    data: { publicUrl }
-  } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filename);
-  return publicUrl;
+  return publicUrl(key);
 }
 
 const MIME_SIGN_ALLOW = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
@@ -104,30 +91,20 @@ const EXT_SIGN: Record<string, string> = {
 };
 
 export async function createSignedUploadUrl(contentType: string): Promise<{ signedUrl: string; publicUrl: string }> {
-  const supabase = getClient();
   const mime = contentType.toLowerCase();
   if (!MIME_SIGN_ALLOW.has(mime)) {
     throw new Error(`Tipo no permitido para subida directa: ${mime}`);
   }
   const ext = EXT_SIGN[mime];
-  const filename = `${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
+  const key = `product-images/${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
 
-  if (!bucketChecked) {
-    const { data: buckets } = await supabase.storage.listBuckets();
-    if (!buckets?.find((b) => b.name === BUCKET_NAME)) {
-      await supabase.storage.createBucket(BUCKET_NAME, { public: true });
-    }
-    bucketChecked = true;
-  }
+  const command = new PutObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: key,
+    ContentType: mime,
+  });
 
-  const { data, error } = await supabase.storage
-    .from(BUCKET_NAME)
-    .createSignedUploadUrl(filename);
-  if (error || !data) throw error || new Error('No se pudo crear la signed URL');
+  const signedUrl = await getSignedUrl(r2Client, command, { expiresIn: 3600 });
 
-  const {
-    data: { publicUrl }
-  } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filename);
-
-  return { signedUrl: data.signedUrl, publicUrl };
+  return { signedUrl, publicUrl: publicUrl(key) };
 }

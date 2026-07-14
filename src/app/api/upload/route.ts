@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { subirImagen } from '@/lib/supabaseStorage';
+import { subirImagen } from '@/lib/imageStorage';
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 import { verifyCsrf } from '@/lib/csrf';
 import { MAX_UPLOAD_DIRECT_BYTES } from '@/lib/uploadLimits';

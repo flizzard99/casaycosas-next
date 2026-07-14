@@ -11,12 +11,16 @@
     "migrate:images": "tsx scripts/migrate-base64-images.ts",
     "migrate:images:dry-run": "tsx scripts/migrate-base64-images.ts --dry-run",
     "reset:stock": "tsx scripts/reset-stock.ts --run",
-    "reset:stock:dry-run": "tsx scripts/reset-stock.ts"
+    "reset:stock:dry-run": "tsx scripts/reset-stock.ts",
+    "migrate:to-r2": "tsx scripts/migrate-to-r2.ts --run",
+    "migrate:to-r2:dry-run": "tsx scripts/migrate-to-r2.ts"
   },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1087.0",
+    "@aws-sdk/s3-request-presigner": "^3.1087.0",
     "@supabase/supabase-js": "^2.110.1",
     "@upstash/redis": "^1.38.0",
     "@vercel/analytics": "^2.0.1",
