@@ -447,6 +447,11 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                           <p className="text-xs text-verde-noche/50">
                             {ped.cliente_nombre || 'Sin nombre'} · {new Date(ped.created_at).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' })}
                           </p>
+                          {ped.cliente_email && (
+                            <p className="text-xs text-verde-noche/50 flex items-center gap-1">
+                              <span>📧</span> {ped.cliente_email}
+                            </p>
+                          )}
                         </div>
                         <span className="text-sm font-semibold text-verde">{formatoCLP.format(ped.total)}</span>
                       </div>

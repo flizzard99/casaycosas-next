@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useCart } from '@/context/CartContext';
 
@@ -10,8 +11,11 @@ const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency:
 export default function CartDrawer() {
   const { items, isOpen, close, updateQty, removeItem, total, clear } = useCart();
   const [nombre, setNombre] = useState('');
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [bloqueado, setBloqueado] = useState(false);
   const [error, setError] = useState('');
+  const router = useRouter();
   const drawerRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -47,17 +51,28 @@ export default function CartDrawer() {
     };
   }, [isOpen, handleKeyDown]);
 
+  function validarEmail(valor: string): boolean {
+    if (!valor.trim()) return true;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor.trim());
+  }
+
   async function reservarPedido() {
     if (!items.length || bloqueado) return;
+    if (!validarEmail(email)) {
+      setEmailError('Email inválido. Déjalo vacío si no quieres recibir notificaciones.');
+      return;
+    }
     setBloqueado(true);
     setError('');
+    setEmailError('');
     try {
       const res = await fetch('/api/pedido', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           items: items.map((i) => ({ id: i.id, qty: i.qty })),
-          nombre: nombre.trim()
+          nombre: nombre.trim(),
+          email: email.trim()
         })
       });
       const data = await res.json();
@@ -65,9 +80,14 @@ export default function CartDrawer() {
         setError(data.error || 'No se pudo procesar el pedido');
         return;
       }
-      window.open(data.whatsappUrl, '_blank');
+      const waUrl = data.whatsappUrl as string | undefined;
+      const estadoUrl = data.estadoUrl as string;
+      if (waUrl) window.open(waUrl, '_blank');
       clear();
       setNombre('');
+      setEmail('');
+      close();
+      router.push(estadoUrl || `/pedido/${data.pedidoId}`);
     } catch {
       setError('Error de conexión. Intenta nuevamente.');
     } finally {
@@ -156,14 +176,28 @@ export default function CartDrawer() {
           </div>
 
           {items.length > 0 && (
-            <input
-              type="text"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              placeholder="Tu nombre (opcional)"
-              className="w-full mb-3 px-3 py-2 rounded-md border border-verde-noche/20 bg-crema/30 text-sm focus:outline-none focus:ring-2 focus:ring-verde"
-              maxLength={50}
-            />
+            <>
+              <input
+                type="text"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                placeholder="Tu nombre (opcional)"
+                className="w-full mb-2 px-3 py-2 rounded-md border border-verde-noche/20 bg-crema/30 text-sm focus:outline-none focus:ring-2 focus:ring-verde"
+                maxLength={50}
+              />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setEmailError(''); }}
+                placeholder="Tu email (opcional, para seguimiento)"
+                className="w-full mb-1 px-3 py-2 rounded-md border border-verde-noche/20 bg-crema/30 text-sm focus:outline-none focus:ring-2 focus:ring-verde"
+                maxLength={200}
+              />
+              {emailError && <p className="text-xs text-red-600 mb-1">{emailError}</p>}
+              <p className="text-[11px] text-verde-noche/40 mb-3 leading-relaxed">
+                Reservaremos el stock 48h. Recibirás un enlace para seguir tu pedido. WhatsApp queda opcional.
+              </p>
+            </>
           )}
 
           {error && (
@@ -175,7 +209,7 @@ export default function CartDrawer() {
             disabled={!items.length || bloqueado}
             className="w-full bg-verde text-white text-sm font-semibold py-3 rounded-md hover:bg-verde-oscuro disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
-            {bloqueado ? 'Reservando…' : 'Reservar pedido por WhatsApp'}
+            {bloqueado ? 'Reservando…' : 'Reservar pedido'}
           </button>
 
           {items.length > 0 && (

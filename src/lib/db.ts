@@ -88,6 +88,7 @@ export type Pedido = {
   id: number;
   cliente_nombre: string;
   cliente_whatsapp: string;
+  cliente_email: string;
   total: number;
   estado: 'pendiente' | 'confirmado' | 'cancelado' | 'expirado';
   created_at: string;
@@ -119,6 +120,7 @@ async function ensurePedidosSchema() {
       confirmado_at TIMESTAMPTZ
     )
   `);
+  await pool.query(`ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS cliente_email TEXT DEFAULT ''`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS pedido_items (
       id SERIAL PRIMARY KEY,
@@ -136,6 +138,7 @@ function formatPedido(row: Record<string, unknown>, items: PedidoItem[] = []): P
     id: row.id as number,
     cliente_nombre: (row.cliente_nombre as string) || '',
     cliente_whatsapp: (row.cliente_whatsapp as string) || '',
+    cliente_email: (row.cliente_email as string) || '',
     total: (row.total as number) || 0,
     estado: (row.estado as EstadoPedido) || 'pendiente',
     created_at: row.created_at as string,
@@ -152,7 +155,7 @@ async function expirarPedidosViejos(pool: Pool): Promise<void> {
   );
 }
 
-export async function crearPedido(items: { id: number; qty: number }[], clienteNombre: string, clienteWhatsapp: string): Promise<Pedido | null> {
+export async function crearPedido(items: { id: number; qty: number }[], clienteNombre: string, clienteWhatsapp: string, clienteEmail: string = ''): Promise<Pedido | null> {
   await ensureSchema();
   await ensurePedidosSchema();
   const pool = getPool();
@@ -177,8 +180,8 @@ export async function crearPedido(items: { id: number; qty: number }[], clienteN
     }
 
     const pedidoRes = await client.query(
-      `INSERT INTO pedidos (cliente_nombre, cliente_whatsapp, total, estado) VALUES ($1, $2, $3, 'pendiente') RETURNING *`,
-      [clienteNombre, clienteWhatsapp, total]
+      `INSERT INTO pedidos (cliente_nombre, cliente_whatsapp, cliente_email, total, estado) VALUES ($1, $2, $3, $4, 'pendiente') RETURNING *`,
+      [clienteNombre, clienteWhatsapp, clienteEmail, total]
     );
     const pedidoId = pedidoRes.rows[0].id;
 
@@ -490,4 +493,20 @@ export async function getFeaturedProducts(): Promise<Producto[]> {
   );
   const byId = new Map(result.rows.map((r) => [r.id, formatProducto(r)]));
   return ids.map((id) => byId.get(id)).filter((p): p is Producto => !!p);
+}
+
+export const PEDIDO_EXPIRACION_MS = PEDIDO_EXPIRACION_HORAS * 60 * 60 * 1000;
+
+export async function getPedidoByIdPublic(id: number): Promise<Pedido | null> {
+  await ensureSchema();
+  await ensurePedidosSchema();
+  const pool = getPool();
+  await expirarPedidosViejos(pool);
+  const res = await pool.query(`SELECT * FROM pedidos WHERE id = $1`, [id]);
+  if (!res.rows.length) return null;
+  const itemsRes = await pool.query(
+    `SELECT producto_id, nombre, qty, precio FROM pedido_items WHERE pedido_id = $1`,
+    [id]
+  );
+  return formatPedido(res.rows[0], itemsRes.rows as PedidoItem[]);
 }

@@ -7,6 +7,7 @@ import { cancelarPedido, parseIdOrBadRequest } from '@/lib/db';
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 import { verifyCsrf } from '@/lib/csrf';
 import { checkAdminRateLimit } from '@/lib/adminRateLimit';
+import { enviarEmailCambioEstado } from '@/lib/email';
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   if (!checkAdminRateLimit(req)) return NextResponse.json({ error: 'Demasiadas solicitudes' }, { status: 429 });
@@ -19,6 +20,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (id === null) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
     const pedido = await cancelarPedido(id);
     if (!pedido) return NextResponse.json({ error: 'Pedido no encontrado o ya procesado' }, { status: 404 });
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/$/, '');
+    enviarEmailCambioEstado(pedido, `${siteUrl}/pedido/${pedido.id}`).catch((e) => console.error('[email]cancelar:', e));
     return NextResponse.json(pedido);
   } catch (e: unknown) {
     console.error('[API Error] cancelar:', e);

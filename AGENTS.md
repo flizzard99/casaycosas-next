@@ -21,6 +21,7 @@ Tienda online para **Casa y Cosas** en Panguipulli, Chile. Vende artículos del 
 - `pedido_items`: pedido_id, producto_id, nombre, qty, precio
 - Los productos pueden tener imágenes como base64 en la DB (legacy). `db.ts` filtra base64 en runtime.
 - **Sistema de pedidos**: el carrito llama `POST /api/pedido` → crea pedido + decrementa stock atómicamente. Expiración lazy a 48h (restaura stock). Admin gestiona en vista Pedidos.
+- **Seguimiento sin WhatsApp**: página pública `/pedido/[id]` con estado en vivo (polling 20s), QR scaneable, cuenta regresiva de expiración. Email opcional con Resend (`src/lib/email.ts`) — degrada a sin-email si `RESEND_API_KEY` no está. WhatsApp queda como botón opcional, no obligatorio.
 
 ## Arquitectura importante
 - **Todas las rutas API** tienen `export const runtime = 'nodejs'` y `export const dynamic = 'force-dynamic'` para evitar 405 en Vercel
@@ -68,6 +69,8 @@ Ver `.env.example` y `README.md` para tabla completa. Las más importantes:
 - `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`
 - `ADMIN_PASSWORD`, `SESSION_SECRET`
 - `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (rate-limit login; optional pero recomendado)
+- `RESEND_API_KEY`, `RESEND_FROM` (email de pedidos; optional, degrada a sin-email si no están)
+- Las `NEXT_PUBLIC_*` de contacto tienen fallbacks en `config.ts`
 - `NEXT_PUBLIC_SITE_URL`
 - Las `NEXT_PUBLIC_*` de contacto tienen fallbacks en `config.ts`
 
