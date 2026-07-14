@@ -5,12 +5,14 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useCart } from '@/context/CartContext';
 import type { Producto } from '@/lib/types';
+import { parsearEncuadre, estilosEncuadre } from '@/lib/encuadre';
 
 const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 
 export default function ProductCard({ producto }: { producto: Producto }) {
   const { addItem } = useCart();
   const imagen = producto.images?.[0] || producto.image_url;
+  const { url: imagenLimpia, encuadre } = parsearEncuadre(imagen);
   const sinStock = producto.stock <= 0;
   const tieneVarias = (producto.images?.length || 0) > 1;
 
@@ -22,14 +24,14 @@ export default function ProductCard({ producto }: { producto: Producto }) {
   return (
     <div className="bg-white rounded-md overflow-hidden border border-verde-noche/10 shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 flex flex-col">
       <Link href={`/producto/${producto.id}`} className="block">
-        <div className="relative aspect-square bg-crema p-2">
+        <div className="relative aspect-square bg-crema p-2 overflow-hidden">
           {imagen ? (
             <Image
-              src={imagen}
+              src={imagenLimpia}
               alt={producto.name}
               fill
               className="transition-opacity duration-300 hover:opacity-90"
-              style={{ objectFit: 'contain' }}
+              style={estilosEncuadre(encuadre)}
               sizes="(max-width: 768px) 50vw, 25vw"
             />
           ) : (
@@ -78,7 +80,7 @@ export default function ProductCard({ producto }: { producto: Producto }) {
           <button
             disabled={sinStock}
             onClick={() => {
-              addItem({ id: producto.id, name: producto.name, price: producto.price, image_url: imagen, stock: producto.stock }, qty);
+              addItem({ id: producto.id, name: producto.name, price: producto.price, image_url: imagenLimpia, stock: producto.stock }, qty);
               setQty(1);
               setAgregado(true);
               setTimeout(() => setAgregado(false), 1500);

@@ -5,6 +5,8 @@ import { fileToDataUrl } from '@/lib/fileToDataUrl';
 import type { Producto } from '@/lib/types';
 import { adminFetch } from '@/lib/adminFetch';
 import { MAX_PRODUCT_IMAGES, MAX_UPLOAD_BYTES } from '@/lib/uploadLimits';
+import { parsearEncuadre, estilosEncuadre, quitarEncuadre } from '@/lib/encuadre';
+import EncuadreEditor from './EncuadreEditor';
 
 type Props = {
   producto?: Producto | null;
@@ -52,6 +54,8 @@ export default function ProductForm({ producto, categorias, onGuardado, onCancel
   const [dragOver, setDragOver] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [editandoEncuadre, setEditandoEncuadre] = useState<number | null>(null);
+  const [convirtiendo, setConvirtiendo] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const subiendo = subidas.some((s) => s.estado === 'subiendo');
@@ -113,6 +117,39 @@ export default function ProductForm({ producto, categorias, onGuardado, onCancel
 
   function handleQuitarImagen(index: number) {
     setImagenes((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function handleGuardarEncuadre(urlNueva: string) {
+    if (editandoEncuadre === null) return;
+    setImagenes((prev) => prev.map((u, i) => (i === editandoEncuadre ? urlNueva : u)));
+    setEditandoEncuadre(null);
+  }
+
+  function handleRestablecerEncuadre() {
+    if (editandoEncuadre === null) return;
+    setImagenes((prev) => prev.map((u, i) => (i === editandoEncuadre ? quitarEncuadre(u) : u)));
+    setEditandoEncuadre(null);
+  }
+
+  async function handleRecortar(dataUrl: string) {
+    if (editandoEncuadre === null) return;
+    setConvirtiendo(true);
+    try {
+      const res = await adminFetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: dataUrl })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al subir el recorte');
+      setImagenes((prev) => prev.map((u, i) => (i === editandoEncuadre ? data.url : u)));
+      setEditandoEncuadre(null);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error al procesar el recorte';
+      setError(message);
+    } finally {
+      setConvirtiendo(false);
+    }
   }
 
   function quitarSubida(id: string) {
@@ -297,11 +334,13 @@ export default function ProductForm({ producto, categorias, onGuardado, onCancel
         </div>
 
         {imagenes.length > 0 && (
-          <p className="text-xs text-verde-noche/50 mb-2">Arrastra para reordenar. La primera imagen es la principal.</p>
+          <p className="text-xs text-verde-noche/50 mb-2">Arrastra para reordenar. La primera imagen es la principal. Pasa el cursor sobre una miniatura y haz clic en ✎ para encuadrarla.</p>
         )}
 
         <div className="grid grid-cols-4 gap-2 mb-3">
-          {imagenes.map((url, i) => (
+          {imagenes.map((url, i) => {
+            const { url: urlLimpia, encuadre } = parsearEncuadre(url);
+            return (
             <div
               key={`${url}-${i}`}
               draggable
@@ -314,17 +353,27 @@ export default function ProductForm({ producto, categorias, onGuardado, onCancel
               } ${dragOverIndex === i && dragIndex !== null ? 'ring-2 ring-verde-oscuro' : ''}`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={url} alt="" className="w-full h-full object-cover pointer-events-none" />
+              <img src={urlLimpia} alt="" className="w-full h-full pointer-events-none" style={estilosEncuadre(encuadre)} />
               {i === 0 && (
-                <span className="absolute top-0.5 left-0.5 bg-verde text-white text-[9px] font-semibold px-1 rounded">PORTADA</span>
+                <span className="absolute top-0.5 left-0.5 bg-verde text-white text-[9px] font-semibold px-1 rounded z-10">PORTADA</span>
+              )}
+              {encuadre && (
+                <span className="absolute top-0.5 right-0.5 bg-verde-oscuro text-white text-[9px] font-semibold px-1 rounded z-10">✎</span>
               )}
               <button
                 type="button"
                 onClick={() => handleQuitarImagen(i)}
-                className="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-5 h-5 rounded-full text-xs leading-none shadow"
+                className="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-5 h-5 rounded-full text-xs leading-none shadow z-10"
                 aria-label="Quitar imagen"
               >×</button>
               <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  type="button"
+                  onClick={() => setEditandoEncuadre(i)}
+                  aria-label="Encuadrar imagen"
+                  className="bg-white/90 text-verde-noche w-7 h-7 rounded text-xs font-semibold"
+                  title="Encuadrar"
+                >✎</button>
                 <button
                   type="button"
                   onClick={() => moverImagen(i, -1)}
@@ -341,7 +390,8 @@ export default function ProductForm({ producto, categorias, onGuardado, onCancel
                 >▶</button>
               </div>
             </div>
-          ))}
+          );
+        })}
 
           {subidas.filter((s) => s.estado === 'subiendo').map((s) => (
             <div key={s.id} className="relative w-full aspect-square rounded bg-crema flex items-center justify-center">
@@ -382,6 +432,25 @@ export default function ProductForm({ producto, categorias, onGuardado, onCancel
           </button>
         </div>
       </form>
+
+      {editandoEncuadre !== null && imagenes[editandoEncuadre] && (
+        <EncuadreEditor
+          url={imagenes[editandoEncuadre]}
+          index={editandoEncuadre}
+          onCancelar={() => setEditandoEncuadre(null)}
+          onGuardarEncuadre={handleGuardarEncuadre}
+          onRecortar={handleRecortar}
+          onRestablecer={handleRestablecerEncuadre}
+        />
+      )}
+
+      {convirtiendo && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50">
+          <div className="bg-white px-6 py-4 rounded-lg shadow-xl text-sm text-verde-noche">
+            Procesando recorte…
+          </div>
+        </div>
+      )}
     </div>
   );
 }

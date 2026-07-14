@@ -6,6 +6,7 @@ import CategoryOrderEditor from './CategoryOrderEditor';
 import FeaturedEditor from './FeaturedEditor';
 import type { Producto, FeaturedConfig } from '@/lib/types';
 import { adminFetch } from '@/lib/adminFetch';
+import { parsearEncuadre, estilosEncuadre } from '@/lib/encuadre';
 
 const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 
@@ -156,14 +157,19 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     <tr key={p.id} className="border-t border-verde-noche/10">
                       <td className="px-4 py-3">
                         <div className="w-10 h-10 rounded bg-crema overflow-hidden flex-shrink-0">
-                          {(p.image_url || (p.images && p.images[0])) ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={p.image_url || p.images[0]}
-                              alt={p.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
+                          {(p.image_url || (p.images && p.images[0])) ? (() => {
+                            const srcRaw = (p.images && p.images[0]) || p.image_url;
+                            const { url: srcLimpia, encuadre } = parsearEncuadre(srcRaw);
+                            return (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={srcLimpia}
+                                alt={p.name}
+                                className="w-full h-full"
+                                style={estilosEncuadre(encuadre)}
+                              />
+                            );
+                          })() : (
                             <div className="w-full h-full flex items-center justify-center text-[10px] text-verde-noche/30">
                               s/i
                             </div>
