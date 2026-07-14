@@ -11,6 +11,7 @@ export type Producto = {
   images: string[];
   created_at: string;
   updated_at?: string;
+  dolibarr_ref?: string;
 };
 
 export type ProductoInput = {

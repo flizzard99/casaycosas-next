@@ -37,7 +37,7 @@ export default function CategoriaClient({ productos }: { productos: Producto[] }
           No encontramos productos que coincidan con tu búsqueda. Prueba con otra palabra.
         </p>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-5 max-w-6xl mx-auto">
           {visibles.map((p) => (
             <ProductCard key={p.id} producto={p} />
           ))}

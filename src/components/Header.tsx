@@ -32,7 +32,7 @@ export default function Header({ categorias = [] }: { categorias?: string[] }) {
   const [catAbierto, setCatAbierto] = useState(false);
 
   return (
-    <header className="bg-verde-noche sticky top-0 z-40">
+    <header className="bg-verde sticky top-0 z-40">
       <div className="flex items-center justify-between px-4 md:px-14 py-4 relative">
         {/* Logo (izquierda) */}
         <Link href="/" className="flex items-center gap-3 z-10">

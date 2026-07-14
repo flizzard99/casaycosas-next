@@ -9,7 +9,7 @@ export default function FeaturedGrid({ productos, titulo }: { productos: Product
     <section className="py-14 md:py-20">
       <div className="px-6 md:px-14">
         <h2 className="font-display text-2xl md:text-3xl text-verde-oscuro mb-8 text-center">{titulo}</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-5 max-w-5xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-5 max-w-6xl mx-auto">
           {productos.map((p) => (
             <ProductCard key={p.id} producto={p} />
           ))}

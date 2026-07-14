@@ -55,7 +55,8 @@ export async function ensureSchema() {
     pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS stock INTEGER DEFAULT 0`),
     pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS images TEXT[] DEFAULT '{}'`),
     pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS visible BOOLEAN DEFAULT TRUE`),
-    pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`)
+    pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`),
+    pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS dolibarr_ref TEXT`)
   ]);
   await pool.query(
     `CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value JSONB DEFAULT '{}'::jsonb)`
@@ -310,7 +311,8 @@ function formatProducto(row: Record<string, unknown>): Producto {
     stock: (row.stock as number) || 0,
     images,
     created_at: row.created_at as string,
-    updated_at: row.updated_at as string | undefined
+    updated_at: row.updated_at as string | undefined,
+    dolibarr_ref: (row.dolibarr_ref as string) || undefined
   };
 }
 
@@ -496,6 +498,27 @@ export async function getFeaturedProducts(): Promise<Producto[]> {
 }
 
 export const PEDIDO_EXPIRACION_MS = PEDIDO_EXPIRACION_HORAS * 60 * 60 * 1000;
+
+export async function getProductoByDolibarrRef(dolibarrRef: string): Promise<Producto | null> {
+  await ensureSchema();
+  const pool = getPool();
+  const result = await pool.query(
+    `SELECT id, name, description, category, image_url, instagram_url, price, stock, visible, created_at, images[1:1] AS images, dolibarr_ref
+     FROM productos WHERE dolibarr_ref = $1`,
+    [dolibarrRef]
+  );
+  return result.rows.length ? formatProducto(result.rows[0]) : null;
+}
+
+export async function actualizarStockDirecto(id: number, stock: number): Promise<Producto | null> {
+  await ensureSchema();
+  const pool = getPool();
+  const result = await pool.query(
+    `UPDATE productos SET stock = GREATEST(0, $1) WHERE id = $2 RETURNING *`,
+    [Math.floor(stock), id]
+  );
+  return result.rows.length ? formatProducto(result.rows[0]) : null;
+}
 
 export async function getPedidoByIdPublic(id: number): Promise<Pedido | null> {
   await ensureSchema();

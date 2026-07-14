@@ -4,7 +4,7 @@ export default function Loading() {
       <div className="h-4 w-40 bg-verde-noche/10 rounded animate-pulse mb-6" />
       <div className="h-9 w-48 bg-verde-noche/10 rounded animate-pulse mb-3" />
       <div className="h-4 w-32 bg-verde-noche/10 rounded animate-pulse mb-8" />
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-5 max-w-6xl mx-auto">
         {Array.from({ length: 8 }).map((_, i) => (
           <div key={i} className="bg-white rounded-md overflow-hidden shadow-sm">
             <div className="h-40 bg-crema animate-pulse" />

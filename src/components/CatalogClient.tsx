@@ -110,7 +110,7 @@ export default function CatalogClient({ productosIniciales, categoryOrder }: Pro
         {visibleGroups.map(([categoria, items]) => (
           <div key={categoria}>
             <h2 className="font-display text-2xl text-verde-oscuro mb-6 capitalize">{categoria}</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-5 max-w-6xl mx-auto">
               {items.map((p) => (
                 <ProductCard key={p.id} producto={p} />
               ))}
