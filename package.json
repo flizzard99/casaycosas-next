@@ -11,9 +11,7 @@
     "migrate:images": "tsx scripts/migrate-base64-images.ts",
     "migrate:images:dry-run": "tsx scripts/migrate-base64-images.ts --dry-run",
     "reset:stock": "tsx scripts/reset-stock.ts --run",
-    "reset:stock:dry-run": "tsx scripts/reset-stock.ts",
-    "sync:stock:dolibarr": "tsx scripts/sync-stock-dolibarr.ts --run",
-    "sync:stock:dolibarr:dry-run": "tsx scripts/sync-stock-dolibarr.ts"
+    "reset:stock:dry-run": "tsx scripts/reset-stock.ts"
   },
   "engines": {
     "node": ">=18"

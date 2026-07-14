@@ -9,9 +9,8 @@ export type Producto = {
   price: number;
   stock: number;
   images: string[];
-  created_at: string;
-  updated_at?: string;
-  dolibarr_ref?: string;
+    created_at: string;
+    updated_at?: string;
 };
 
 export type ProductoInput = {
