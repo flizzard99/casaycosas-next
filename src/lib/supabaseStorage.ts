@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import sharp from 'sharp';
-import { MAX_UPLOAD_BYTES } from '@/lib/uploadLimits';
+import { MAX_UPLOAD_DIRECT_BYTES } from '@/lib/uploadLimits';
 
 const BUCKET_NAME = 'product-images';
 let bucketChecked = false;
@@ -67,8 +67,8 @@ export async function subirImagen(dataUrl: string): Promise<string> {
     throw new Error(`Tipo de imagen no permitido: ${mime}. Solo JPG, PNG, WebP, GIF, AVIF y HEIC.`);
   }
   const buffer = Buffer.from(match[2], 'base64');
-  if (buffer.length > MAX_UPLOAD_BYTES) {
-    throw new Error('La imagen supera 4 MB.');
+  if (buffer.length > MAX_UPLOAD_DIRECT_BYTES) {
+    throw new Error('La imagen supera 4 MB para formato HEIC.');
   }
 
   const { buffer: finalBuffer, mime: finalMime, ext } = await procesarImagen(mime, buffer);
@@ -91,4 +91,42 @@ export async function subirImagen(dataUrl: string): Promise<string> {
     data: { publicUrl }
   } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filename);
   return publicUrl;
+}
+
+const MIME_SIGN_ALLOW = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
+const EXT_SIGN: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+  'image/avif': 'avif'
+};
+
+export async function createSignedUploadUrl(contentType: string): Promise<{ signedUrl: string; publicUrl: string }> {
+  const supabase = getClient();
+  const mime = contentType.toLowerCase();
+  if (!MIME_SIGN_ALLOW.has(mime)) {
+    throw new Error(`Tipo no permitido para subida directa: ${mime}`);
+  }
+  const ext = EXT_SIGN[mime];
+  const filename = `${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
+
+  if (!bucketChecked) {
+    const { data: buckets } = await supabase.storage.listBuckets();
+    if (!buckets?.find((b) => b.name === BUCKET_NAME)) {
+      await supabase.storage.createBucket(BUCKET_NAME, { public: true });
+    }
+    bucketChecked = true;
+  }
+
+  const { data, error } = await supabase.storage
+    .from(BUCKET_NAME)
+    .createSignedUploadUrl(filename);
+  if (error || !data) throw error || new Error('No se pudo crear la signed URL');
+
+  const {
+    data: { publicUrl }
+  } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filename);
+
+  return { signedUrl: data.signedUrl, publicUrl };
 }

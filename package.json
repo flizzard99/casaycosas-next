@@ -9,7 +9,9 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "migrate:images": "tsx scripts/migrate-base64-images.ts",
-    "migrate:images:dry-run": "tsx scripts/migrate-base64-images.ts --dry-run"
+    "migrate:images:dry-run": "tsx scripts/migrate-base64-images.ts --dry-run",
+    "reset:stock": "tsx scripts/reset-stock.ts --run",
+    "reset:stock:dry-run": "tsx scripts/reset-stock.ts"
   },
   "engines": {
     "node": ">=18"

@@ -4,7 +4,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useCart } from '@/context/CartContext';
-import { tienda } from '@/lib/config';
 
 const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 
@@ -12,6 +11,7 @@ export default function CartDrawer() {
   const { items, isOpen, close, updateQty, removeItem, total, clear } = useCart();
   const [nombre, setNombre] = useState('');
   const [bloqueado, setBloqueado] = useState(false);
+  const [error, setError] = useState('');
   const drawerRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -47,21 +47,33 @@ export default function CartDrawer() {
     };
   }, [isOpen, handleKeyDown]);
 
-  function construirMensaje(): string {
-    const lineas = items.map((i) => `• ${i.qty}x ${i.name} — ${formatoCLP.format(i.price * i.qty)}`);
-    const saludo = nombre.trim() ? `Hola! Soy ${nombre.trim()}, quisiera reservar este pedido para retiro en tienda:` : 'Hola! Quisiera reservar este pedido para retiro en tienda:';
-    return [saludo, '', ...lineas, '', `Total: ${formatoCLP.format(total)}`].join('\n');
-  }
-
-  function enviarPorWhatsapp() {
+  async function reservarPedido() {
     if (!items.length || bloqueado) return;
     setBloqueado(true);
-    setTimeout(() => setBloqueado(false), 1000);
-    const url = `https://wa.me/${tienda.whatsappNumber}?text=${encodeURIComponent(construirMensaje())}`;
-    window.open(url, '_blank');
+    setError('');
+    try {
+      const res = await fetch('/api/pedido', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: items.map((i) => ({ id: i.id, qty: i.qty })),
+          nombre: nombre.trim()
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'No se pudo procesar el pedido');
+        return;
+      }
+      window.open(data.whatsappUrl, '_blank');
+      clear();
+      setNombre('');
+    } catch {
+      setError('Error de conexión. Intenta nuevamente.');
+    } finally {
+      setBloqueado(false);
+    }
   }
-
-  
 
   return (
     <div className={`fixed inset-0 z-50 flex justify-end transition-opacity duration-300 ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
@@ -154,12 +166,16 @@ export default function CartDrawer() {
             />
           )}
 
+          {error && (
+            <p className="text-xs text-red-600 mb-2 leading-relaxed">{error}</p>
+          )}
+
           <button
-            onClick={enviarPorWhatsapp}
+            onClick={reservarPedido}
             disabled={!items.length || bloqueado}
             className="w-full bg-verde text-white text-sm font-semibold py-3 rounded-md hover:bg-verde-oscuro disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
-            Reservar pedido por WhatsApp
+            {bloqueado ? 'Reservando…' : 'Reservar pedido por WhatsApp'}
           </button>
 
           {items.length > 0 && (

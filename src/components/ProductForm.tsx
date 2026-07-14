@@ -4,7 +4,7 @@ import { useState, useRef, useCallback } from 'react';
 import { fileToDataUrl } from '@/lib/fileToDataUrl';
 import type { Producto } from '@/lib/types';
 import { adminFetch } from '@/lib/adminFetch';
-import { MAX_PRODUCT_IMAGES, MAX_UPLOAD_BYTES } from '@/lib/uploadLimits';
+import { MAX_PRODUCT_IMAGES, MAX_UPLOAD_BYTES, MAX_UPLOAD_DIRECT_BYTES } from '@/lib/uploadLimits';
 import { parsearEncuadre, estilosEncuadre, quitarEncuadre } from '@/lib/encuadre';
 import EncuadreEditor from './EncuadreEditor';
 
@@ -26,14 +26,22 @@ type EstadoSubida = {
 const MIME_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif', 'image/heic', 'image/heif'];
 const ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/avif,image/heic,image/heif,.heic,.heif';
 
+const MIME_DIRECT = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
+
+function esHeic(file: File): boolean {
+  const mime = (file.type || '').toLowerCase();
+  return mime === 'image/heic' || mime === 'image/heif' || /\.heic$|\.heif$/i.test(file.name);
+}
+
 function archivoValido(file: File): string | null {
   const mime = (file.type || '').toLowerCase();
-  const esHeic = mime === 'image/heic' || mime === 'image/heif' || file.name.toLowerCase().match(/\.heic$|\.heif$/);
-  if (!MIME_PERMITIDOS.includes(mime) && !esHeic) {
+  const heic = esHeic(file);
+  if (!MIME_PERMITIDOS.includes(mime) && !heic) {
     return 'Formato no admitido (use JPG, PNG, WebP, GIF, AVIF o HEIC)';
   }
-  if (file.size > MAX_UPLOAD_BYTES) {
-    return 'Supera 4 MB';
+  const limit = heic ? MAX_UPLOAD_DIRECT_BYTES : MAX_UPLOAD_BYTES;
+  if (file.size > limit) {
+    return `Supera ${Math.round(limit / 1048576)} MB`;
   }
   return null;
 }
@@ -71,17 +79,37 @@ export default function ProductForm({ producto, categorias, onGuardado, onCancel
     }
     setSubidas((prev) => [...prev, { id, estado: 'subiendo', progreso: 0 }]);
     try {
-      const dataUrl = await fileToDataUrl(file);
-      setSubidas((prev) => prev.map((s) => (s.id === id ? { ...s, progreso: 50 } : s)));
-      const res = await adminFetch('/api/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: dataUrl })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error al subir la imagen');
-      setImagenes((prev) => [...prev, data.url]);
-      setSubidas((prev) => prev.map((s) => (s.id === id ? { ...s, estado: 'ok', url: data.url, progreso: 100 } : s)));
+      let url: string;
+      if (esHeic(file)) {
+        const dataUrl = await fileToDataUrl(file);
+        setSubidas((prev) => prev.map((s) => (s.id === id ? { ...s, progreso: 50 } : s)));
+        const res = await adminFetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: dataUrl })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al subir la imagen');
+        url = data.url;
+      } else {
+        const signRes = await adminFetch('/api/upload/sign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contentType: file.type, size: file.size })
+        });
+        const signData = await signRes.json();
+        if (!signRes.ok) throw new Error(signData.error || 'Error al obtener URL de subida');
+        setSubidas((prev) => prev.map((s) => (s.id === id ? { ...s, progreso: 30 } : s)));
+        const putRes = await fetch(signData.signedUrl, {
+          method: 'PUT',
+          body: file,
+          headers: { 'Content-Type': file.type }
+        });
+        if (!putRes.ok) throw new Error('Error al subir a Supabase Storage');
+        url = signData.publicUrl;
+      }
+      setImagenes((prev) => [...prev, url]);
+      setSubidas((prev) => prev.map((s) => (s.id === id ? { ...s, estado: 'ok', url, progreso: 100 } : s)));
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error al subir la imagen';
       setSubidas((prev) => prev.map((s) => (s.id === id ? { ...s, estado: 'error', error: message } : s)));
@@ -322,7 +350,7 @@ export default function ProductForm({ producto, categorias, onGuardado, onCancel
           <p className="text-sm text-verde-noche/70">
             {alLimite ? 'Límite de imágenes alcanzado' : 'Arrastra imágenes aquí o haz clic para subir'}
           </p>
-          <p className="text-xs text-verde-noche/40 mt-1">JPG, PNG, WebP, GIF, AVIF, HEIC · máx 4 MB · hasta {MAX_PRODUCT_IMAGES} fotos</p>
+          <p className="text-xs text-verde-noche/40 mt-1">JPG, PNG, WebP, GIF, AVIF (máx 25 MB) · HEIC (máx 4 MB) · hasta {MAX_PRODUCT_IMAGES} fotos</p>
           <input
             ref={inputRef}
             type="file"

@@ -5,8 +5,8 @@ Tienda online para **Casa y Cosas** en Panguipulli, Chile. Vende artículos del 
 
 ## Stack
 - **Framework:** Next.js 14 (App Router) + TypeScript + Tailwind CSS
-- **DB:** Supabase Postgres (tablas: `productos`, `config`)
-- **Imágenes:** Supabase Storage bucket `product-images`
+- **DB:** Supabase Postgres (tablas: `productos`, `config`, `pedidos`, `pedido_items`)
+- **Imágenes:** Supabase Storage bucket `product-images` — subida directa vía signed URLs (hasta 25 MB) o data URL → conversión sharp server-side (HEIC, hasta 4 MB)
 - **Deploy:** Vercel (`casaycosas-next.vercel.app`) — auto-deploy desde `main`
 - **Auth admin:** Cookie httpOnly firmada con HMAC (`SESSION_SECRET`), expira 12h. `SameSite=Strict` (anti-CSRF).
 - **CSRF:** Cookie `cyc_admin_csrf` (HMAC-signed, no httpOnly para que JS la lea) + header `X-CSRF-Token`. `src/lib/csrf.ts` valida server-side; `src/lib/adminFetch.ts` adjunta client-side. Toda mutación admin (POST/PUT/PATCH/DELETE) valida session + CSRF.
@@ -17,7 +17,10 @@ Tienda online para **Casa y Cosas** en Panguipulli, Chile. Vende artículos del 
 ## Modelo de datos clave
 - `productos`: id, name, description, category, image_url, instagram_url, price, stock, visible, images[], created_at
 - `config`: JSONB con `category_order` (string[]) y `featured` ({productIds: number[4], title: string})
+- `pedidos`: id, cliente_nombre, cliente_whatsapp, total, estado (pendiente/confirmado/cancelado/expirado), created_at, confirmado_at
+- `pedido_items`: pedido_id, producto_id, nombre, qty, precio
 - Los productos pueden tener imágenes como base64 en la DB (legacy). `db.ts` filtra base64 en runtime.
+- **Sistema de pedidos**: el carrito llama `POST /api/pedido` → crea pedido + decrementa stock atómicamente. Expiración lazy a 48h (restaura stock). Admin gestiona en vista Pedidos.
 
 ## Arquitectura importante
 - **Todas las rutas API** tienen `export const runtime = 'nodejs'` y `export const dynamic = 'force-dynamic'` para evitar 405 en Vercel
@@ -75,6 +78,8 @@ npx next build       # Build de producción
 npx next lint        # Lint
 npm run migrate:images:dry-run  # Preview migración base64→Storage
 npm run migrate:images          # Ejecutar migración
+npm run reset:stock:dry-run     # Preview reset stock ≥1 → 10
+npm run reset:stock             # Ejecutar reset stock
 ```
 
 ## Git

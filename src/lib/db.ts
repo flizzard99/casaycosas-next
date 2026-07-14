@@ -84,6 +84,200 @@ export async function ensureSchema() {
   schemaReady = true;
 }
 
+export type Pedido = {
+  id: number;
+  cliente_nombre: string;
+  cliente_whatsapp: string;
+  total: number;
+  estado: 'pendiente' | 'confirmado' | 'cancelado' | 'expirado';
+  created_at: string;
+  confirmado_at: string | null;
+  items: PedidoItem[];
+};
+
+export type PedidoItem = {
+  producto_id: number;
+  nombre: string;
+  qty: number;
+  precio: number;
+};
+
+export type EstadoPedido = 'pendiente' | 'confirmado' | 'cancelado' | 'expirado';
+
+const PEDIDO_EXPIRACION_HORAS = 48;
+
+async function ensurePedidosSchema() {
+  const pool = getPool();
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS pedidos (
+      id SERIAL PRIMARY KEY,
+      cliente_nombre TEXT DEFAULT '',
+      cliente_whatsapp TEXT DEFAULT '',
+      total INTEGER DEFAULT 0,
+      estado TEXT DEFAULT 'pendiente',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      confirmado_at TIMESTAMPTZ
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS pedido_items (
+      id SERIAL PRIMARY KEY,
+      pedido_id INTEGER REFERENCES pedidos(id) ON DELETE CASCADE,
+      producto_id INTEGER,
+      nombre TEXT,
+      qty INTEGER DEFAULT 1,
+      precio INTEGER DEFAULT 0
+    )
+  `);
+}
+
+function formatPedido(row: Record<string, unknown>, items: PedidoItem[] = []): Pedido {
+  return {
+    id: row.id as number,
+    cliente_nombre: (row.cliente_nombre as string) || '',
+    cliente_whatsapp: (row.cliente_whatsapp as string) || '',
+    total: (row.total as number) || 0,
+    estado: (row.estado as EstadoPedido) || 'pendiente',
+    created_at: row.created_at as string,
+    confirmado_at: row.confirmado_at ? (row.confirmado_at as string) : null,
+    items
+  };
+}
+
+async function expirarPedidosViejos(pool: Pool): Promise<void> {
+  await pool.query(
+    `UPDATE pedidos SET estado = 'expirado'
+     WHERE estado = 'pendiente' AND created_at < NOW() - ($1 || ' hours')::INTERVAL`,
+    [String(PEDIDO_EXPIRACION_HORAS)]
+  );
+}
+
+export async function crearPedido(items: { id: number; qty: number }[], clienteNombre: string, clienteWhatsapp: string): Promise<Pedido | null> {
+  await ensureSchema();
+  await ensurePedidosSchema();
+  const pool = getPool();
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await expirarPedidosViejos(client as unknown as Pool);
+
+    let total = 0;
+    const itemsDetalle: { producto_id: number; nombre: string; qty: number; precio: number }[] = [];
+
+    for (const item of items) {
+      const res = await client.query('SELECT id, name, price, stock FROM productos WHERE id = $1 FOR UPDATE', [item.id]);
+      if (!res.rows.length) throw new Error(`Producto ${item.id} no encontrado`);
+      const p = res.rows[0];
+      if ((p.stock || 0) < item.qty) {
+        throw new Error(`Stock insuficiente para "${p.name}" (disponible: ${p.stock || 0}, solicitado: ${item.qty})`);
+      }
+      total += (p.price || 0) * item.qty;
+      itemsDetalle.push({ producto_id: p.id, nombre: p.name, qty: item.qty, precio: p.price || 0 });
+      await client.query('UPDATE productos SET stock = stock - $1 WHERE id = $2', [item.qty, p.id]);
+    }
+
+    const pedidoRes = await client.query(
+      `INSERT INTO pedidos (cliente_nombre, cliente_whatsapp, total, estado) VALUES ($1, $2, $3, 'pendiente') RETURNING *`,
+      [clienteNombre, clienteWhatsapp, total]
+    );
+    const pedidoId = pedidoRes.rows[0].id;
+
+    for (const item of itemsDetalle) {
+      await client.query(
+        `INSERT INTO pedido_items (pedido_id, producto_id, nombre, qty, precio) VALUES ($1, $2, $3, $4, $5)`,
+        [pedidoId, item.producto_id, item.nombre, item.qty, item.precio]
+      );
+    }
+
+    await client.query('COMMIT');
+    return formatPedido(pedidoRes.rows[0], itemsDetalle);
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+export async function getPedidosPendientes(): Promise<Pedido[]> {
+  await ensureSchema();
+  await ensurePedidosSchema();
+  const pool = getPool();
+  await expirarPedidosViejos(pool);
+  const res = await pool.query(
+    `SELECT * FROM pedidos WHERE estado = 'pendiente' ORDER BY created_at DESC`
+  );
+  const pedidos: Pedido[] = [];
+  for (const row of res.rows) {
+    const itemsRes = await pool.query(
+      `SELECT producto_id, nombre, qty, precio FROM pedido_items WHERE pedido_id = $1`,
+      [row.id]
+    );
+    pedidos.push(formatPedido(row, itemsRes.rows as PedidoItem[]));
+  }
+  return pedidos;
+}
+
+export async function confirmarPedido(id: number): Promise<Pedido | null> {
+  await ensureSchema();
+  await ensurePedidosSchema();
+  const pool = getPool();
+  const res = await pool.query(
+    `UPDATE pedidos SET estado = 'confirmado', confirmado_at = NOW() WHERE id = $1 AND estado = 'pendiente' RETURNING *`,
+    [id]
+  );
+  if (!res.rows.length) return null;
+  const itemsRes = await pool.query(
+    `SELECT producto_id, nombre, qty, precio FROM pedido_items WHERE pedido_id = $1`,
+    [id]
+  );
+  return formatPedido(res.rows[0], itemsRes.rows as PedidoItem[]);
+}
+
+export async function cancelarPedido(id: number): Promise<Pedido | null> {
+  await ensureSchema();
+  await ensurePedidosSchema();
+  const pool = getPool();
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const pedRes = await client.query(
+      `SELECT * FROM pedidos WHERE id = $1 AND estado = 'pendiente' FOR UPDATE`,
+      [id]
+    );
+    if (!pedRes.rows.length) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+    await client.query(
+      `UPDATE pedidos SET estado = 'cancelado' WHERE id = $1`,
+      [id]
+    );
+    const itemsRes = await client.query(
+      `SELECT producto_id, qty FROM pedido_items WHERE pedido_id = $1`,
+      [id]
+    );
+    for (const item of itemsRes.rows) {
+      await client.query(
+        `UPDATE productos SET stock = stock + $1 WHERE id = $2`,
+        [item.qty, item.producto_id]
+      );
+    }
+    await client.query('COMMIT');
+    const finales = await pool.query(`SELECT * FROM pedidos WHERE id = $1`, [id]);
+    const itemsFinales = await pool.query(
+      `SELECT producto_id, nombre, qty, precio FROM pedido_items WHERE pedido_id = $1`,
+      [id]
+    );
+    return formatPedido(finales.rows[0], itemsFinales.rows as PedidoItem[]);
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 /** Filtra imágenes que son data URLs base64 (inflan el HTML/ISR) o strings inválidos */
 function limpiarImagenes(images: (string | null | undefined)[]): string[] {
   if (!Array.isArray(images)) return [];
