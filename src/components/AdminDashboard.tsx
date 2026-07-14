@@ -16,6 +16,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
   const [featured, setFeatured] = useState<FeaturedConfig>(FEATURED_DEFAULT);
   const [busqueda, setBusqueda] = useState('');
+  const [categoriaFiltro, setCategoriaFiltro] = useState('todas');
   const [cargando, setCargando] = useState(true);
   const [editando, setEditando] = useState<Producto | null>(null);
   const [creandoNuevo, setCreandoNuevo] = useState(false);
@@ -44,9 +45,12 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
   const filtrados = useMemo(() => {
     const term = busqueda.trim().toLowerCase();
-    if (!term) return productos;
-    return productos.filter((p) => p.name.toLowerCase().includes(term) || p.category.toLowerCase().includes(term));
-  }, [productos, busqueda]);
+    return productos.filter((p) => {
+      const porCategoria = categoriaFiltro === 'todas' || p.category === categoriaFiltro;
+      const porTexto = !term || p.name.toLowerCase().includes(term) || p.category.toLowerCase().includes(term);
+      return porCategoria && porTexto;
+    });
+  }, [productos, busqueda, categoriaFiltro]);
 
   async function ajustarStock(id: number, delta: number) {
     const res = await adminFetch(`/api/productos/${id}/stock`, {
@@ -98,12 +102,24 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       <main className="px-6 md:px-10 py-8 grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8">
         <div>
           <div className="flex flex-col md:flex-row gap-3 md:items-center justify-between mb-5">
-            <input
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar por nombre o categoría..."
-              className="w-full md:w-72 px-3 py-2 rounded border border-verde-noche/20 text-sm bg-white"
-            />
+            <div className="flex flex-col sm:flex-row gap-3 flex-1">
+              <input
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                placeholder="Buscar por nombre..."
+                className="w-full sm:w-72 px-3 py-2 rounded border border-verde-noche/20 text-sm bg-white"
+              />
+              <select
+                value={categoriaFiltro}
+                onChange={(e) => setCategoriaFiltro(e.target.value)}
+                className="w-full sm:w-48 px-3 py-2 rounded border border-verde-noche/20 text-sm bg-white capitalize"
+              >
+                <option value="todas">Todas las categorías</option>
+                {categorias.map((c) => (
+                  <option key={c} value={c} className="capitalize">{c}</option>
+                ))}
+              </select>
+            </div>
             <button
               onClick={() => setCreandoNuevo(true)}
               className="bg-verde text-white text-sm font-semibold px-4 py-2 rounded-md hover:bg-verde-oscuro whitespace-nowrap"
@@ -114,8 +130,14 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
           {cargando ? (
             <p className="text-sm text-verde-noche/60">Cargando productos…</p>
+          ) : filtrados.length === 0 ? (
+            <div className="bg-white rounded-lg shadow-sm p-10 text-center">
+              <p className="text-sm text-verde-noche/60">No se encontraron productos con los filtros actuales.</p>
+            </div>
           ) : (
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div>
+          <p className="text-xs text-verde-noche/50 mb-2">{filtrados.length} de {productos.length} productos</p>
+          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-crema/70 text-verde-noche/70 text-xs uppercase">
@@ -200,6 +222,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               </table>
               </div>
             </div>
+          </div>
           )}
         </div>
 

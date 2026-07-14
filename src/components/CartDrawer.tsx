@@ -10,7 +10,6 @@ const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency:
 
 export default function CartDrawer() {
   const { items, isOpen, close, updateQty, removeItem, total, clear } = useCart();
-  const [copiado, setCopiado] = useState(false);
   const [nombre, setNombre] = useState('');
   const [bloqueado, setBloqueado] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -62,20 +61,7 @@ export default function CartDrawer() {
     window.open(url, '_blank');
   }
 
-  async function copiarParaInstagram() {
-    if (!items.length || bloqueado) return;
-    setBloqueado(true);
-    setTimeout(() => setBloqueado(false), 1000);
-    const mensaje = construirMensaje();
-    try {
-      await navigator.clipboard.writeText(mensaje);
-    } catch {
-      setCopiado(false);
-      return;
-    }
-    setCopiado(true);
-    setTimeout(() => setCopiado(false), 3000);
-  }
+  
 
   return (
     <div className={`fixed inset-0 z-50 flex justify-end transition-opacity duration-300 ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
@@ -175,19 +161,6 @@ export default function CartDrawer() {
           >
             Reservar pedido por WhatsApp
           </button>
-          <button
-            onClick={copiarParaInstagram}
-            disabled={!items.length || bloqueado}
-            className="w-full mt-2 bg-white border border-verde-oscuro/20 text-verde-oscuro text-sm font-semibold py-3 rounded-md hover:bg-crema disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {copiado ? '¡Mensaje copiado! Pégalo en Instagram' : 'Copiar pedido para Instagram'}
-          </button>
-
-          {copiado && (
-            <p className="text-xs text-verde-oscuro/70 text-center mt-2 leading-relaxed">
-              Mensaje copiado al portapapeles. Ábrelo en el chat de Instagram de la tienda y pégalo (Ctrl+V).
-            </p>
-          )}
 
           {items.length > 0 && (
             <button onClick={clear} className="w-full text-xs text-verde-noche/50 hover:text-verde-noche mt-2">

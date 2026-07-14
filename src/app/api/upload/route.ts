@@ -21,6 +21,11 @@ export async function POST(req: NextRequest) {
     if (typeof image !== 'string' || !image.startsWith('data:image/')) {
       return NextResponse.json({ error: 'Falta la imagen o el formato es inválido' }, { status: 400 });
     }
+    const mimeRaw = image.split(',')[0]?.match(/data:(image\/[\w.+-]+)/i)?.[1]?.toLowerCase();
+    const PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif', 'image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence'];
+    if (!mimeRaw || !PERMITIDOS.includes(mimeRaw)) {
+      return NextResponse.json({ error: 'Formato no permitido. Solo JPG, PNG, WebP, GIF, AVIF y HEIC.' }, { status: 400 });
+    }
     const base64Data = image.split(',')[1];
     if (!base64Data) {
       return NextResponse.json({ error: 'Formato data URL inválido' }, { status: 400 });

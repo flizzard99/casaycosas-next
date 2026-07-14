@@ -20,8 +20,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (!Array.isArray(images) || !images.length) {
       return NextResponse.json({ error: 'images debe ser un array no vacío' }, { status: 400 });
     }
-    if (images.length > 20) {
-      return NextResponse.json({ error: 'Máximo 20 imágenes por producto' }, { status: 400 });
+    if (images.length > 8) {
+      return NextResponse.json({ error: 'Máximo 8 imágenes por producto' }, { status: 400 });
     }
     const id = parseIdOrBadRequest(params.id);
     if (id === null) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
