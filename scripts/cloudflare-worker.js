@@ -11,7 +11,7 @@
  * 5. En DigitalPlat, creá un CNAME: images → casaycosas-next.pages.dev (o el dominio del worker)
  */
 
-const SUPABASE_ORIGIN = 'https://TU-PROJECT-REF.supabase.co';
+const SUPABASE_ORIGIN = 'https://iabrfqqaqlonllnoinzd.supabase.co';
 
 export default {
   async fetch(request) {
