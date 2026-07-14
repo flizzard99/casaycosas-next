@@ -28,17 +28,6 @@ function getPool(): Pool {
 
 let schemaReady = false;
 
-const SUPABASE_CDN_DOMAIN = process.env.SUPABASE_CDN_DOMAIN || '';
-const SUPABASE_PROJECT_REF = process.env.SUPABASE_PROJECT_REF || '';
-
-function proxyStorageUrl(url: string): string {
-  if (!SUPABASE_CDN_DOMAIN || !SUPABASE_PROJECT_REF) return url;
-  return url.replace(
-    `https://${SUPABASE_PROJECT_REF}.supabase.co`,
-    `https://${SUPABASE_CDN_DOMAIN}`
-  );
-}
-
 /**
  * Crea las tablas si no existen y agrega columnas nuevas de forma segura.
  * Es exactamente compatible con la tabla "productos" que ya usa tu sitio actual,
@@ -298,14 +287,13 @@ function limpiarImagenes(images: (string | null | undefined)[]): string[] {
   return images
     .filter((img): img is string => typeof img === 'string' && img.length > 0)
     .filter((img) => !img.startsWith('data:'))
-    .map(proxyStorageUrl)
     .slice(0, 20);
 }
 
 function limpiarImageUrl(url: string | undefined | null): string {
   if (!url || typeof url !== 'string') return '';
   if (url.startsWith('data:')) return '';
-  return proxyStorageUrl(url);
+  return url;
 }
 
 function formatProducto(row: Record<string, unknown>): Producto {

@@ -13,11 +13,11 @@ const securityHeaders = [
     value:
       [
         "default-src 'self'",
-        "img-src 'self' https://*.supabase.co https://images.casaycosas.qzz.io https://acdn-us.mitiendanube.com https://cdn.sd.com.py https://cdn11.bigcommerce.com https://fimgs.net https://mates.cl https://tangofoodsusa.com https://www.google.com https://www.mundobiblia.com https://www.schwarzenbach.ch data: blob:",
+        "img-src 'self' https://*.supabase.co https://acdn-us.mitiendanube.com https://cdn.sd.com.py https://cdn11.bigcommerce.com https://fimgs.net https://mates.cl https://tangofoodsusa.com https://www.google.com https://www.mundobiblia.com https://www.schwarzenbach.ch data: blob:",
         "script-src 'self' 'unsafe-inline'",
         "style-src 'self' 'unsafe-inline'",
         "font-src 'self' data:",
-        "connect-src 'self' https://*.supabase.co https://images.casaycosas.qzz.io https://*.vercel-analytics.com wss://*.supabase.co",
+        "connect-src 'self' https://*.supabase.co https://*.vercel-analytics.com wss://*.supabase.co",
         "frame-ancestors 'none'",
         "base-uri 'self'",
         "form-action 'self'",
@@ -32,7 +32,6 @@ const nextConfig = {
     minimumCacheTTL: 86400,
     remotePatterns: [
       { protocol: 'https', hostname: '**.supabase.co' },
-      { protocol: 'https', hostname: 'images.casaycosas.qzz.io' },
       { protocol: 'https', hostname: 'cdn11.bigcommerce.com' },
       { protocol: 'https', hostname: 'acdn-us.mitiendanube.com' },
       { protocol: 'https', hostname: 'cdn.sd.com.py' },
