@@ -16,7 +16,7 @@
     "migrate:to-r2:dry-run": "tsx scripts/migrate-to-r2.ts"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1087.0",
