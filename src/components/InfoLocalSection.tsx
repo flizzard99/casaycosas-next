@@ -43,7 +43,7 @@ const ICON_COMPONENTS: Record<string, React.FC> = {
 export default function InfoLocalSection() {
   const redes = [
     { nombre: 'Instagram', url: tienda.instagramUrl, color: '#E1306C' },
-    { nombre: 'WhatsApp', url: tienda.whatsappUrl, color: '#25D366' },
+    { nombre: 'WhatsApp', url: tienda.whatsappUrl, color: '#167c42' },
     { nombre: 'Facebook', url: tienda.facebookUrl, color: '#1877F2' },
     { nombre: 'TikTok', url: tienda.tiktokUrl, color: '#111111' }
   ];
@@ -72,7 +72,7 @@ export default function InfoLocalSection() {
           </a>
 
           {/* Datos + Redes a la derecha */}
-          <div className="flex-1 min-w-[280px] text-center">
+          <div className="flex-1 min-w-0 basis-[280px] text-center">
             <h3 className="font-display text-2xl text-verde-oscuro mb-2">Visítanos</h3>
             <p className="text-verde-noche/70 mb-6 text-sm">{tienda.storeAddress}</p>
             <div className="flex gap-2.5 flex-wrap justify-center mb-6">

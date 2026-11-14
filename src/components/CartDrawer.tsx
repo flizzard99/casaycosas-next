@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import ProductImage from './ProductImage';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -26,7 +26,7 @@ export default function CartDrawer() {
     }
     if (e.key !== 'Tab' || !drawerRef.current) return;
     const focusable = drawerRef.current.querySelectorAll<HTMLElement>(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
     );
     if (!focusable.length) return;
     const first = focusable[0];
@@ -42,11 +42,14 @@ export default function CartDrawer() {
 
   useEffect(() => {
     if (!isOpen) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     closeBtnRef.current?.focus();
     document.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, handleKeyDown]);
@@ -80,20 +83,21 @@ export default function CartDrawer() {
         setError(data.error || 'No se pudo procesar el pedido');
         return;
       }
-      const waUrl = data.whatsappUrl as string | undefined;
       const estadoUrl = data.estadoUrl as string;
-      if (waUrl) window.open(waUrl, '_blank');
       clear();
       setNombre('');
       setEmail('');
       close();
-      router.push(estadoUrl || `/pedido/${data.pedidoId}`);
+      const destino = new URL(estadoUrl, window.location.origin);
+      router.push(`${destino.pathname}${destino.search}`);
     } catch {
       setError('Error de conexión. Intenta nuevamente.');
     } finally {
       setBloqueado(false);
     }
   }
+
+  if (!isOpen) return null;
 
   return (
     <div className={`fixed inset-0 z-50 flex justify-end transition-opacity duration-300 ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
@@ -120,7 +124,7 @@ export default function CartDrawer() {
           {items.length === 0 && (
             <div className="text-center py-10">
               <p className="text-sm text-verde-noche/60 mb-3">Tu carrito está vacío.</p>
-              <Link href="/catalogo" className="text-sm text-verde hover:text-verde-oscuro font-medium">
+              <Link href="/catalogo" onClick={close} className="text-sm text-verde hover:text-verde-oscuro font-medium">
                 Explora nuestro catálogo →
               </Link>
             </div>
@@ -132,7 +136,7 @@ export default function CartDrawer() {
               <div key={item.id} className="flex gap-3 items-center">
                 <div className="w-14 h-14 rounded bg-crema flex-shrink-0 overflow-hidden relative">
                   {item.image_url && (
-                    <Image src={item.image_url} alt={item.name} fill className="object-cover" sizes="56px" />
+                    <ProductImage src={item.image_url} alt={item.name} fill className="object-cover" sizes="56px" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -179,6 +183,8 @@ export default function CartDrawer() {
             <>
               <input
                 type="text"
+                aria-label="Tu nombre (opcional)"
+                autoComplete="name"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
                 placeholder="Tu nombre (opcional)"
@@ -187,6 +193,8 @@ export default function CartDrawer() {
               />
               <input
                 type="email"
+                aria-label="Tu email (opcional, para seguimiento)"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setEmailError(''); }}
                 placeholder="Tu email (opcional, para seguimiento)"
@@ -201,7 +209,7 @@ export default function CartDrawer() {
           )}
 
           {error && (
-            <p className="text-xs text-red-600 mb-2 leading-relaxed">{error}</p>
+            <p role="alert" className="text-xs text-red-600 mb-2 leading-relaxed">{error}</p>
           )}
 
           <button

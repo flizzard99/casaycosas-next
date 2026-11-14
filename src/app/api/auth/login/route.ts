@@ -73,13 +73,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (!process.env.ADMIN_PASSWORD) {
+  if (!process.env.ADMIN_PASSWORD || !process.env.SESSION_SECRET) {
     await registerFailedAttempt(ip);
-    return NextResponse.json({ error: 'ADMIN_PASSWORD no configurada en el servidor' }, { status: 500 });
+    return NextResponse.json({ error: 'El acceso de administración no está disponible temporalmente' }, { status: 503 });
   }
 
-  const { password } = await req.json();
-  if (!password || !checkPassword(password)) {
+  let body: unknown;
+  try { body = await req.json(); } catch {
+    return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
+  }
+  const password = body && typeof body === 'object' ? (body as Record<string, unknown>).password : undefined;
+  if (typeof password !== 'string' || !password || password.length > 1024 || !checkPassword(password)) {
     await registerFailedAttempt(ip);
     return NextResponse.json({ error: 'Contraseña incorrecta' }, { status: 401 });
   }
@@ -94,8 +98,8 @@ export async function POST(req: NextRequest) {
     path: '/',
     maxAge: 60 * 60 * 12
   };
-  cookies().set(SESSION_COOKIE_NAME, token, cookieOpts);
-  cookies().set(CSRF_COOKIE_NAME, csrf, {
+  (await cookies()).set(SESSION_COOKIE_NAME, token, cookieOpts);
+  (await cookies()).set(CSRF_COOKIE_NAME, csrf, {
     httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict' as const,

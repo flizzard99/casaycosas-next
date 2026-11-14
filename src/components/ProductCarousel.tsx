@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import ProductImage from './ProductImage';
 import { useState, useRef, useCallback } from 'react';
 
 export default function ProductCarousel({ images, alt }: { images: string[]; alt: string }) {
@@ -51,7 +51,7 @@ export default function ProductCarousel({ images, alt }: { images: string[]; alt
       aria-label={`Galería de fotos de ${alt}`}
       aria-roledescription="carrusel"
     >
-      <Image
+      <ProductImage
         src={images[indice]}
         alt={`${alt} — foto ${indice + 1}`}
         fill

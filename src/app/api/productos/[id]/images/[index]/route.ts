@@ -9,20 +9,20 @@ import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 import { verifyCsrf } from '@/lib/csrf';
 import { checkAdminRateLimit } from '@/lib/adminRateLimit';
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string; index: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string; index: string }> }) {
   if (!checkAdminRateLimit(req)) return NextResponse.json({ error: 'Demasiadas solicitudes' }, { status: 429 });
-  const token = cookies().get(SESSION_COOKIE_NAME)?.value;
-  if (!verifySessionToken(token) || !verifyCsrf(req)) {
+  const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
+  if (!verifySessionToken(token) || !(await verifyCsrf(req))) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
   try {
-    const idx = parseInt(params.index, 10);
+    const idx = parseInt((await params).index, 10);
     if (isNaN(idx) || idx < 0) return NextResponse.json({ error: 'Índice inválido' }, { status: 400 });
-    const id = parseIdOrBadRequest(params.id);
+    const id = parseIdOrBadRequest((await params).id);
     if (id === null) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
     const producto = await eliminarImagen(id, idx);
     if (!producto) return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
-    revalidatePath(`/producto/${params.id}`, 'page');
+    revalidatePath(`/producto/${(await params).id}`, 'page');
     return NextResponse.json(producto);
   } catch (e: unknown) {
     console.error('[API Error] image delete:', e);

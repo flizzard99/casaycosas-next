@@ -25,7 +25,7 @@ export function createSessionToken(): string {
 
 /** Verifica el token de sesión. Devuelve true si es válido y no ha expirado. */
 export function verifySessionToken(token: string | undefined | null): boolean {
-  if (!token) return false;
+  if (!token || !process.env.SESSION_SECRET || token.split('.').length !== 2) return false;
   const [payloadB64, signature] = token.split('.');
   if (!payloadB64 || !signature) return false;
 
@@ -60,7 +60,7 @@ export function createCsrfToken(): string {
 }
 
 export function verifyCsrfToken(token: string | undefined | null): boolean {
-  if (!token) return false;
+  if (!token || !process.env.SESSION_SECRET || token.split('.').length !== 2) return false;
   const [payloadB64, signature] = token.split('.');
   if (!payloadB64 || !signature) return false;
   const expected = sign(payloadB64);

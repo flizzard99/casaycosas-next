@@ -33,8 +33,8 @@ export default function Hero() {
           Detalles especiales para Ti y para tu Hogar
         </h1>
         <p className="max-w-lg mx-auto mt-6 text-sm md:text-base text-white leading-relaxed">
-          Un catálogo armado para recorrer con calma. Agrega tus artículos al carrito, selecciona el
-          canal de comunicación y coordinamos tu pedido.
+          Encuentra detalles para regalar y disfrutar en casa. Reserva tus favoritos por 48 horas
+          y coordina el retiro en nuestra tienda en Panguipulli.
         </p>
         <Link
           href="/catalogo"
@@ -42,6 +42,7 @@ export default function Hero() {
         >
           Ver catálogo
         </Link>
+        <p className="mt-4 text-xs text-white/90">Retiro en tienda · Precios en pesos chilenos · Atención cercana</p>
       </div>
     </section>
   );

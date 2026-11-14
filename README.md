@@ -1,6 +1,6 @@
 # Casa y Cosas — Panguipulli (v2, Next.js)
 
-Reescritura completa del sitio en **Next.js 14 (App Router) + TypeScript + Tailwind CSS**,
+Reescritura completa del sitio en **Next.js 16 (App Router) + TypeScript + Tailwind CSS**,
 manteniendo la misma base de datos Postgres/Supabase que ya usa el sitio actual
 (no se pierde ningún producto ni configuración).
 
@@ -77,10 +77,10 @@ cp .env.example .env.local
 
 ## 2. Instalación y desarrollo local
 
-Requiere Node.js 18 o superior.
+Requiere Node.js 22 o superior (validado con Node.js 24).
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
@@ -151,3 +151,46 @@ El script requiere `.env.local` con `DATABASE_URL`, `SUPABASE_URL` y `SUPABASE_S
 - Agregar registro de auditoría (quién cambió qué) si lo necesitas más adelante.
 - Optimizar imágenes servidas desde URLs externas (bigcommerce, etc.) migrándolas a Supabase
   Storage con el tiempo.
+
+
+## Validación y entorno en la nube
+
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run build
+npm run test:e2e
+```
+
+`npm test` utiliza Postgres embebido (PGlite) en memoria; no modifica Supabase.
+Las pruebas de navegador ejecutan su propio servidor de desarrollo en el puerto 3100,
+sin credenciales de base de datos ni administración. Comprueban el modo sin conexión,
+la navegación y el carrito en escritorio y móvil. Requieren Chromium disponible en
+`/usr/bin/chromium`, o indicar `CHROMIUM_PATH` con la ruta del navegador instalado.
+Para probar la aplicación con productos reales configura `DATABASE_URL` y verifica
+inicio, catálogo, categorías, detalle y una reserva controlada en una base de pruebas.
+No ejecutes pruebas que creen pedidos contra la base de producción.
+
+Las fuentes Anton y Work Sans se sirven desde paquetes locales: la compilación ya no
+requiere conectarse a Google Fonts. Next.js 16 utiliza APIs asíncronas para cookies
+y parámetros de ruta; usa `npm run lint`, porque `next lint` fue eliminado.
+
+El catálogo muestra un aviso y el contacto de WhatsApp si no puede conectarse a Postgres;
+esto no significa que la conexión esté configurada. Para administrar necesitas también
+`ADMIN_PASSWORD` y `SESSION_SECRET`. La subida de imágenes utiliza R2 y necesita
+`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME` y
+`R2_PUBLIC_URL`; Supabase Storage se conserva para los scripts de migración heredados.
+Configura los valores sensibles en los ajustes seguros del entorno y de Vercel.
+No copies los valores de ejemplo como si fueran credenciales reales.
+
+Los nuevos enlaces de seguimiento incluyen una clave privada (`?token=...`). Guarda
+el enlace completo. Los enlaces antiguos sin clave dejan de mostrar datos de clientes;
+los pedidos permanecen disponibles para el administrador. La nueva columna
+`pedidos.tracking_token` se agrega automáticamente al inicializar el esquema.
+Los pedidos que ya figuraban como expirados antes de esta corrección no se recalculan:
+su stock debe revisarse por separado para evitar devolver unidades dos veces.
+
+El rate limit distribuido del login requiere Upstash. Los correos requieren Resend y
+un remitente verificado. Sin estas integraciones no se validan envío de emails ni
+protección distribuida contra intentos de acceso.

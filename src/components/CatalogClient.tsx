@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import ProductCard from './ProductCard';
 import type { Producto } from '@/lib/types';
 
@@ -15,10 +15,6 @@ export default function CatalogClient({ productosIniciales, categoryOrder }: Pro
   const [busqueda, setBusqueda] = useState('');
   const [categoriaActiva, setCategoriaActiva] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [busqueda, categoriaActiva]);
 
   const categorias = useMemo(() => {
     const set = new Set(productosIniciales.map((p) => p.category));
@@ -70,15 +66,17 @@ export default function CatalogClient({ productosIniciales, categoryOrder }: Pro
     <section id="catalogo" className="px-6 md:px-14 py-14 md:py-20">
       <div className="flex flex-col md:flex-row md:items-center gap-4 mb-8">
         <input
-          type="text"
+          type="search"
+          aria-label="Buscar productos"
           value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
+          onChange={(e) => { setBusqueda(e.target.value); setVisibleCount(PAGE_SIZE); }}
           placeholder="Buscar productos..."
           className="w-full md:w-80 px-4 py-2.5 rounded-md border border-verde-oscuro/20 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-verde"
         />
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => setCategoriaActiva(null)}
+            onClick={() => { setCategoriaActiva(null); setVisibleCount(PAGE_SIZE); }}
+            aria-pressed={categoriaActiva === null}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${
               categoriaActiva === null ? 'bg-verde-oscuro text-white border-verde-oscuro' : 'border-verde-oscuro/30 text-verde-oscuro'
             }`}
@@ -88,7 +86,8 @@ export default function CatalogClient({ productosIniciales, categoryOrder }: Pro
           {categorias.map((cat) => (
             <button
               key={cat}
-              onClick={() => setCategoriaActiva(cat)}
+              onClick={() => { setCategoriaActiva(cat); setVisibleCount(PAGE_SIZE); }}
+              aria-pressed={categoriaActiva === cat}
               className={`px-3 py-1.5 rounded-full text-xs font-semibold border capitalize ${
                 categoriaActiva === cat ? 'bg-verde-oscuro text-white border-verde-oscuro' : 'border-verde-oscuro/30 text-verde-oscuro'
               }`}
@@ -98,6 +97,8 @@ export default function CatalogClient({ productosIniciales, categoryOrder }: Pro
           ))}
         </div>
       </div>
+
+      <p className="text-sm text-verde-oscuro mb-6" role="status">{filtrados.length} producto{filtrados.length !== 1 ? 's' : ''} encontrado{filtrados.length !== 1 ? 's' : ''}</p>
 
       {grupos.length === 0 && (
         <p className="text-sm text-verde-oscuro/70">

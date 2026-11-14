@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { Producto, FeaturedConfig } from '@/lib/types';
 import { adminFetch } from '@/lib/adminFetch';
 
@@ -19,11 +19,6 @@ export default function FeaturedEditor({ productos, featureConfigInicial, onGuar
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
   const [ok, setOk] = useState(false);
-
-  useEffect(() => {
-    setSeleccionados(featureConfigInicial.productIds);
-    setTitulo(featureConfigInicial.title);
-  }, [featureConfigInicial]);
 
   const filtrados = useMemo(() => {
     const term = busqueda.trim().toLowerCase();

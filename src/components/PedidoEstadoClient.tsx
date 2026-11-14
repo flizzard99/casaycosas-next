@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { QRCodeSVG } from 'qrcode.react';
 import type { Pedido } from '@/lib/db';
@@ -16,30 +16,37 @@ const ESTADO_CONFIG: Record<Pedido['estado'], { label: string; bg: string; emoji
 };
 
 const POLL_MS = 20000;
+let clockSnapshot = 0;
+const serverClock = () => 0;
+const getClockSnapshot = () => clockSnapshot;
+function subscribeClock(listener: () => void) {
+  clockSnapshot = Date.now();
+  const interval = setInterval(() => { clockSnapshot = Date.now(); listener(); }, 1000);
+  return () => clearInterval(interval);
+}
 
-type Props = { pedidoInicial: Pedido };
+type Props = { pedidoInicial: Pedido; token: string };
 
-export default function PedidoEstadoClient({ pedidoInicial }: Props) {
-  const [pedido, setPedido] = useState<Pedido & { expiracionAt?: string }>(pedidoInicial as Pedido & { expiracionAt?: string });
-  const [now, setNow] = useState(Date.now());
+export default function PedidoEstadoClient({ pedidoInicial, token }: Props) {
+  const [pedido, setPedido] = useState<Pedido & { expiracionAt?: number }>(pedidoInicial as Pedido & { expiracionAt?: number });
+  const now = useSyncExternalStore(subscribeClock, getClockSnapshot, serverClock);
   const [qrGrande, setQrGrande] = useState(false);
 
   const fetchEstado = useCallback(async () => {
     try {
-      const res = await fetch(`/api/pedido/${pedidoInicial.id}`, { cache: 'no-store' });
+      const res = await fetch(`/api/pedido/${pedidoInicial.id}?token=${encodeURIComponent(token)}`, { cache: 'no-store' });
       if (!res.ok) return;
       const data = await res.json();
       setPedido(data);
     } catch {
       // network error, ignoramos
     }
-  }, [pedidoInicial.id]);
+  }, [pedidoInicial.id, token]);
 
   useEffect(() => {
     if (pedido.estado !== 'pendiente') return;
     const interval = setInterval(fetchEstado, POLL_MS);
-    const tick = setInterval(() => setNow(Date.now()), 1000);
-    return () => { clearInterval(interval); clearInterval(tick); };
+    return () => clearInterval(interval);
   }, [pedido.estado, fetchEstado]);
 
   const cfg = ESTADO_CONFIG[pedido.estado];
@@ -65,7 +72,7 @@ export default function PedidoEstadoClient({ pedidoInicial }: Props) {
             <p className="text-xs text-verde-noche/50 uppercase tracking-wide">Pedido</p>
             <h1 className="font-display text-3xl text-verde-noche">#{pedido.id}</h1>
             <p className="text-xs text-verde-noche/50 mt-1">
-              {new Date(pedido.created_at).toLocaleString('es-CL', { dateStyle: 'long', timeStyle: 'short' })}
+              {new Date(pedido.created_at).toLocaleString('es-CL', { dateStyle: 'long', timeStyle: 'short', timeZone: 'America/Santiago' })}
             </p>
           </div>
 
@@ -81,7 +88,7 @@ export default function PedidoEstadoClient({ pedidoInicial }: Props) {
               <div className="text-center mb-4">
                 <p className="text-xs text-verde-noche/50 uppercase tracking-wide mb-1">Expira en</p>
                 <p className="font-display text-xl text-verde-noche tabular-nums">
-                  {restaH > 0 && <>{restaH}h </>}{restaM.toString().padStart(2, '0')}m {restaS.toString().padStart(2, '0')}s
+                  {now === 0 ? 'Calculando…' : <>{restaH > 0 && <>{restaH}h </>}{restaM.toString().padStart(2, '0')}m {restaS.toString().padStart(2, '0')}s</>}
                 </p>
               </div>
             )}
@@ -110,7 +117,7 @@ export default function PedidoEstadoClient({ pedidoInicial }: Props) {
                   className="p-3 bg-white rounded-xl border border-verde-noche/10 hover:bg-crema transition-colors"
                   aria-label="Ampliar QR"
                 >
-                  <QRCodeSVG value={`PEDIDO-${pedido.id}`} size={128} bgColor="#ffffff" fgColor="#344E41" level="M" />
+                  <QRCodeSVG value={`${tienda.siteUrl}/pedido/${pedido.id}?token=${encodeURIComponent(token)}`} size={128} bgColor="#ffffff" fgColor="#344E41" level="M" />
                 </button>
                 <p className="text-[10px] text-verde-noche/40 mt-1">Toca para ampliar</p>
               </div>
@@ -144,7 +151,7 @@ export default function PedidoEstadoClient({ pedidoInicial }: Props) {
           <div className="bg-white p-6 rounded-2xl text-center" onClick={(e) => e.stopPropagation()}>
             <p className="font-display text-2xl text-verde-noche mb-1">Pedido #{pedido.id}</p>
             <p className="text-xs text-verde-noche/50 mb-4">Muestra esto en la tienda</p>
-            <QRCodeSVG value={`PEDIDO-${pedido.id}`} size={280} bgColor="#ffffff" fgColor="#344E41" level="M" />
+            <QRCodeSVG value={`${tienda.siteUrl}/pedido/${pedido.id}?token=${encodeURIComponent(token)}`} size={280} bgColor="#ffffff" fgColor="#344E41" level="M" />
             <button
               onClick={() => setQrGrande(false)}
               className="mt-4 px-5 py-2 rounded-lg border border-verde-noche/20 text-sm font-semibold text-verde-noche hover:bg-crema"

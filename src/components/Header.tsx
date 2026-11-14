@@ -33,22 +33,24 @@ export default function Header({ categorias = [] }: { categorias?: string[] }) {
 
   return (
     <header className="bg-verde sticky top-0 z-40">
+      <a href="#contenido" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-white focus:p-3">Saltar al contenido</a>
       <div className="flex items-center justify-between px-4 md:px-14 py-4 relative">
         {/* Logo (izquierda) */}
         <Link href="/" className="flex items-center gap-3 z-10">
-          <Image src="/oveja-logo.png" alt="Casa y Cosas" width={40} height={40} className="rounded-md" priority />
+          <Image src="/oveja-logo.png" alt="Casa y Cosas" width={40} height={40} className="rounded-md w-10 h-auto" priority />
         </Link>
 
         {/* Texto centrado (mobile + desktop) */}
         <Link
           href="/"
-          className="font-display text-white text-lg md:text-xl tracking-wide absolute left-1/2 -translate-x-1/2 hover:opacity-80 transition-opacity"
+          className="font-display text-white text-base sm:text-xl tracking-wide md:mr-auto md:ml-4 hover:opacity-80 transition-opacity"
         >
           CASA Y COSAS
         </Link>
 
         {/* Nav desktop */}
-        <nav className="hidden md:flex items-center gap-6 md:gap-8">
+        <nav aria-label="Navegación principal" className="hidden md:flex items-center gap-4 lg:gap-6">
+          <Link href="/catalogo" className="text-white text-sm uppercase tracking-wide">Catálogo</Link>
           {categorias.length > 0 && (
             <div
               className="relative"
@@ -61,18 +63,18 @@ export default function Header({ categorias = [] }: { categorias?: string[] }) {
                   if (e.key === 'Escape') setCatAbierto(false);
                 }}
                 aria-expanded={catAbierto}
-                aria-haspopup="menu"
+                aria-controls="categorias-menu"
                 className="text-white text-xs md:text-sm uppercase tracking-wide opacity-95 hover:opacity-100"
               >
                 Categorías ▾
               </button>
               {catAbierto && (
                 <div
-                  role="menu"
+                  id="categorias-menu"
                   onKeyDown={(e) => {
                     if (e.key === 'Escape') setCatAbierto(false);
                   }}
-                  className="absolute left-0 top-full bg-white rounded-md shadow-xl py-2 min-w-[200px] border border-verde-noche/10"
+                  className="absolute right-0 top-full bg-white rounded-md shadow-xl py-2 min-w-[200px] max-h-[65vh] overflow-y-auto border border-verde-noche/10"
                 >
                   <Link
                     href="/catalogo"
@@ -120,7 +122,9 @@ export default function Header({ categorias = [] }: { categorias?: string[] }) {
           <button
             onClick={() => setMenuAbierto((v) => !v)}
             className="text-white text-2xl leading-none"
-            aria-label="Abrir menú"
+            aria-label={menuAbierto ? "Cerrar menú" : "Abrir menú"}
+            aria-expanded={menuAbierto}
+            aria-controls="menu-mobile"
           >
             {menuAbierto ? '×' : '☰'}
           </button>
@@ -128,7 +132,8 @@ export default function Header({ categorias = [] }: { categorias?: string[] }) {
       </div>
 
       {menuAbierto && (
-        <div className="md:hidden border-t border-white/10 px-6 py-4 space-y-3">
+        <nav id="menu-mobile" aria-label="Navegación móvil" className="md:hidden border-t border-white/10 px-6 py-4 space-y-3 max-h-[75vh] overflow-y-auto">
+          <Link href="/catalogo" onClick={() => setMenuAbierto(false)} className="block text-white text-sm font-semibold">Ver catálogo completo</Link>
           {categorias.length > 0 && (
             <div className="space-y-2">
               <p className="text-white/50 text-xs uppercase tracking-wide">Categorías</p>
@@ -158,7 +163,7 @@ export default function Header({ categorias = [] }: { categorias?: string[] }) {
           >
             Visítanos
           </Link>
-        </div>
+        </nav>
       )}
     </header>
   );

@@ -8,24 +8,16 @@ import { getProductosPublicos, getProductosAdmin, createProducto } from '@/lib/d
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 import { verifyCsrf } from '@/lib/csrf';
 import { checkAdminRateLimit } from '@/lib/adminRateLimit';
+import { validarProducto } from '@/lib/validacionProducto';
 
-function isAdminRequest() {
-  const token = cookies().get(SESSION_COOKIE_NAME)?.value;
+async function isAdminRequest() {
+  const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
   return verifySessionToken(token);
-}
-
-function validarProducto(body: Record<string, unknown>): string[] {
-  const errores: string[] = [];
-  if (!body.name || !(body.name as string).trim()) errores.push('El nombre es obligatorio');
-  if (!body.category || !(body.category as string).trim()) errores.push('La categoría es obligatoria');
-  if (body.name && (body.name as string).length > 200) errores.push('El nombre no puede superar 200 caracteres');
-  if (body.description && (body.description as string).length > 2000) errores.push('La descripción no puede superar 2000 caracteres');
-  return errores;
 }
 
 export async function GET() {
   try {
-    const admin = isAdminRequest();
+    const admin = await isAdminRequest();
     const productos = admin ? await getProductosAdmin() : await getProductosPublicos();
     return NextResponse.json(productos, {
       headers: { 'Cache-Control': 'no-store' }
@@ -38,7 +30,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   if (!checkAdminRateLimit(req)) return NextResponse.json({ error: 'Demasiadas solicitudes' }, { status: 429 });
-  if (!isAdminRequest() || !verifyCsrf(req)) {
+  if (!(await isAdminRequest()) || !(await verifyCsrf(req))) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
   try {

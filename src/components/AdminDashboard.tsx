@@ -27,6 +27,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [categoriaFiltro, setCategoriaFiltro] = useState('todas');
   const [estadoFiltro, setEstadoFiltro] = useState<FiltroEstado>('todos');
   const [orden, setOrden] = useState<Orden>('recientes');
+  const [errorCarga, setErrorCarga] = useState('');
   const [cargando, setCargando] = useState(true);
   const [editando, setEditando] = useState<Producto | null>(null);
   const [creandoNuevo, setCreandoNuevo] = useState(false);
@@ -34,20 +35,18 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [pagina, setPagina] = useState(1);
   const [menuMobile, setMenuMobile] = useState(false);
 
-  async function cargarTodo() {
-    setCargando(true);
-    try {
-      const [resProductos, resConfig] = await Promise.all([fetch('/api/productos'), fetch('/api/config')]);
-      if (!resProductos.ok || !resConfig.ok) throw new Error('Error al cargar datos');
-      setProductos(await resProductos.json());
-      const config = await resConfig.json();
-      setCategoryOrder(config.categoryOrder || []);
-      setFeatured(config.featured || FEATURED_DEFAULT);
-    } catch {
-      // sin datos disponibles
-    } finally {
-      setCargando(false);
-    }
+  function cargarTodo() {
+    return Promise.all([fetch('/api/productos'), fetch('/api/config')])
+      .then(async ([resProductos, resConfig]) => {
+        if (!resProductos.ok || !resConfig.ok) throw new Error('Error al cargar datos');
+        const [datos, config] = await Promise.all([resProductos.json(), resConfig.json()]);
+        setErrorCarga('');
+        setProductos(datos);
+        setCategoryOrder(config.categoryOrder || []);
+        setFeatured(config.featured || FEATURED_DEFAULT);
+      })
+      .catch(() => setErrorCarga('No pudimos cargar los datos. Verifica la conexión e inténtalo nuevamente.'))
+      .finally(() => setCargando(false));
   }
 
   async function cargarPedidos() {
@@ -62,10 +61,6 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   useEffect(() => {
     cargarTodo();
   }, []);
-
-  useEffect(() => {
-    if (vista === 'pedidos') cargarPedidos();
-  }, [vista]);
 
   const categorias = useMemo(() => [...new Set(productos.map((p) => p.category))].sort(), [productos]);
 
@@ -104,8 +99,6 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const totalPaginas = Math.ceil(filtrados.length / PAGE_SIZE);
   const paginaActual = Math.min(pagina, totalPaginas || 1);
   const productosPagina = filtrados.slice((paginaActual - 1) * PAGE_SIZE, paginaActual * PAGE_SIZE);
-
-  useEffect(() => { setPagina(1); }, [busqueda, categoriaFiltro, estadoFiltro, orden]);
 
   async function ajustarStock(id: number, delta: number) {
     const res = await adminFetch(`/api/productos/${id}/stock`, {
@@ -181,7 +174,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           {navItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => { setVista(item.id); setMenuMobile(false); }}
+              onClick={() => { setVista(item.id); setMenuMobile(false); if (item.id === 'pedidos') cargarPedidos(); }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 vista === item.id ? 'bg-white/15 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'
               }`}
@@ -256,6 +249,8 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         </header>
 
         <main className="flex-1 p-4 md:p-8">
+          {errorCarga && <div role="alert" className="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-800">{errorCarga} <button onClick={cargarTodo} className="underline font-semibold">Reintentar</button></div>}
+
           {/* Productos */}
           {vista === 'productos' && (
             <>
@@ -271,13 +266,13 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 mb-5">
                 <input
                   value={busqueda}
-                  onChange={(e) => setBusqueda(e.target.value)}
+                  onChange={(e) => { setBusqueda(e.target.value); setPagina(1); }}
                   placeholder="Buscar producto…"
                   className="flex-1 min-w-[150px] px-3 py-2 rounded-lg border border-verde-noche/15 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-verde/30"
                 />
                 <select
                   value={categoriaFiltro}
-                  onChange={(e) => setCategoriaFiltro(e.target.value)}
+                  onChange={(e) => { setCategoriaFiltro(e.target.value); setPagina(1); }}
                   className="px-3 py-2 rounded-lg border border-verde-noche/15 text-sm bg-white capitalize"
                 >
                   <option value="todas">Todas las categorías</option>
@@ -287,7 +282,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 </select>
                 <select
                   value={estadoFiltro}
-                  onChange={(e) => setEstadoFiltro(e.target.value as FiltroEstado)}
+                  onChange={(e) => { setEstadoFiltro(e.target.value as FiltroEstado); setPagina(1); }}
                   className="px-3 py-2 rounded-lg border border-verde-noche/15 text-sm bg-white"
                 >
                   <option value="todos">Todos los estados</option>
@@ -297,7 +292,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 </select>
                 <select
                   value={orden}
-                  onChange={(e) => setOrden(e.target.value as Orden)}
+                  onChange={(e) => { setOrden(e.target.value as Orden); setPagina(1); }}
                   className="px-3 py-2 rounded-lg border border-verde-noche/15 text-sm bg-white"
                 >
                   <option value="recientes">Más recientes</option>
@@ -490,7 +485,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           {/* Destacados */}
           {vista === 'destacados' && !cargando && productos.length > 0 && (
             <div className="max-w-md">
-              <FeaturedEditor productos={productos} featureConfigInicial={featured} onGuardado={setFeatured} />
+              <FeaturedEditor key={JSON.stringify(featured)} productos={productos} featureConfigInicial={featured} onGuardado={setFeatured} />
             </div>
           )}
         </main>

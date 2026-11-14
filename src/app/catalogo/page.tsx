@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Header from '@/components/Header';
+import CatalogUnavailable from '@/components/CatalogUnavailable';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
 import FloatWhatsApp from '@/components/FloatWhatsApp';
@@ -15,6 +16,7 @@ export const metadata: Metadata = {
 };
 
 export default async function CatalogoPage() {
+  let disponible = true;
   let productos: Awaited<ReturnType<typeof getProductosPublicos>> = [];
   let categoryOrder: string[] = [];
   try {
@@ -22,7 +24,7 @@ export default async function CatalogoPage() {
     productos = p;
     categoryOrder = config.categoryOrder;
   } catch {
-    // Sin DB disponible
+    disponible = false;
   }
 
   const categorias = Array.from(new Set(productos.map((p) => p.category)));
@@ -30,7 +32,7 @@ export default async function CatalogoPage() {
   return (
     <>
       <Header categorias={categorias} />
-      <main className="min-h-[60vh] bg-crema/30">
+      <main id="contenido" className="min-h-[60vh] bg-crema/30">
         <div className="px-6 md:px-14 pt-14 md:pt-20 pb-0">
           <Link href="/" className="text-sm text-verde hover:text-verde-oscuro mb-4 inline-block">
             ← Volver al inicio
@@ -40,7 +42,7 @@ export default async function CatalogoPage() {
             Explora nuestro catálogo completo, filtrado por categoría.
           </p>
         </div>
-        <CatalogClient productosIniciales={productos} categoryOrder={categoryOrder} />
+        {disponible ? <CatalogClient productosIniciales={productos} categoryOrder={categoryOrder} /> : <CatalogUnavailable />}
       </main>
       <Footer />
       <CartDrawer />

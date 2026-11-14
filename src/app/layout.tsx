@@ -1,12 +1,13 @@
 import type { Metadata, Viewport } from 'next';
-import { Anton, Work_Sans } from 'next/font/google';
+import '@fontsource/anton/latin-400.css';
+import '@fontsource/work-sans/latin-400.css';
+import '@fontsource/work-sans/latin-500.css';
+import '@fontsource/work-sans/latin-600.css';
 import { CartProvider } from '@/context/CartContext';
 import { Analytics } from '@vercel/analytics/react';
 import { tienda } from '@/lib/config';
 import './globals.css';
 
-const anton = Anton({ subsets: ['latin'], weight: '400', variable: '--font-anton' });
-const workSans = Work_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-worksans' });
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://casaycosas-next.vercel.app';
 
@@ -87,11 +88,11 @@ const localBusinessJsonLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={`${anton.variable} ${workSans.variable}`}>
+    <html lang="es" data-scroll-behavior="smooth">
       <body className="font-body text-verde-noche">
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd).replace(/</g, '\\u003c') }}
         />
         <CartProvider>{children}</CartProvider>
         <Analytics />

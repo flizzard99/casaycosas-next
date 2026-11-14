@@ -11,8 +11,8 @@ import { getProductosPublicos, getConfig } from '@/lib/db';
 export const revalidate = 60;
 export const dynamicParams = true;
 
-export async function generateMetadata({ params }: { params: { categoria: string } }): Promise<Metadata> {
-  const categoria = decodeURIComponent(params.categoria);
+export async function generateMetadata({ params }: { params: Promise<{ categoria: string }> }): Promise<Metadata> {
+  const categoria = (await params).categoria;
   const capitalizada = categoria.charAt(0).toUpperCase() + categoria.slice(1);
   return {
     title: `${capitalizada} — Catálogo`,
@@ -21,14 +21,15 @@ export async function generateMetadata({ params }: { params: { categoria: string
   };
 }
 
-export default async function CategoriaPage({ params }: { params: { categoria: string } }) {
-  const categoria = decodeURIComponent(params.categoria);
+export default async function CategoriaPage({ params }: { params: Promise<{ categoria: string }> }) {
+  const categoria = (await params).categoria;
 
   let productos: Awaited<ReturnType<typeof getProductosPublicos>> = [];
   try {
     productos = await getProductosPublicos();
   } catch (error) {
     console.error('Error al cargar productos:', error);
+    throw new Error('No pudimos cargar el catálogo. Inténtalo nuevamente.');
   }
 
   const todos = Array.from(new Set(productos.map((p) => p.category)));
@@ -47,7 +48,7 @@ export default async function CategoriaPage({ params }: { params: { categoria: s
   return (
     <>
       <Header categorias={todos} />
-      <main className="min-h-[60vh] bg-crema/30">
+      <main id="contenido" className="min-h-[60vh] bg-crema/30">
         <div className="px-6 md:px-14 pt-14 md:pt-20 pb-0">
           <Link href="/catalogo" className="text-sm text-verde hover:text-verde-oscuro mb-4 inline-block">
             ← Volver al catálogo

@@ -7,6 +7,7 @@
 const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '56992139709';
 
 export const tienda = {
+  siteUrl: (process.env.NEXT_PUBLIC_SITE_URL || 'https://casaycosas-next.vercel.app').replace(/\/$/, ''),
   whatsappNumber: WHATSAPP_NUMBER,
   whatsappUrl: `https://wa.me/${WHATSAPP_NUMBER}`,
   whatsappCatalogUrl:

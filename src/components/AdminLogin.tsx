@@ -36,9 +36,12 @@ export default function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-8 w-full max-w-sm">
         <h1 className="font-display text-2xl text-verde-noche mb-1">Panel de administración</h1>
         <p className="text-sm text-verde-noche/60 mb-6">Casa y Cosas — Panguipulli</p>
-        <label className="block text-sm font-medium text-verde-noche mb-1.5">Contraseña</label>
+        <label htmlFor="admin-password" className="block text-sm font-medium text-verde-noche mb-1.5">Contraseña</label>
         <div className="relative mb-4">
           <input
+            id="admin-password"
+            autoComplete="current-password"
+            required
             type={mostrarPass ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}

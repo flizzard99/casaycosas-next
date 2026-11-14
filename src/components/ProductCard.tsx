@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import ProductImage from './ProductImage';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useCart } from '@/context/CartContext';
@@ -26,7 +26,7 @@ export default function ProductCard({ producto }: { producto: Producto }) {
       <Link href={`/producto/${producto.id}`} className="block">
         <div className="relative aspect-square bg-crema p-2 overflow-hidden">
           {imagen ? (
-            <Image
+            <ProductImage
               src={imagenLimpia}
               alt={producto.name}
               fill
@@ -53,7 +53,7 @@ export default function ProductCard({ producto }: { producto: Producto }) {
       </Link>
       <div className="p-4 flex flex-col flex-1">
         <Link href={`/producto/${producto.id}`}>
-          <div className="text-[11px] uppercase tracking-wide text-sage font-semibold">{producto.category}</div>
+          <div className="text-[11px] uppercase tracking-wide text-verde-oscuro font-semibold">{producto.category}</div>
           <h3 className="text-sm font-semibold mt-1 text-verde-noche hover:text-verde transition-colors line-clamp-2 min-h-[2.5rem]">{producto.name}</h3>
         </Link>
         <p className="text-sm text-verde font-semibold mt-1.5">{formatoCLP.format(producto.price)}</p>

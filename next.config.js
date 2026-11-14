@@ -14,7 +14,7 @@ const securityHeaders = [
       [
         "default-src 'self'",
         "img-src 'self' https://*.supabase.co https://images.casaycosas.qzz.io https://acdn-us.mitiendanube.com https://cdn.sd.com.py https://cdn11.bigcommerce.com https://fimgs.net https://mates.cl https://tangofoodsusa.com https://www.google.com https://www.mundobiblia.com https://www.schwarzenbach.ch data: blob:",
-        "script-src 'self' 'unsafe-inline'",
+        `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}`,
         "style-src 'self' 'unsafe-inline'",
         "font-src 'self' data:",
         "connect-src 'self' https://*.supabase.co https://*.r2.cloudflarestorage.com https://images.casaycosas.qzz.io https://*.vercel-analytics.com wss://*.supabase.co",
@@ -46,13 +46,20 @@ const nextConfig = {
   },
   poweredByHeader: false,
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production'
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false
   },
   async headers() {
     return [
       {
         source: '/:path*',
         headers: securityHeaders
+      },
+      {
+        source: '/pedido/:path*',
+        headers: [
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' }
+        ]
       }
     ];
   }

@@ -3,8 +3,8 @@ import { cookies } from 'next/headers';
 import { timingSafeEqual } from 'crypto';
 import { CSRF_COOKIE_NAME, verifyCsrfToken } from './auth';
 
-export function verifyCsrf(req: NextRequest): boolean {
-  const cookie = cookies().get(CSRF_COOKIE_NAME)?.value;
+export async function verifyCsrf(req: NextRequest): Promise<boolean> {
+  const cookie = (await cookies()).get(CSRF_COOKIE_NAME)?.value;
   const header = req.headers.get('x-csrf-token');
   if (!cookie || !header) return false;
   if (!verifyCsrfToken(header)) return false;

@@ -23,8 +23,8 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   if (!checkAdminRateLimit(req)) return NextResponse.json({ error: 'Demasiadas solicitudes' }, { status: 429 });
   try {
-    const token = cookies().get(SESSION_COOKIE_NAME)?.value;
-    if (!verifySessionToken(token) || !verifyCsrf(req)) {
+    const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
+    if (!verifySessionToken(token) || !(await verifyCsrf(req))) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 

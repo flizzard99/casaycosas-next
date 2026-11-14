@@ -9,10 +9,10 @@ import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 import { verifyCsrf } from '@/lib/csrf';
 import { checkAdminRateLimit } from '@/lib/adminRateLimit';
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!checkAdminRateLimit(req)) return NextResponse.json({ error: 'Demasiadas solicitudes' }, { status: 429 });
-  const token = cookies().get(SESSION_COOKIE_NAME)?.value;
-  if (!verifySessionToken(token) || !verifyCsrf(req)) {
+  const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
+  if (!verifySessionToken(token) || !(await verifyCsrf(req))) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
   try {
@@ -23,11 +23,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (images.length > 8) {
       return NextResponse.json({ error: 'Máximo 8 imágenes por producto' }, { status: 400 });
     }
-    const id = parseIdOrBadRequest(params.id);
+    const id = parseIdOrBadRequest((await params).id);
     if (id === null) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
     const producto = await agregarImagenes(id, images);
     if (!producto) return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
-    revalidatePath(`/producto/${params.id}`, 'page');
+    revalidatePath(`/producto/${(await params).id}`, 'page');
     return NextResponse.json(producto);
   } catch (e: unknown) {
     console.error('[API Error] images:', e);

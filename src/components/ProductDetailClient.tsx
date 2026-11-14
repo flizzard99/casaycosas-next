@@ -11,7 +11,7 @@ import { tienda } from '@/lib/config';
 const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 
 export default function ProductDetailClient({ producto, relacionados = [] }: { producto: Producto; relacionados?: Producto[] }) {
-  const { addItem } = useCart();
+  const { addItem, open } = useCart();
   const sinStock = producto.stock <= 0;
   const imagenes = producto.images?.length ? producto.images : producto.image_url ? [producto.image_url] : [];
 
@@ -20,8 +20,8 @@ export default function ProductDetailClient({ producto, relacionados = [] }: { p
   const maxQty = producto.stock || 1;
 
   function comprarAhora() {
-    const msg = `Hola! Quisiera reservar: ${qty}x ${producto.name} — ${formatoCLP.format(producto.price * qty)} (retiro en tienda)`;
-    window.open(`https://wa.me/${tienda.whatsappNumber}?text=${encodeURIComponent(msg)}`, '_blank');
+    addItem({ id: producto.id, name: producto.name, price: producto.price, image_url: imagenes[0] || '', stock: producto.stock }, qty);
+    open();
   }
 
   return (
@@ -36,7 +36,7 @@ export default function ProductDetailClient({ producto, relacionados = [] }: { p
         </div>
 
         <div className="flex flex-col">
-          <div className="text-xs uppercase tracking-wide text-sage font-semibold">{producto.category}</div>
+          <div className="text-xs uppercase tracking-wide text-verde-oscuro font-semibold">{producto.category}</div>
           <h1 className="font-display text-3xl text-verde-oscuro mt-2">{producto.name}</h1>
           <p className="text-2xl font-semibold text-verde mt-3">{formatoCLP.format(producto.price)}</p>
 
@@ -57,6 +57,7 @@ export default function ProductDetailClient({ producto, relacionados = [] }: { p
               <span className="text-sm text-verde-noche/70">Cantidad:</span>
               <div className="flex items-center border border-verde-noche/20 rounded-md">
                 <button
+                  aria-label="Reducir cantidad"
                   onClick={() => setQty((q) => Math.max(1, q - 1))}
                   className="w-9 h-9 flex items-center justify-center text-lg font-medium hover:bg-crema transition-colors rounded-l-md"
                 >
@@ -64,6 +65,7 @@ export default function ProductDetailClient({ producto, relacionados = [] }: { p
                 </button>
                 <span className="w-10 text-center font-medium">{qty}</span>
                 <button
+                  aria-label="Aumentar cantidad"
                   onClick={() => setQty((q) => Math.min(maxQty, q + 1))}
                   disabled={qty >= maxQty}
                   className="w-9 h-9 flex items-center justify-center text-lg font-medium hover:bg-crema transition-colors rounded-r-md disabled:opacity-30"

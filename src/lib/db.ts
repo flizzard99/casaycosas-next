@@ -1,9 +1,11 @@
 import { Pool } from 'pg';
+import { randomBytes } from 'crypto';
 import type { Producto, ProductoInput, Config, FeaturedConfig } from './types';
 
 export function parseIdOrBadRequest(id: string): number | null {
-  const parsed = parseInt(id, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  if (!/^[1-9]\d*$/.test(id)) return null;
+  const parsed = Number(id);
+  return Number.isSafeInteger(parsed) && parsed <= 2147483647 ? parsed : null;
 }
 
 // Reutilizamos el pool entre recargas en desarrollo (patrón recomendado para Next.js)
@@ -26,15 +28,23 @@ function getPool(): Pool {
   return globalForPg.pgPool;
 }
 
-let schemaReady = false;
+let schemaPromise: Promise<void> | undefined;
+let pedidosSchemaPromise: Promise<void> | undefined;
 
 /**
  * Crea las tablas si no existen y agrega columnas nuevas de forma segura.
  * Es exactamente compatible con la tabla "productos" que ya usa tu sitio actual,
  * así que no se pierde ningún dato existente.
  */
-export async function ensureSchema() {
-  if (schemaReady) return;
+export function ensureSchema(): Promise<void> {
+  if (!schemaPromise) schemaPromise = inicializarSchema().catch((error) => {
+    schemaPromise = undefined;
+    throw error;
+  });
+  return schemaPromise;
+}
+
+async function inicializarSchema() {
   const pool = getPool();
   await pool.query(`
     CREATE TABLE IF NOT EXISTS productos (
@@ -81,7 +91,6 @@ export async function ensureSchema() {
       END IF;
     END $$
   `);
-  schemaReady = true;
 }
 
 export type Pedido = {
@@ -89,6 +98,7 @@ export type Pedido = {
   cliente_nombre: string;
   cliente_whatsapp: string;
   cliente_email: string;
+  tracking_token: string;
   total: number;
   estado: 'pendiente' | 'confirmado' | 'cancelado' | 'expirado';
   created_at: string;
@@ -107,7 +117,15 @@ export type EstadoPedido = 'pendiente' | 'confirmado' | 'cancelado' | 'expirado'
 
 const PEDIDO_EXPIRACION_HORAS = 48;
 
-async function ensurePedidosSchema() {
+function ensurePedidosSchema(): Promise<void> {
+  if (!pedidosSchemaPromise) pedidosSchemaPromise = inicializarPedidosSchema().catch((error) => {
+    pedidosSchemaPromise = undefined;
+    throw error;
+  });
+  return pedidosSchemaPromise;
+}
+
+async function inicializarPedidosSchema() {
   const pool = getPool();
   await pool.query(`
     CREATE TABLE IF NOT EXISTS pedidos (
@@ -121,6 +139,7 @@ async function ensurePedidosSchema() {
     )
   `);
   await pool.query(`ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS cliente_email TEXT DEFAULT ''`);
+  await pool.query(`ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS tracking_token TEXT`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS pedido_items (
       id SERIAL PRIMARY KEY,
@@ -139,6 +158,7 @@ function formatPedido(row: Record<string, unknown>, items: PedidoItem[] = []): P
     cliente_nombre: (row.cliente_nombre as string) || '',
     cliente_whatsapp: (row.cliente_whatsapp as string) || '',
     cliente_email: (row.cliente_email as string) || '',
+    tracking_token: (row.tracking_token as string) || '',
     total: (row.total as number) || 0,
     estado: (row.estado as EstadoPedido) || 'pendiente',
     created_at: row.created_at as string,
@@ -149,39 +169,57 @@ function formatPedido(row: Record<string, unknown>, items: PedidoItem[] = []): P
 
 async function expirarPedidosViejos(pool: Pool): Promise<void> {
   await pool.query(
-    `UPDATE pedidos SET estado = 'expirado'
-     WHERE estado = 'pendiente' AND created_at < NOW() - ($1 || ' hours')::INTERVAL`,
+    `WITH expirados AS (
+       UPDATE pedidos SET estado = 'expirado'
+       WHERE estado = 'pendiente' AND created_at < NOW() - ($1 || ' hours')::INTERVAL
+       RETURNING id
+     ), devoluciones AS (
+       SELECT pi.producto_id, SUM(pi.qty)::INTEGER AS qty
+       FROM pedido_items pi JOIN expirados e ON e.id = pi.pedido_id
+       GROUP BY pi.producto_id
+     )
+     UPDATE productos p SET stock = p.stock + d.qty
+     FROM devoluciones d WHERE p.id = d.producto_id`,
     [String(PEDIDO_EXPIRACION_HORAS)]
   );
 }
 
 export async function crearPedido(items: { id: number; qty: number }[], clienteNombre: string, clienteWhatsapp: string, clienteEmail: string = ''): Promise<Pedido | null> {
+  if (!items.length || items.length > 100 || items.some((item) =>
+    !Number.isSafeInteger(item.id) || item.id <= 0 || item.id > 2147483647 ||
+    !Number.isSafeInteger(item.qty) || item.qty <= 0 || item.qty > 999
+  )) throw new Error('Productos o cantidades inválidos');
+  const agrupados = new Map<number, number>();
+  for (const item of items) agrupados.set(item.id, (agrupados.get(item.id) || 0) + item.qty);
+  if ([...agrupados.values()].some((qty) => qty > 999)) throw new Error('Productos o cantidades inválidos');
+  items = [...agrupados].sort(([a], [b]) => a - b).map(([id, qty]) => ({ id, qty }));
   await ensureSchema();
   await ensurePedidosSchema();
   const pool = getPool();
+  await expirarPedidosViejos(pool);
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    await expirarPedidosViejos(client as unknown as Pool);
 
     let total = 0;
     const itemsDetalle: { producto_id: number; nombre: string; qty: number; precio: number }[] = [];
 
     for (const item of items) {
-      const res = await client.query('SELECT id, name, price, stock FROM productos WHERE id = $1 FOR UPDATE', [item.id]);
+      const res = await client.query('SELECT id, name, price, stock FROM productos WHERE id = $1 AND visible = TRUE FOR UPDATE', [item.id]);
       if (!res.rows.length) throw new Error(`Producto ${item.id} no encontrado`);
       const p = res.rows[0];
       if ((p.stock || 0) < item.qty) {
         throw new Error(`Stock insuficiente para "${p.name}" (disponible: ${p.stock || 0}, solicitado: ${item.qty})`);
       }
       total += (p.price || 0) * item.qty;
+      if (!Number.isSafeInteger(total) || total > 2147483647) throw new Error('El total del pedido supera el máximo permitido');
       itemsDetalle.push({ producto_id: p.id, nombre: p.name, qty: item.qty, precio: p.price || 0 });
       await client.query('UPDATE productos SET stock = stock - $1 WHERE id = $2', [item.qty, p.id]);
     }
 
     const pedidoRes = await client.query(
-      `INSERT INTO pedidos (cliente_nombre, cliente_whatsapp, cliente_email, total, estado) VALUES ($1, $2, $3, $4, 'pendiente') RETURNING *`,
-      [clienteNombre, clienteWhatsapp, clienteEmail, total]
+      `INSERT INTO pedidos (cliente_nombre, cliente_whatsapp, cliente_email, total, estado, tracking_token) VALUES ($1, $2, $3, $4, 'pendiente', $5) RETURNING *`,
+      [clienteNombre, clienteWhatsapp, clienteEmail, total, randomBytes(32).toString('hex')]
     );
     const pedidoId = pedidoRes.rows[0].id;
 
@@ -225,9 +263,10 @@ export async function confirmarPedido(id: number): Promise<Pedido | null> {
   await ensureSchema();
   await ensurePedidosSchema();
   const pool = getPool();
+  await expirarPedidosViejos(pool);
   const res = await pool.query(
-    `UPDATE pedidos SET estado = 'confirmado', confirmado_at = NOW() WHERE id = $1 AND estado = 'pendiente' RETURNING *`,
-    [id]
+    `UPDATE pedidos SET estado = 'confirmado', confirmado_at = NOW(), tracking_token = COALESCE(tracking_token, $2) WHERE id = $1 AND estado = 'pendiente' RETURNING *`,
+    [id, randomBytes(32).toString('hex')]
   );
   if (!res.rows.length) return null;
   const itemsRes = await pool.query(
@@ -241,6 +280,7 @@ export async function cancelarPedido(id: number): Promise<Pedido | null> {
   await ensureSchema();
   await ensurePedidosSchema();
   const pool = getPool();
+  await expirarPedidosViejos(pool);
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -253,8 +293,8 @@ export async function cancelarPedido(id: number): Promise<Pedido | null> {
       return null;
     }
     await client.query(
-      `UPDATE pedidos SET estado = 'cancelado' WHERE id = $1`,
-      [id]
+      `UPDATE pedidos SET estado = 'cancelado', tracking_token = COALESCE(tracking_token, $2) WHERE id = $1`,
+      [id, randomBytes(32).toString('hex')]
     );
     const itemsRes = await client.query(
       `SELECT producto_id, qty FROM pedido_items WHERE pedido_id = $1`,
@@ -443,10 +483,10 @@ export async function getConfig(): Promise<Config> {
     pool.query(`SELECT value FROM config WHERE key = 'featured'`)
   ]);
   const featured: FeaturedConfig = resFeat.rows.length
-    ? resFeat.rows[0].value
+    ? resFeat.rows[0].value || {}
     : { productIds: [], title: 'Productos más vendidos' };
   return {
-    categoryOrder: resCat.rows.length ? resCat.rows[0].value : [],
+    categoryOrder: Array.isArray(resCat.rows[0]?.value) ? resCat.rows[0].value.filter((value: unknown) => typeof value === 'string') : [],
     featured: {
       productIds: Array.isArray(featured.productIds) ? featured.productIds.slice(0, 4) : [],
       title: featured.title || 'Productos más vendidos'
@@ -497,12 +537,13 @@ export async function getFeaturedProducts(): Promise<Producto[]> {
 
 export const PEDIDO_EXPIRACION_MS = PEDIDO_EXPIRACION_HORAS * 60 * 60 * 1000;
 
-export async function getPedidoByIdPublic(id: number): Promise<Pedido | null> {
+export async function getPedidoByIdPublic(id: number, token: string = ''): Promise<Pedido | null> {
+  if (!/^[a-f0-9]{64}$/.test(token)) return null;
   await ensureSchema();
   await ensurePedidosSchema();
   const pool = getPool();
   await expirarPedidosViejos(pool);
-  const res = await pool.query(`SELECT * FROM pedidos WHERE id = $1`, [id]);
+  const res = await pool.query(`SELECT * FROM pedidos WHERE id = $1 AND tracking_token = $2`, [id, token]);
   if (!res.rows.length) return null;
   const itemsRes = await pool.query(
     `SELECT producto_id, nombre, qty, precio FROM pedido_items WHERE pedido_id = $1`,

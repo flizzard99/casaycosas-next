@@ -20,7 +20,7 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
-    verificarSesion();
+    fetch('/api/auth/me').then((res) => res.json()).then((data) => setAutenticado(!!data.authenticated)).catch(() => setAutenticado(false));
   }, []);
 
   if (autenticado === null) {

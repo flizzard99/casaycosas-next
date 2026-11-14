@@ -25,7 +25,8 @@ export default function CategoriaClient({ productos }: { productos: Producto[] }
   return (
     <section className="px-6 md:px-14 py-10 md:py-14">
       <input
-        type="text"
+        type="search"
+        aria-label="Buscar en esta categoría"
         value={busqueda}
         onChange={(e) => { setBusqueda(e.target.value); setVisibleCount(PAGE_SIZE); }}
         placeholder="Buscar en esta categoría..."

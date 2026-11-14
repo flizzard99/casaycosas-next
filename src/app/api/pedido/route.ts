@@ -5,25 +5,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { crearPedido, PEDIDO_EXPIRACION_MS } from '@/lib/db';
 import { tienda } from '@/lib/config';
 import { enviarEmailPedidoCreado } from '@/lib/email';
+import { validarPedido } from '@/lib/validacionPedido';
+import { revalidatePath } from 'next/cache';
 
 const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { items, nombre, whatsapp, email } = body || {};
-    if (!Array.isArray(items) || !items.length) {
-      return NextResponse.json({ error: 'El carrito está vacío' }, { status: 400 });
+    let body: unknown;
+    try { body = await req.json(); } catch {
+      return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
     }
-    const itemsValidos = items
-      .filter((i: { id: number; qty: number }) => Number.isFinite(i.id) && Number.isFinite(i.qty) && i.qty > 0)
-      .map((i: { id: number; qty: number }) => ({ id: Math.floor(i.id), qty: Math.floor(i.qty) }));
-    if (!itemsValidos.length) {
-      return NextResponse.json({ error: 'items debe tener al menos un producto válido' }, { status: 400 });
-    }
-
-    const emailLimpio = typeof email === 'string' ? email.trim().slice(0, 200) : '';
-    const pedido = await crearPedido(itemsValidos, (nombre || '').slice(0, 100), (whatsapp || '').slice(0, 20), emailLimpio);
+    const validacion = validarPedido(body);
+    if ('error' in validacion) return NextResponse.json({ error: validacion.error }, { status: 400 });
+    const { items, nombre, whatsapp, email } = validacion;
+    if (!process.env.DATABASE_URL) return NextResponse.json({ error: 'Las reservas no están disponibles temporalmente. Contáctanos por WhatsApp.' }, { status: 503 });
+    const pedido = await crearPedido(items, nombre, whatsapp, email);
     if (!pedido) {
       return NextResponse.json({ error: 'No se pudo crear el pedido' }, { status: 500 });
     }
@@ -35,10 +32,10 @@ export async function POST(req: NextRequest) {
     const mensaje = [saludo, '', ...lineas, '', `Total: ${formatoCLP.format(pedido.total)}`].join('\n');
     const waUrl = `https://wa.me/${tienda.whatsappNumber}?text=${encodeURIComponent(mensaje)}`;
 
-    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/$/, '');
-    const estadoUrl = `${siteUrl}/pedido/${pedido.id}`;
+    const estadoUrl = `${tienda.siteUrl}/pedido/${pedido.id}?token=${pedido.tracking_token}`;
+    revalidatePath('/', 'layout');
 
-    enviarEmailPedidoCreado(pedido, estadoUrl).catch((e) => console.error('[email]pedido-creado:', e));
+    await enviarEmailPedidoCreado(pedido, estadoUrl).catch((e) => console.error('[email]pedido-creado:', e));
 
     return NextResponse.json({
       pedidoId: pedido.id,
@@ -51,6 +48,6 @@ export async function POST(req: NextRequest) {
     console.error('[API Error] pedido:', e);
     const message = e instanceof Error ? e.message : 'Error interno del servidor';
     const status = message.includes('Stock insuficiente') || message.includes('no encontrado') ? 409 : 500;
-    return NextResponse.json({ error: message }, { status });
+    return NextResponse.json({ error: status === 409 ? message : 'No pudimos reservar el pedido. Inténtalo nuevamente o contáctanos por WhatsApp.' }, { status });
   }
 }

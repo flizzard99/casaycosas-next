@@ -29,18 +29,22 @@ function fromAddress(): string {
 
 const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 
+function escaparHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!));
+}
+
 function itemsHtml(items: Pedido['items']): string {
-  return items.map((i) => `<tr><td style="padding:4px 0">${i.qty}×</td><td style="padding:4px 8px">${i.nombre}</td><td style="padding:4px 0;text-align:right">${formatoCLP.format(i.precio * i.qty)}</td></tr>`).join('');
+  return items.map((i) => `<tr><td style="padding:4px 0">${i.qty}×</td><td style="padding:4px 8px">${escaparHtml(i.nombre)}</td><td style="padding:4px 0;text-align:right">${formatoCLP.format(i.precio * i.qty)}</td></tr>`).join('');
 }
 
 export async function enviarEmailPedidoCreado(pedido: Pedido, estadoUrl: string): Promise<void> {
   if (!pedido.cliente_email) return;
   const resend = getResend();
-  if (!resend) { console.info('[email] RESEND_API_KEY no configurada, saltando email a', pedido.cliente_email); return; }
+  if (!resend) { console.info('[email] RESEND_API_KEY no configurada, notificación omitida'); return; }
   const html = `
   <div style="font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;color:#344E41">
     <h1 style="font-size:20px;color:#3A5A40">¡Pedido reservado! 🌿</h1>
-    <p>Hola${pedido.cliente_nombre ? ' ' + pedido.cliente_nombre : ''},</p>
+    <p>Hola${pedido.cliente_nombre ? ' ' + escaparHtml(pedido.cliente_nombre) : ''},</p>
     <p>Tu pedido <strong>#${pedido.id}</strong> fue reservado correctamente. Puedes seguir su estado en:</p>
     <p><a href="${estadoUrl}" style="background:#588157;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;display:inline-block">Ver estado de mi pedido →</a></p>
     <p style="color:#888;font-size:12px">O copia este enlace: ${estadoUrl}</p>

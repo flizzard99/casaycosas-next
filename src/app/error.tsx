@@ -17,9 +17,9 @@ export default function Error({
   return (
     <div className="min-h-[70vh] flex flex-col items-center justify-center px-6 text-center">
       <h1 className="font-display text-6xl text-verde-oscuro mb-4">¡Ups!</h1>
-      <p className="text-verde-noche text-lg mb-2">Algo se rompió.</p>
+      <p className="text-verde-noche text-lg mb-2">No pudimos cargar esta página.</p>
       <p className="text-verde-noche/60 text-sm mb-8">
-        Ocurrió un error inesperado. Podés volver al inicio o al catálogo, o intentar de nuevo.
+        El servicio no está disponible en este momento. Puedes volver al inicio o intentar nuevamente.
       </p>
       <div className="flex flex-col sm:flex-row gap-3">
         <button
