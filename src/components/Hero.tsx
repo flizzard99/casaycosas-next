@@ -5,12 +5,12 @@ export default function Hero() {
     <section className="store-hero relative isolate overflow-hidden bg-verde-noche px-5 text-white">
       <div className="store-shell relative py-16 sm:py-24 lg:py-28">
         <div className="max-w-xl">
-          <p className="mb-4 text-sm font-semibold text-crema">Panguipulli, Región de Los Ríos</p>
+          <p className="mb-4 text-sm font-semibold text-crema">Tienda online</p>
           <h1 className="balance-text font-display text-4xl leading-tight sm:text-5xl lg:text-6xl">
             Detalles especiales para tu hogar
           </h1>
           <p className="mt-5 max-w-md text-base leading-relaxed text-white/90">
-            Hogar, mate, artesanías y perfumes. Elige tus favoritos y retira tu pedido en tienda.
+            Hogar, mate, artesanías y perfumes. Elige tus favoritos y cotiza el despacho desde el carrito.
           </p>
           <Link
             href="/catalogo"

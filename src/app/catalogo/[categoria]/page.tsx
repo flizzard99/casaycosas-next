@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
+import { origenCheckout } from '@/lib/mercadoPago';
 import CategoriaClient from '@/components/CategoriaClient';
 import { getProductosPublicos } from '@/lib/db';
 
@@ -15,7 +16,7 @@ export async function generateMetadata({ params }: { params: { categoria: string
   const capitalizada = categoria.charAt(0).toUpperCase() + categoria.slice(1);
   return {
     title: `${capitalizada} — Catálogo`,
-    description: `Productos de la categoría "${capitalizada}" en Casa y Cosas, Panguipulli.`,
+    description: `Productos de la categoría "${capitalizada}" en Casa y Cosas.`,
     alternates: { canonical: `/catalogo/${encodeURIComponent(categoria)}` }
   };
 }
@@ -52,7 +53,7 @@ export default async function CategoriaPage({ params }: { params: { categoria: s
         <CategoriaClient key={categoria} productos={productosCategoria} />
       </main>
       <Footer />
-      <CartDrawer />
+      <CartDrawer pagoEnLinea={!!origenCheckout()} />
     </>
   );
 }

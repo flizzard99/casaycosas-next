@@ -5,24 +5,22 @@ import { getPedidoByIdPublic, parseIdOrBadRequest } from '@/lib/db';
 import PedidoEstadoClient from '@/components/PedidoEstadoClient';
 import Link from 'next/link';
 
-export async function generateMetadata({ params }: { params: { id: string } }) {
-  const id = parseIdOrBadRequest(params.id);
-  if (id === null) return { title: 'Pedido no encontrado' };
-  const pedido = await getPedidoByIdPublic(id);
-  if (!pedido) return { title: 'Pedido no encontrado' };
-  return {
-    title: `Pedido #${pedido.id}`,
-    robots: { index: false, follow: false }
-  };
-}
+export const metadata = {
+  title: 'Seguimiento de pedido',
+  robots: { index: false, follow: false },
+  referrer: 'no-referrer' as const
+};
 
-export default async function PedidoPage({ params }: { params: { id: string } }) {
+export default async function PedidoPage({ params, searchParams }: {
+  params: { id: string };
+  searchParams: { ref?: string };
+}) {
   const id = parseIdOrBadRequest(params.id);
   if (id === null) return NotFound();
-  const pedido = await getPedidoByIdPublic(id);
+  const referencia = typeof searchParams.ref === 'string' ? searchParams.ref : undefined;
+  const pedido = await getPedidoByIdPublic(id, referencia);
   if (!pedido) return NotFound();
-
-  return <PedidoEstadoClient pedidoInicial={pedido} />;
+  return <PedidoEstadoClient pedidoInicial={pedido} referencia={referencia} />;
 }
 
 function NotFound() {

@@ -35,10 +35,16 @@ export default function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
     <div className="min-h-screen bg-crema flex items-center justify-center px-6">
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-8 w-full max-w-sm">
         <h1 className="font-display text-2xl text-verde-noche mb-1">Panel de administración</h1>
-        <p className="text-sm text-verde-noche/60 mb-6">Casa y Cosas — Panguipulli</p>
-        <label className="block text-sm font-medium text-verde-noche mb-1.5">Contraseña</label>
+        <p className="text-sm text-verde-noche/60 mb-6">Casa y Cosas</p>
+        <label htmlFor="admin-password" className="block text-sm font-medium text-verde-noche mb-1.5">Contraseña</label>
         <div className="relative mb-4">
           <input
+            id="admin-password"
+            name="password"
+            autoComplete="current-password"
+            required
+            aria-invalid={!!error}
+            aria-describedby={error ? 'admin-login-error' : undefined}
             type={mostrarPass ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -58,7 +64,7 @@ export default function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
             )}
           </button>
         </div>
-        {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+        {error && <p id="admin-login-error" role="alert" className="text-sm text-red-600 mb-4">{error}</p>}
         <button
           type="submit"
           disabled={cargando}

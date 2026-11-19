@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import { tienda } from '@/lib/config';
 
 function InstagramIcon() {
@@ -40,7 +39,7 @@ const ICON_COMPONENTS: Record<string, React.FC> = {
   TikTok: TikTokIcon
 };
 
-export default function InfoLocalSection() {
+export default function SocialSection() {
   const redes = [
     { nombre: 'Instagram', url: tienda.instagramUrl },
     { nombre: 'WhatsApp', url: tienda.whatsappUrl },
@@ -50,10 +49,10 @@ export default function InfoLocalSection() {
 
   return (
     <section id="contacto" className="border-t border-verde-noche/10 bg-crema/30 py-10 sm:py-16">
-      <div className="store-shell grid items-center gap-6 md:grid-cols-2 md:gap-12">
+      <div className="store-shell">
         <div>
-          <h2 className="font-display text-3xl text-verde-noche">Visítanos en Panguipulli</h2>
-          <address className="mt-3 not-italic text-verde-noche/80">{tienda.storeAddress}</address>
+          <h2 className="font-display text-3xl text-verde-noche">Encuéntranos en redes sociales</h2>
+          <p className="mt-3 text-verde-noche/80">Consulta por productos o escríbenos sobre tu pedido.</p>
           <div className="mt-5 flex flex-wrap gap-2">
             {redes.map(({ nombre, url }) => {
               const Icon = ICON_COMPONENTS[nombre];
@@ -72,23 +71,7 @@ export default function InfoLocalSection() {
             })}
           </div>
         </div>
-        <a
-          href={tienda.mapsUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="relative block aspect-[2/1] overflow-hidden rounded-xl border border-verde-noche/15"
-        >
-          <Image
-            src="/direccion.png"
-            alt=""
-            fill
-            sizes="(min-width: 1280px) 570px, (min-width: 768px) 50vw, 100vw"
-            className="object-cover"
-          />
-          <span className="absolute bottom-3 left-3 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-verde-noche shadow">
-            Cómo llegar
-          </span>
-        </a>
+
       </div>
     </section>
   );

@@ -57,7 +57,7 @@ export default function Header({ categorias = [] }: { categorias?: string[] }) {
             Catálogo
           </Link>
           <Link href="/#contacto" className="hidden font-semibold hover:underline md:inline">
-            Visítanos
+            Redes sociales
           </Link>
           <details
             ref={menu}
@@ -86,7 +86,7 @@ export default function Header({ categorias = [] }: { categorias?: string[] }) {
                   </Link>
                 </li>
               ))}
-              <li className="md:hidden"><Link href="/#contacto" onClick={cerrarMenu} className="block rounded-lg px-3 py-2 hover:bg-crema/50">Visítanos</Link></li>
+              <li className="md:hidden"><Link href="/#contacto" onClick={cerrarMenu} className="block rounded-lg px-3 py-2 hover:bg-crema/50">Redes sociales</Link></li>
             </ul>
           </details>
           <button

@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { getPedidosPendientes } from '@/lib/db';
+import { getPedidosAdmin } from '@/lib/db';
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
@@ -12,8 +12,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
   try {
-    const pedidos = await getPedidosPendientes();
-    return NextResponse.json(pedidos);
+    const estado = req.nextUrl.searchParams.get('estado');
+    const estados = ['pendiente', 'confirmado', 'cancelado', 'expirado', 'revision', 'todos'] as const;
+    const filtro = estados.find((opcion) => opcion === estado) ?? 'pendiente';
+    const pagina = Number(req.nextUrl.searchParams.get('pagina') ?? '1');
+    if (!Number.isSafeInteger(pagina) || pagina < 1 || pagina > 100000) {
+      return NextResponse.json({ error: 'Página inválida' }, { status: 400 });
+    }
+    const resultado = await getPedidosAdmin(filtro, pagina);
+    return NextResponse.json(resultado, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (e: unknown) {
     console.error('[API Error] getPedidos:', e);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });

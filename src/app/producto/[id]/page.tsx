@@ -1,13 +1,12 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { cache } from 'react';
-import dynamic from 'next/dynamic';
+import ProductDetailClient from '@/components/ProductDetailClient';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
+import { origenCheckout } from '@/lib/mercadoPago';
 import { getProductoById, getProductosPublicos } from '@/lib/db';
-
-const ProductDetailClient = dynamic(() => import('@/components/ProductDetailClient'), { ssr: false });
 
 const getProducto = cache((id: number) => getProductoById(id));
 
@@ -19,9 +18,9 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
     const producto = await getProducto(Number(params.id));
     if (!producto) return { title: 'Producto no encontrado' };
     return {
-      title: `${producto.name} — Casa y Cosas`,
+      title: producto.name,
       description:
-        producto.description || `${producto.name} en Casa y Cosas, Panguipulli. ${producto.category}.`,
+        producto.description || `${producto.name} en Casa y Cosas. ${producto.category}.`,
       alternates: { canonical: `/producto/${producto.id}` },
       openGraph: {
         title: producto.name,
@@ -72,14 +71,14 @@ export default async function ProductoPage({ params }: { params: { id: string } 
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd).replace(/</g, '\\u003c') }}
       />
       <Header categorias={categorias} />
       <main id="contenido" tabIndex={-1} className="min-h-[60vh] bg-crema/40">
         <ProductDetailClient producto={producto} relacionados={relacionados} />
       </main>
       <Footer />
-      <CartDrawer />
+      <CartDrawer pagoEnLinea={!!origenCheckout()} />
     </>
   );
 }

@@ -20,7 +20,7 @@ export default function ProductDetailClient({ producto, relacionados = [] }: { p
   const maxQty = producto.stock || 1;
 
   function comprarAhora() {
-    const msg = `Hola! Quisiera reservar: ${qty}x ${producto.name} — ${formatoCLP.format(producto.price * qty)} (retiro en tienda)`;
+    const msg = `Hola! Quisiera reservar: ${qty}x ${producto.name} — ${formatoCLP.format(producto.price * qty)}`;
     window.open(`https://wa.me/${tienda.whatsappNumber}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
   }
 

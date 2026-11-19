@@ -8,7 +8,7 @@ import { useCart } from '@/context/CartContext';
 
 const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 
-export default function CartDrawer() {
+export default function CartDrawer({ pagoEnLinea = false }: { pagoEnLinea?: boolean }) {
   const { items, isOpen, close, updateQty, removeItem, total, clear } = useCart();
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
@@ -144,7 +144,7 @@ export default function CartDrawer() {
             <span className="font-semibold text-verde-noche">{formatoCLP.format(total)}</span>
           </div>
 
-          {items.length > 0 && (
+          {items.length > 0 && !pagoEnLinea && (
             <>
               <input
                 type="text"
@@ -179,6 +179,14 @@ export default function CartDrawer() {
             <p role="alert" className="text-xs text-red-600 mb-2 leading-relaxed">{error}</p>
           )}
 
+          {pagoEnLinea ? (
+            items.length > 0 && (
+              <Link href="/comprar" onClick={close}
+                className="flex min-h-12 items-center justify-center rounded-lg bg-verde-oscuro px-3 font-semibold text-white hover:bg-verde-noche">
+                Finalizar compra
+              </Link>
+            )
+          ) : (
           <button
             onClick={reservarPedido}
             disabled={!items.length || bloqueado}
@@ -186,6 +194,7 @@ export default function CartDrawer() {
           >
             {bloqueado ? 'Reservando…' : 'Reservar pedido'}
           </button>
+          )}
 
           {items.length > 0 && (
             <button onClick={clear} className="w-full text-xs text-verde-noche/50 hover:text-verde-noche mt-2">

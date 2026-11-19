@@ -16,6 +16,17 @@ const PAGE_SIZE = 24;
 
 type Vista = 'productos' | 'categorias' | 'destacados' | 'pedidos';
 type FiltroEstado = 'todos' | 'en-stock' | 'agotado' | 'ocultos';
+const ESTADOS_PEDIDO = {
+  pendiente: 'Pendientes',
+  confirmado: 'Confirmados',
+  revision: 'Pagos por revisar',
+  cancelado: 'Cancelados',
+  expirado: 'Vencidos',
+  todos: 'Todos'
+} as const;
+type FiltroPedido = keyof typeof ESTADOS_PEDIDO;
+const VISTAS: Vista[] = ['productos', 'pedidos', 'categorias', 'destacados'];
+
 type Orden = 'recientes' | 'nombre' | 'precio-asc' | 'precio-desc' | 'stock-desc';
 
 export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
@@ -32,10 +43,29 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [creandoNuevo, setCreandoNuevo] = useState(false);
   const [vista, setVista] = useState<Vista>('productos');
   const [pagina, setPagina] = useState(1);
-  const [menuMobile, setMenuMobile] = useState(false);
+  const [filtroPedido, setFiltroPedido] = useState<FiltroPedido>('todos');
+  const [paginaPedidos, setPaginaPedidos] = useState(1);
+  const [totalPedidos, setTotalPedidos] = useState(0);
+  const [cargandoPedidos, setCargandoPedidos] = useState(false);
+  const [recargarPedidos, setRecargarPedidos] = useState(0);
+  const [errorPedidos, setErrorPedidos] = useState('');
+  const [errorCatalogo, setErrorCatalogo] = useState('');
+  const [aviso, setAviso] = useState<{ texto: string; error?: boolean }>();
+  const [ocupado, setOcupado] = useState<string>();
+
+  useEffect(() => {
+    function sincronizarVista() {
+      const valor = window.location.hash.slice(1);
+      setVista(VISTAS.find((seccion) => seccion === valor) ?? 'productos');
+    }
+    sincronizarVista();
+    window.addEventListener('hashchange', sincronizarVista);
+    return () => window.removeEventListener('hashchange', sincronizarVista);
+  }, []);
 
   async function cargarTodo() {
     setCargando(true);
+    setErrorCatalogo('');
     try {
       const [resProductos, resConfig] = await Promise.all([fetch('/api/productos'), fetch('/api/config')]);
       if (!resProductos.ok || !resConfig.ok) throw new Error('Error al cargar datos');
@@ -44,18 +74,9 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       setCategoryOrder(config.categoryOrder || []);
       setFeatured(config.featured || FEATURED_DEFAULT);
     } catch {
-      // sin datos disponibles
+      setErrorCatalogo('No pudimos cargar los productos y la configuración.');
     } finally {
       setCargando(false);
-    }
-  }
-
-  async function cargarPedidos() {
-    try {
-      const res = await adminFetch('/api/pedidos', { method: 'GET' });
-      if (res.ok) setPedidos(await res.json());
-    } catch {
-      // sin pedidos disponibles
     }
   }
 
@@ -64,16 +85,41 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   }, []);
 
   useEffect(() => {
-    if (vista === 'pedidos') cargarPedidos();
-  }, [vista]);
+    if (vista !== 'pedidos') return;
+    const controller = new AbortController();
+    setCargandoPedidos(true);
+    setErrorPedidos('');
+    async function cargarPedidos() {
+      try {
+        const res = await adminFetch(`/api/pedidos?estado=${filtroPedido}&pagina=${paginaPedidos}`, {
+          method: 'GET', signal: controller.signal
+        });
+        if (!res.ok) throw new Error('No se pudieron cargar los pedidos.');
+        const data = await res.json();
+        if (controller.signal.aborted) return;
+        const ultimaPagina = Math.max(1, Math.ceil(data.total / PAGE_SIZE));
+        if (paginaPedidos > ultimaPagina) {
+          setPaginaPedidos(ultimaPagina);
+          return;
+        }
+        setPedidos(data.pedidos);
+        setTotalPedidos(data.total);
+      } catch {
+        if (!controller.signal.aborted) setErrorPedidos('No pudimos cargar los pedidos.');
+      } finally {
+        if (!controller.signal.aborted) setCargandoPedidos(false);
+      }
+    }
+    cargarPedidos();
+    return () => controller.abort();
+  }, [vista, filtroPedido, paginaPedidos, recargarPedidos]);
 
   const categorias = useMemo(() => [...new Set(productos.map((p) => p.category))].sort(), [productos]);
 
   const kpis = useMemo(() => {
     const enStock = productos.filter((p) => p.stock > 0).length;
     const agotados = productos.filter((p) => p.stock <= 0).length;
-    const valorInventario = productos.reduce((sum, p) => sum + p.price * p.stock, 0);
-    return { total: productos.length, enStock, agotados, categorias: categorias.length, valorInventario };
+    return { total: productos.length, enStock, agotados, categorias: categorias.length };
   }, [productos, categorias]);
 
   const filtrados = useMemo(() => {
@@ -107,53 +153,64 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
   useEffect(() => { setPagina(1); }, [busqueda, categoriaFiltro, estadoFiltro, orden]);
 
-  async function ajustarStock(id: number, delta: number) {
-    const res = await adminFetch(`/api/productos/${id}/stock`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ delta })
-    });
-    if (res.ok) {
-      const actualizado = await res.json();
-      setProductos((prev) => prev.map((p) => (p.id === id ? actualizado : p)));
+  async function ejecutarAccion(clave: string, url: string, opciones: RequestInit, mensaje: string, actualizar: (dato: Producto) => void) {
+    if (ocupado) return;
+    setOcupado(clave);
+    setAviso(undefined);
+    try {
+      const res = await adminFetch(url, opciones);
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || 'No pudimos guardar el cambio.');
+      }
+      actualizar(await res.json().catch(() => null));
+      setAviso({ texto: mensaje });
+    } catch (error) {
+      setAviso({ texto: error instanceof Error ? error.message : 'No pudimos guardar el cambio.', error: true });
+    } finally {
+      setOcupado(undefined);
     }
   }
 
-  async function toggleVisibilidad(id: number, visible: boolean) {
-    const res = await adminFetch(`/api/productos/${id}/visibility`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ visible: !visible })
-    });
-    if (res.ok) {
-      const actualizado = await res.json();
-      setProductos((prev) => prev.map((p) => (p.id === id ? actualizado : p)));
-    }
+  function actualizarProducto(actualizado: Producto) {
+    setProductos((prev) => prev.map((p) => (p.id === actualizado.id ? actualizado : p)));
   }
 
-  async function eliminarProducto(id: number) {
+  function ajustarStock(id: number, delta: number) {
+    return ejecutarAccion(`producto-${id}`, `/api/productos/${id}/stock`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ delta })
+    }, 'Stock actualizado.', actualizarProducto);
+  }
+
+  function toggleVisibilidad(id: number, visible: boolean) {
+    return ejecutarAccion(`producto-${id}`, `/api/productos/${id}/visibility`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visible: !visible })
+    }, visible ? 'Producto oculto.' : 'Producto publicado.', actualizarProducto);
+  }
+
+  function eliminarProducto(id: number) {
     if (!confirm('¿Eliminar este producto? Esta acción no se puede deshacer.')) return;
-    const res = await adminFetch(`/api/productos/${id}`, { method: 'DELETE' });
-    if (res.ok) setProductos((prev) => prev.filter((p) => p.id !== id));
+    return ejecutarAccion(`producto-${id}`, `/api/productos/${id}`, { method: 'DELETE' },
+      'Producto eliminado.', () => setProductos((prev) => prev.filter((p) => p.id !== id)));
   }
 
-  async function confirmarPedido(id: number) {
-    const res = await adminFetch(`/api/pedidos/${id}/confirmar`, { method: 'PATCH' });
-    if (res.ok) setPedidos((prev) => prev.filter((p) => p.id !== id));
+  function procesarPedido(id: number, accion: 'confirmar' | 'cancelar') {
+    if (accion === 'cancelar' && !confirm('¿Cancelar este pedido? El stock será restaurado.')) return;
+    return ejecutarAccion(`pedido-${id}`, `/api/pedidos/${id}/${accion}`, { method: 'PATCH' },
+      accion === 'confirmar' ? 'Pedido confirmado.' : 'Pedido cancelado.', () => {
+        setRecargarPedidos((valor) => valor + 1);
+        if (accion === 'cancelar') cargarTodo();
+      });
   }
 
-  async function cancelarPedido(id: number) {
-    if (!confirm('¿Cancelar este pedido? El stock será restaurado.')) return;
-    const res = await adminFetch(`/api/pedidos/${id}/cancelar`, { method: 'PATCH' });
-    if (res.ok) {
-      setPedidos((prev) => prev.filter((p) => p.id !== id));
-      cargarTodo();
-    }
+  function registrarDespacho(id: number, codigo: string) {
+    return ejecutarAccion(`pedido-${id}`, `/api/pedidos/${id}/despachar`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigo })
+    }, 'Despacho registrado.', () => setRecargarPedidos((valor) => valor + 1));
   }
 
   async function handleLogout() {
-    await adminFetch('/api/auth/logout', { method: 'POST' });
-    onLogout();
+    await ejecutarAccion('salir', '/api/auth/logout', { method: 'POST' }, 'Sesión cerrada.', onLogout);
   }
 
   const navItems: { id: Vista; label: string; icon: string }[] = [
@@ -164,24 +221,25 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   ];
 
   return (
-    <div className="min-h-screen bg-crema flex">
+    <div className="min-h-screen bg-[#f7f7f2] flex">
       {/* Sidebar */}
-      <aside className={`fixed lg:sticky top-0 left-0 h-screen w-60 bg-verde-noche flex flex-col z-40 transition-transform duration-300 ${menuMobile ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col bg-verde-noche lg:flex">
         <div className="px-5 py-5 border-b border-white/10">
           <Link href="/" className="flex items-center gap-2 group">
             <span className="text-lg">🌿</span>
             <div>
               <p className="font-display text-white text-sm leading-tight">Casa y Cosas</p>
-              <p className="text-white/40 text-[10px]">Panguipulli · Admin</p>
+              <p className="text-white/40 text-[10px]">Administración</p>
             </div>
           </Link>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav aria-label="Administración" className="flex-1 px-3 py-4 space-y-1">
           {navItems.map((item) => (
-            <button
+            <a
               key={item.id}
-              onClick={() => { setVista(item.id); setMenuMobile(false); }}
+              href={`#${item.id}`}
+              aria-current={vista === item.id ? 'page' : undefined}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 vista === item.id ? 'bg-white/15 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'
               }`}
@@ -190,10 +248,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
               </svg>
               {item.label}
-              {item.id === 'pedidos' && pedidos.length > 0 && (
-                <span className="ml-auto bg-verde text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{pedidos.length}</span>
-              )}
-            </button>
+            </a>
           ))}
         </nav>
 
@@ -220,29 +275,17 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         </div>
       </aside>
 
-      {menuMobile && (
-        <div className="fixed inset-0 bg-black/40 z-30 lg:hidden" onClick={() => setMenuMobile(false)} />
-      )}
-
-      {/* Contenido */}
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Topbar */}
-        <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-sm border-b border-verde-noche/10 px-4 md:px-8 py-3 flex items-center gap-3">
-          <button
-            onClick={() => setMenuMobile(true)}
-            className="lg:hidden p-1.5 rounded text-verde-noche hover:bg-crema"
-            aria-label="Abrir menú"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-          <h1 className="font-display text-verde-noche text-base md:text-lg flex-1 capitalize">
-            {vista === 'productos' && 'Productos'}
-            {vista === 'pedidos' && 'Pedidos pendientes'}
-            {vista === 'categorias' && 'Categorías'}
-            {vista === 'destacados' && 'Destacados'}
-          </h1>
+        <header className="sticky top-0 z-20 border-b border-verde-noche/10 bg-white px-4 py-3 md:px-8">
+          <div className="flex items-center gap-3">
+            <h1 className="flex-1 font-display text-xl text-verde-noche">
+              {navItems.find((item) => item.id === vista)?.label}
+            </h1>
+            <Link href="/catalogo" className="hidden text-sm font-semibold underline sm:inline lg:hidden">Tienda</Link>
+            <button type="button" className="min-h-10 rounded-lg border border-verde-noche/15 px-3 text-sm lg:hidden" onClick={handleLogout}>
+              Salir
+            </button>
           {vista === 'productos' && (
             <button
               onClick={() => setCreandoNuevo(true)}
@@ -253,9 +296,24 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               <span className="sm:hidden">Nuevo</span>
             </button>
           )}
+          </div>
+          <nav aria-label="Administración móvil" className="mt-3 grid grid-cols-4 gap-1 lg:hidden">
+            {navItems.map((item) => (
+              <a href={`#${item.id}`} key={item.id} aria-current={vista === item.id ? 'page' : undefined}
+                className={`grid min-h-10 place-items-center rounded-lg px-0.5 py-2 text-center text-xs font-semibold sm:text-sm ${vista === item.id ? 'bg-verde-noche text-white' : 'hover:bg-crema/50'}`}>
+                {item.label}
+              </a>
+            ))}
+          </nav>
         </header>
 
-        <main className="flex-1 p-4 md:p-8">
+        <main className="w-full max-w-screen-2xl flex-1 p-4 md:p-8">
+          {aviso && <p role={aviso.error ? 'alert' : 'status'} className={`mb-4 rounded-lg border p-3 text-sm ${aviso.error ? 'border-red-200 bg-red-50 text-red-800' : 'border-verde/20 bg-sage/20'}`}>{aviso.texto}</p>}
+          {errorCatalogo && vista !== 'pedidos' && (
+            <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+              <p>{errorCatalogo}</p><button onClick={cargarTodo} className="font-semibold underline">Reintentar</button>
+            </div>
+          )}
           {/* Productos */}
           {vista === 'productos' && (
             <>
@@ -273,6 +331,8 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
                   placeholder="Buscar producto…"
+                  aria-label="Buscar producto"
+                  type="search"
                   className="flex-1 min-w-[150px] px-3 py-2 rounded-lg border border-verde-noche/15 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-verde/30"
                 />
                 <select
@@ -345,6 +405,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                             <div className="absolute top-2 right-2 flex gap-1.5">
                               <button
                                 onClick={() => toggleVisibilidad(p.id, p.visible)}
+                              disabled={!!ocupado}
                                 className={`text-[10px] font-semibold px-2 py-1 rounded-full ${p.visible ? 'bg-verde/85 text-white' : 'bg-gray-600/85 text-white'}`}
                                 title={p.visible ? 'Ocultar' : 'Mostrar'}
                               >
@@ -370,11 +431,12 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                             <div className="flex items-center gap-1">
                               <button
                                 onClick={() => ajustarStock(p.id, -1)}
-                                disabled={p.stock <= 0}
+                                disabled={p.stock <= 0 || !!ocupado}
                                 className="flex-1 py-1.5 rounded-lg border border-verde-noche/15 text-xs hover:bg-crema disabled:opacity-30"
                               >−</button>
                               <button
                                 onClick={() => ajustarStock(p.id, 1)}
+                                disabled={!!ocupado}
                                 className="flex-1 py-1.5 rounded-lg border border-verde-noche/15 text-xs hover:bg-crema"
                               >+</button>
                               <button
@@ -383,6 +445,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                               >Editar</button>
                               <button
                                 onClick={() => eliminarProducto(p.id)}
+                              disabled={!!ocupado}
                                 className="px-2 py-1.5 rounded-lg text-red-500 hover:bg-red-50 text-xs"
                                 aria-label="Eliminar"
                               >🗑</button>
@@ -429,55 +492,90 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             </>
           )}
 
-          {/* Pedidos */}
           {vista === 'pedidos' && (
-            <div>
-              {pedidos.length === 0 ? (
-                <div className="bg-white rounded-xl shadow-sm p-10 text-center">
-                  <p className="text-sm text-verde-noche/60">No hay pedidos pendientes.</p>
-                  <p className="text-xs text-verde-noche/40 mt-1">Los pedidos se expiran automáticamente a las 48h y restauran el stock.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {pedidos.map((ped) => (
-                    <div key={ped.id} className="bg-white rounded-xl shadow-sm border border-verde-noche/5 p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <p className="font-semibold text-verde-noche text-sm">Pedido #{ped.id}</p>
-                          <p className="text-xs text-verde-noche/50">
-                            {ped.cliente_nombre || 'Sin nombre'} · {new Date(ped.created_at).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' })}
-                          </p>
-                          {ped.cliente_email && (
-                            <p className="text-xs text-verde-noche/50 flex items-center gap-1">
-                              <span>📧</span> {ped.cliente_email}
-                            </p>
-                          )}
-                        </div>
-                        <span className="text-sm font-semibold text-verde">{formatoCLP.format(ped.total)}</span>
-                      </div>
-                      <div className="space-y-1 mb-3">
-                        {ped.items.map((item, idx) => (
-                          <div key={idx} className="flex justify-between text-xs text-verde-noche/70">
-                            <span>{item.qty}× {item.nombre}</span>
-                            <span>{formatoCLP.format(item.precio * item.qty)}</span>
+            <section aria-label="Pedidos de la tienda">
+              <div className="mb-4 flex flex-wrap items-end gap-3">
+                <label className="text-sm font-medium">
+                  Estado del pedido
+                  <select value={filtroPedido} onChange={(event) => { setFiltroPedido(event.target.value as FiltroPedido); setPaginaPedidos(1); }}
+                    className="mt-1 block min-h-11 rounded-lg border border-verde-noche/20 bg-white px-3">
+                    {Object.entries(ESTADOS_PEDIDO).map(([estado, nombre]) => <option key={estado} value={estado}>{nombre}</option>)}
+                  </select>
+                </label>
+                <button type="button" className="min-h-11 rounded-lg border border-verde-noche/20 bg-white px-3 text-sm font-semibold"
+                  onClick={() => setRecargarPedidos((valor) => valor + 1)}>Actualizar</button>
+              </div>
+              {errorPedidos ? <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{errorPedidos}</p>
+                : cargandoPedidos ? <p role="status" className="p-4 text-sm">Cargando pedidos…</p>
+                : pedidos.length === 0 ? <p className="rounded-lg border border-verde-noche/10 bg-white p-6 text-sm">No hay pedidos con este filtro.</p>
+                : (
+                  <>
+                    <div className="grid gap-4 xl:grid-cols-2">
+                      {pedidos.map((ped) => (
+                        <article key={ped.id} className="min-w-0 rounded-xl border border-verde-noche/10 bg-white p-4">
+                          <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <h2 className="font-semibold">Pedido #{ped.id}</h2>
+                              <p className="text-xs text-verde-noche/75">{new Date(ped.created_at).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Santiago' })}</p>
+                            </div>
+                            <span className="rounded-full bg-crema/60 px-2.5 py-1 text-xs font-semibold capitalize">{ped.despachado_at ? 'Despachado' : ped.estado}</span>
                           </div>
-                        ))}
-                      </div>
+                          <dl className="space-y-1 break-words text-sm">
+                            <div><dt className="inline font-semibold">Cliente: </dt><dd className="inline">{ped.cliente_nombre || 'Sin nombre'}</dd></div>
+                            {ped.cliente_email && <div><dt className="inline font-semibold">Correo: </dt><dd className="inline">{ped.cliente_email}</dd></div>}
+                            {ped.cliente_whatsapp && <div><dt className="inline font-semibold">Teléfono: </dt><dd className="inline">{ped.cliente_whatsapp}</dd></div>}
+                            {ped.despacho && <div><dt className="inline font-semibold">Despacho por pagar: </dt><dd className="inline">{ped.despacho.direccion}, {ped.despacho.comuna}, {ped.despacho.region}</dd></div>}
+                            {ped.codigo_despacho && <div><dt className="inline font-semibold">Seguimiento: </dt><dd className="inline">{ped.codigo_despacho}</dd></div>}
+                            <div><dt className="inline font-semibold">Pago: </dt>
+                              <dd className="inline">{ped.pago_estado === 'aprobado' ? `Mercado Pago aprobado · ${ped.pago_id}` : ped.pago_estado === 'revision' ? 'Requiere revisión' : ped.pago_estado ? 'Esperando Mercado Pago' : 'Pedido coordinado por redes'}</dd>
+                            </div>
+                          </dl>
+                          {ped.pago_revision && <p className="mt-3 rounded-lg bg-amber-50 p-2 text-sm text-amber-900">{ped.pago_revision}</p>}
+                          <ul className="my-3 space-y-1 border-t border-verde-noche/10 pt-3 text-sm">
+                            {ped.items.map((item, idx) => (
+                              <li className="flex justify-between gap-3" key={idx}>
+                                <span>{item.qty} × {item.nombre}</span><span className="shrink-0">{formatoCLP.format(item.precio * item.qty)}</span>
+                              </li>
+                            ))}
+                          </ul>
+                          <p className="mb-3 text-right font-semibold">Total {formatoCLP.format(ped.total)}</p>
+                          {ped.estado === 'pendiente' && !ped.pago_estado && (
+                            <div className="flex gap-2">
+                              <button disabled={!!ocupado} onClick={() => procesarPedido(ped.id, 'confirmar')}
+                                className="min-h-10 flex-1 rounded-lg bg-verde-oscuro px-2 text-sm font-semibold text-white disabled:opacity-50">Confirmar</button>
+                              <button disabled={!!ocupado} onClick={() => procesarPedido(ped.id, 'cancelar')}
+                                className="min-h-10 flex-1 rounded-lg border border-red-200 px-2 text-sm font-semibold text-red-700 disabled:opacity-50">Cancelar</button>
+                            </div>
+                          )}
+                          {ped.estado === 'confirmado' && ped.pago_estado !== 'revision' && !ped.despachado_at && (
+                            <form onSubmit={(event) => {
+                              event.preventDefault();
+                              registrarDespacho(ped.id, String(new FormData(event.currentTarget).get('codigo') || ''));
+                            }} className="flex flex-wrap items-end gap-2">
+                              <label className="flex-1 text-sm">
+                                Código de seguimiento (opcional)
+                                <input name="codigo" maxLength={80} className="mt-1 block min-h-10 w-full rounded-lg border border-verde-noche/20 px-2" />
+                              </label>
+                              <button disabled={!!ocupado} type="submit" className="min-h-10 rounded-lg bg-verde-oscuro px-3 text-sm font-semibold text-white disabled:opacity-50">
+                                Registrar despacho
+                              </button>
+                            </form>
+                          )}
+                        </article>
+                      ))}
+                    </div>
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+                      <p>{totalPedidos} {totalPedidos === 1 ? 'pedido' : 'pedidos'} · Página {paginaPedidos} de {Math.ceil(totalPedidos / PAGE_SIZE)}</p>
                       <div className="flex gap-2">
-                        <button
-                          onClick={() => confirmarPedido(ped.id)}
-                          className="flex-1 py-2 rounded-lg bg-verde text-white text-xs font-semibold hover:bg-verde-oscuro"
-                        >✓ Confirmar</button>
-                        <button
-                          onClick={() => cancelarPedido(ped.id)}
-                          className="flex-1 py-2 rounded-lg border border-red-300 text-red-600 text-xs font-semibold hover:bg-red-50"
-                        >Cancelar</button>
+                        <button disabled={paginaPedidos === 1} onClick={() => setPaginaPedidos((valor) => valor - 1)}
+                          className="min-h-10 rounded-lg border bg-white px-3 disabled:opacity-40">Anterior</button>
+                        <button disabled={paginaPedidos * PAGE_SIZE >= totalPedidos} onClick={() => setPaginaPedidos((valor) => valor + 1)}
+                          className="min-h-10 rounded-lg border bg-white px-3 disabled:opacity-40">Siguiente</button>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                  </>
+                )}
+            </section>
           )}
 
           {/* Categorías */}

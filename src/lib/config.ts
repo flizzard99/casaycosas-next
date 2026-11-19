@@ -18,11 +18,7 @@ export const tienda = {
   facebookUrl:
     process.env.NEXT_PUBLIC_FACEBOOK_URL ||
     'https://www.facebook.com/people/Tienda-Casa-y-Cosas-Panguipulli/61582181283916/',
-  tiktokUrl: process.env.NEXT_PUBLIC_TIKTOK_URL || 'https://www.tiktok.com/@tiendacasaycosas',
-  mapsUrl:
-    process.env.NEXT_PUBLIC_MAPS_URL || 'https://maps.app.goo.gl/t4b9KeWEd7U4MDPc6',
-  storeAddress:
-    process.env.NEXT_PUBLIC_STORE_ADDRESS || 'Martínez de Rosas 498, Local C, Panguipulli'
+  tiktokUrl: process.env.NEXT_PUBLIC_TIKTOK_URL || 'https://www.tiktok.com/@tiendacasaycosas'
 } as const;
 
 export type Tienda = typeof tienda;

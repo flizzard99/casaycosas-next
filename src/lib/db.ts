@@ -113,7 +113,16 @@ export type Pedido = {
   created_at: string;
   confirmado_at: string | null;
   items: PedidoItem[];
+  pago_estado: 'pendiente' | 'aprobado' | 'revision' | null;
+  pago_id: string | null;
+  pago_revision: string | null;
+  despacho: DespachoPedido | null;
+  despachado_at: string | null;
+  codigo_despacho: string | null;
 };
+
+export type DespachoPedido = { region: string; comuna: string; direccion: string };
+type Compra = { referencia: string; despacho: DespachoPedido; totalEsperado: number };
 
 export type PedidoItem = {
   producto_id: number;
@@ -125,31 +134,65 @@ export type PedidoItem = {
 export type EstadoPedido = 'pendiente' | 'confirmado' | 'cancelado' | 'expirado';
 
 const PEDIDO_EXPIRACION_HORAS = 48;
+export const COMPRA_EXPIRACION_MINUTOS = 45;
 
-async function ensurePedidosSchema() {
-  const pool = getPool();
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS pedidos (
-      id SERIAL PRIMARY KEY,
-      cliente_nombre TEXT DEFAULT '',
-      cliente_whatsapp TEXT DEFAULT '',
-      total INTEGER DEFAULT 0,
-      estado TEXT DEFAULT 'pendiente',
-      created_at TIMESTAMPTZ DEFAULT NOW(),
-      confirmado_at TIMESTAMPTZ
-    )
-  `);
-  await pool.query(`ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS cliente_email TEXT DEFAULT ''`);
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS pedido_items (
-      id SERIAL PRIMARY KEY,
-      pedido_id INTEGER REFERENCES pedidos(id) ON DELETE CASCADE,
-      producto_id INTEGER,
-      nombre TEXT,
-      qty INTEGER DEFAULT 1,
-      precio INTEGER DEFAULT 0
-    )
-  `);
+let pedidosInitialization: Promise<void> | undefined;
+
+function ensurePedidosSchema() {
+  pedidosInitialization ??= initializePedidosSchema().catch((error) => {
+    pedidosInitialization = undefined;
+    throw error;
+  });
+  return pedidosInitialization;
+}
+
+async function initializePedidosSchema() {
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock(440811, 2)');
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pedidos (
+        id SERIAL PRIMARY KEY,
+        cliente_nombre TEXT DEFAULT '',
+        cliente_whatsapp TEXT DEFAULT '',
+        total INTEGER DEFAULT 0,
+        estado TEXT DEFAULT 'pendiente',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        confirmado_at TIMESTAMPTZ
+      );
+      ALTER TABLE pedidos
+        ADD COLUMN IF NOT EXISTS cliente_email TEXT DEFAULT '',
+        ADD COLUMN IF NOT EXISTS pago_referencia UUID,
+        ADD COLUMN IF NOT EXISTS pago_estado TEXT,
+        ADD COLUMN IF NOT EXISTS pago_id TEXT,
+        ADD COLUMN IF NOT EXISTS pago_url TEXT,
+        ADD COLUMN IF NOT EXISTS pago_revision TEXT,
+        ADD COLUMN IF NOT EXISTS despacho JSONB,
+        ADD COLUMN IF NOT EXISTS despachado_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS codigo_despacho TEXT;
+      CREATE TABLE IF NOT EXISTS pedido_items (
+        id SERIAL PRIMARY KEY,
+        pedido_id INTEGER REFERENCES pedidos(id) ON DELETE CASCADE,
+        producto_id INTEGER,
+        nombre TEXT,
+        qty INTEGER DEFAULT 1,
+        precio INTEGER DEFAULT 0
+      );
+      ALTER TABLE pedidos ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE pedido_items ENABLE ROW LEVEL SECURITY;
+      CREATE UNIQUE INDEX IF NOT EXISTS pedidos_pago_referencia_uidx ON pedidos(pago_referencia) WHERE pago_referencia IS NOT NULL;
+      CREATE UNIQUE INDEX IF NOT EXISTS pedidos_pago_id_uidx ON pedidos(pago_id) WHERE pago_id IS NOT NULL;
+      CREATE INDEX IF NOT EXISTS pedidos_pendientes_fecha_idx ON pedidos(created_at) WHERE estado = 'pendiente';
+      CREATE INDEX IF NOT EXISTS pedido_items_pedido_id_idx ON pedido_items(pedido_id);
+    `);
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 function formatPedido(row: Record<string, unknown>, items: PedidoItem[] = []): Pedido {
@@ -162,34 +205,75 @@ function formatPedido(row: Record<string, unknown>, items: PedidoItem[] = []): P
     estado: (row.estado as EstadoPedido) || 'pendiente',
     created_at: row.created_at as string,
     confirmado_at: row.confirmado_at ? (row.confirmado_at as string) : null,
-    items
+    items,
+    pago_estado: (row.pago_estado as Pedido['pago_estado']) ?? null,
+    pago_id: (row.pago_id as string) ?? null,
+    pago_revision: (row.pago_revision as string) ?? null,
+    despacho: (row.despacho as DespachoPedido) ?? null,
+    despachado_at: (row.despachado_at as string) ?? null,
+    codigo_despacho: (row.codigo_despacho as string) ?? null
   };
 }
 
-async function expirarPedidosViejos(pool: Pool): Promise<void> {
-  await pool.query(
-    `UPDATE pedidos SET estado = 'expirado'
-     WHERE estado = 'pendiente' AND created_at < NOW() - ($1 || ' hours')::INTERVAL`,
-    [String(PEDIDO_EXPIRACION_HORAS)]
-  );
+async function expirarPedidosViejos(db: Pick<Pool, 'query'>): Promise<void> {
+  await db.query(`
+    WITH vencidos AS (
+      UPDATE pedidos SET estado = 'expirado'
+      WHERE estado = 'pendiente' AND created_at < NOW() -
+        (CASE WHEN pago_referencia IS NULL THEN $1::integer ELSE $2::integer END * INTERVAL '1 minute')
+      RETURNING id
+    ), unidades AS (
+      SELECT producto_id, SUM(qty)::integer AS qty
+      FROM pedido_items JOIN vencidos ON pedido_items.pedido_id = vencidos.id
+      GROUP BY producto_id
+    )
+    UPDATE productos SET stock = COALESCE(stock, 0) + unidades.qty
+    FROM unidades WHERE productos.id = unidades.producto_id
+  `, [PEDIDO_EXPIRACION_HORAS * 60, COMPRA_EXPIRACION_MINUTOS]);
 }
 
-export async function crearPedido(items: { id: number; qty: number }[], clienteNombre: string, clienteWhatsapp: string, clienteEmail: string = ''): Promise<Pedido | null> {
+async function leerItems(db: Pick<Pool, 'query'>, id: number): Promise<PedidoItem[]> {
+  const result = await db.query(
+    'SELECT producto_id, nombre, qty, precio FROM pedido_items WHERE pedido_id = $1 ORDER BY id',
+    [id]
+  );
+  return result.rows;
+}
+
+export async function crearPedido(items: { id: number; qty: number }[], clienteNombre: string, clienteWhatsapp: string, clienteEmail = '', compra?: Compra): Promise<Pedido> {
   await ensureSchema();
   await ensurePedidosSchema();
   const pool = getPool();
+  await expirarPedidosViejos(pool);
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    await expirarPedidosViejos(client as unknown as Pool);
+    if (compra) {
+      await client.query('SELECT pg_advisory_xact_lock(440812, hashtext($1))', [compra.referencia]);
+      const existente = await client.query('SELECT * FROM pedidos WHERE pago_referencia = $1', [compra.referencia]);
+      if (existente.rows.length) {
+        const row = existente.rows[0];
+        const detalle = await leerItems(client, row.id);
+        if (row.total !== compra.totalEsperado || detalle.length !== items.length ||
+            !items.every((item) => detalle.some((linea) => linea.producto_id === item.id && linea.qty === item.qty)) ||
+            row.cliente_nombre !== clienteNombre || row.cliente_whatsapp !== clienteWhatsapp || row.cliente_email !== clienteEmail ||
+            row.despacho?.region !== compra.despacho.region || row.despacho?.comuna !== compra.despacho.comuna ||
+            row.despacho?.direccion !== compra.despacho.direccion) {
+          throw new Error('La sesión de pago corresponde a otro carrito o despacho.');
+        }
+        await client.query('COMMIT');
+        return formatPedido(row, detalle);
+      }
+    }
 
     let total = 0;
     const itemsDetalle: { producto_id: number; nombre: string; qty: number; precio: number }[] = [];
 
-    for (const item of items) {
-      const res = await client.query('SELECT id, name, price, stock FROM productos WHERE id = $1 FOR UPDATE', [item.id]);
+    for (const item of [...items].sort((a, b) => a.id - b.id)) {
+      const res = await client.query('SELECT id, name, price, stock FROM productos WHERE id = $1 AND visible IS TRUE FOR UPDATE', [item.id]);
       if (!res.rows.length) throw new Error(`Producto ${item.id} no encontrado`);
       const p = res.rows[0];
+      if (compra && (!Number.isInteger(p.price) || p.price <= 0)) throw new Error('Total de compra inválido');
       if ((p.stock || 0) < item.qty) {
         throw new Error(`Stock insuficiente para "${p.name}" (disponible: ${p.stock || 0}, solicitado: ${item.qty})`);
       }
@@ -198,9 +282,13 @@ export async function crearPedido(items: { id: number; qty: number }[], clienteN
       await client.query('UPDATE productos SET stock = stock - $1 WHERE id = $2', [item.qty, p.id]);
     }
 
+    if (compra && (total <= 0 || total > 2147483647)) throw new Error('Total de compra inválido');
+    if (compra && total !== compra.totalEsperado) throw new Error('El precio de los productos cambió. Actualiza el carrito.');
+
     const pedidoRes = await client.query(
-      `INSERT INTO pedidos (cliente_nombre, cliente_whatsapp, cliente_email, total, estado) VALUES ($1, $2, $3, $4, 'pendiente') RETURNING *`,
-      [clienteNombre, clienteWhatsapp, clienteEmail, total]
+      `INSERT INTO pedidos (cliente_nombre, cliente_whatsapp, cliente_email, total, estado, pago_referencia, pago_estado, despacho)
+       VALUES ($1, $2, $3, $4, 'pendiente', $5, $6, $7) RETURNING *`,
+      [clienteNombre, clienteWhatsapp, clienteEmail, total, compra?.referencia ?? null, compra ? 'pendiente' : null, compra?.despacho ?? null]
     );
     const pedidoId = pedidoRes.rows[0].id;
 
@@ -221,31 +309,34 @@ export async function crearPedido(items: { id: number; qty: number }[], clienteN
   }
 }
 
-export async function getPedidosPendientes(): Promise<Pedido[]> {
+export async function getPedidosAdmin(estado: EstadoPedido | 'revision' | 'todos', pagina: number): Promise<{ pedidos: Pedido[]; total: number }> {
   await ensureSchema();
   await ensurePedidosSchema();
   const pool = getPool();
   await expirarPedidosViejos(pool);
-  const res = await pool.query(
-    `SELECT * FROM pedidos WHERE estado = 'pendiente' ORDER BY created_at DESC`
-  );
-  const pedidos: Pedido[] = [];
-  for (const row of res.rows) {
-    const itemsRes = await pool.query(
-      `SELECT producto_id, nombre, qty, precio FROM pedido_items WHERE pedido_id = $1`,
-      [row.id]
-    );
-    pedidos.push(formatPedido(row, itemsRes.rows as PedidoItem[]));
-  }
-  return pedidos;
+  const filtro = `(($1 = 'todos') OR ($1 = 'revision' AND p.pago_estado = 'revision') OR p.estado = $1)`;
+  const [rows, cantidad] = await Promise.all([
+    pool.query(`
+      SELECT p.*, COALESCE(detalle.items, '[]'::json) AS items
+      FROM (SELECT p.* FROM pedidos p WHERE ${filtro} ORDER BY p.created_at DESC, p.id DESC LIMIT 24 OFFSET $2) p
+      LEFT JOIN LATERAL (
+        SELECT json_agg(json_build_object('producto_id', producto_id, 'nombre', nombre, 'qty', qty, 'precio', precio) ORDER BY id) AS items
+        FROM pedido_items WHERE pedido_id = p.id
+      ) detalle ON true
+      ORDER BY p.created_at DESC, p.id DESC
+    `, [estado, (pagina - 1) * 24]),
+    pool.query(`SELECT count(*)::integer AS total FROM pedidos p WHERE ${filtro}`, [estado])
+  ]);
+  return { pedidos: rows.rows.map((row) => formatPedido(row, row.items)), total: cantidad.rows[0].total };
 }
 
 export async function confirmarPedido(id: number): Promise<Pedido | null> {
   await ensureSchema();
   await ensurePedidosSchema();
   const pool = getPool();
+  await expirarPedidosViejos(pool);
   const res = await pool.query(
-    `UPDATE pedidos SET estado = 'confirmado', confirmado_at = NOW() WHERE id = $1 AND estado = 'pendiente' RETURNING *`,
+    `UPDATE pedidos SET estado = 'confirmado', confirmado_at = NOW() WHERE id = $1 AND estado = 'pendiente' AND pago_referencia IS NULL RETURNING *`,
     [id]
   );
   if (!res.rows.length) return null;
@@ -264,7 +355,7 @@ export async function cancelarPedido(id: number): Promise<Pedido | null> {
   try {
     await client.query('BEGIN');
     const pedRes = await client.query(
-      `SELECT * FROM pedidos WHERE id = $1 AND estado = 'pendiente' FOR UPDATE`,
+      `SELECT * FROM pedidos WHERE id = $1 AND estado = 'pendiente' AND pago_referencia IS NULL FOR UPDATE`,
       [id]
     );
     if (!pedRes.rows.length) {
@@ -516,16 +607,108 @@ export async function getFeaturedProducts(): Promise<Producto[]> {
 
 export const PEDIDO_EXPIRACION_MS = PEDIDO_EXPIRACION_HORAS * 60 * 60 * 1000;
 
-export async function getPedidoByIdPublic(id: number): Promise<Pedido | null> {
+export async function despacharPedido(id: number, codigo: string): Promise<boolean> {
+  await ensureSchema();
+  await ensurePedidosSchema();
+  const result = await getPool().query(
+    `UPDATE pedidos SET despachado_at = NOW(), codigo_despacho = NULLIF($2, '')
+     WHERE id = $1 AND estado = 'confirmado' AND despachado_at IS NULL
+       AND (pago_estado = 'aprobado' OR pago_referencia IS NULL)`,
+    [id, codigo]
+  );
+  return result.rowCount === 1;
+}
+
+export function resumenPublicoPedido(pedido: Pedido) {
+  return {
+    id: pedido.id,
+    total: pedido.total,
+    estado: pedido.estado,
+    pago_estado: pedido.pago_estado,
+    created_at: pedido.created_at,
+    items: pedido.items,
+    despachado_at: pedido.pago_estado !== 'revision' ? pedido.despachado_at : null,
+    codigo_despacho: pedido.pago_estado === 'aprobado' ? pedido.codigo_despacho : null,
+    expiracionAt: new Date(pedido.created_at).getTime() + (pedido.pago_estado ? COMPRA_EXPIRACION_MINUTOS * 60000 : PEDIDO_EXPIRACION_MS)
+  };
+}
+
+export type PedidoPublico = ReturnType<typeof resumenPublicoPedido>;
+
+export async function getPedidoByIdPublic(id: number, referencia?: string): Promise<PedidoPublico | null> {
   await ensureSchema();
   await ensurePedidosSchema();
   const pool = getPool();
   await expirarPedidosViejos(pool);
-  const res = await pool.query(`SELECT * FROM pedidos WHERE id = $1`, [id]);
-  if (!res.rows.length) return null;
-  const itemsRes = await pool.query(
-    `SELECT producto_id, nombre, qty, precio FROM pedido_items WHERE pedido_id = $1`,
-    [id]
+  const res = await pool.query(
+    'SELECT * FROM pedidos WHERE id = $1 AND (pago_referencia IS NULL OR pago_referencia::text = $2)',
+    [id, referencia ?? '']
   );
-  return formatPedido(res.rows[0], itemsRes.rows as PedidoItem[]);
+  if (!res.rows.length) return null;
+  return resumenPublicoPedido(formatPedido(res.rows[0], await leerItems(pool, id)));
+}
+
+export async function obtenerEnlaceDePago(pedido: Pedido, referencia: string, crearEnlace: () => Promise<string>): Promise<string | null> {
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      "SELECT pago_url FROM pedidos WHERE id = $1 AND pago_referencia = $2 AND estado = 'pendiente' AND pago_estado = 'pendiente' FOR UPDATE",
+      [pedido.id, referencia]
+    );
+    let url: string | null = rows[0]?.pago_url ?? null;
+    if (rows.length && !url) {
+      url = await crearEnlace();
+      await client.query('UPDATE pedidos SET pago_url = $2 WHERE id = $1', [pedido.id, url]);
+    }
+    await client.query('COMMIT');
+    return url;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function registrarPagoMercadoPago(pago: { referencia: string; id: string; total: number; moneda: string; estado: string }) {
+  await ensureSchema();
+  await ensurePedidosSchema();
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      "SELECT *, created_at + ($2::integer * INTERVAL '1 minute') <= NOW() AS vencido FROM pedidos WHERE pago_referencia = $1 FOR UPDATE",
+      [pago.referencia, COMPRA_EXPIRACION_MINUTOS]
+    );
+    const pedido = rows[0];
+    let confirmado: Pedido | null = null;
+    if (pedido && pago.estado === 'approved') {
+      if (pedido.pago_id === pago.id && pedido.pago_estado === 'aprobado') {
+        // Mercado Pago puede reenviar la misma notificación.
+      } else if (pedido.pago_id || pedido.estado !== 'pendiente' || pedido.vencido ||
+                 pedido.pago_estado === 'revision' || pago.moneda !== 'CLP' || pedido.total !== pago.total) {
+        await client.query(
+          "UPDATE pedidos SET pago_estado = 'revision', pago_revision = $2 WHERE id = $1",
+          [pedido.id, `Pago ${pago.id}: duplicado, recibido fuera del plazo o con monto/moneda diferente. Verificar antes de despachar.`]
+        );
+      } else {
+        const result = await client.query(
+          "UPDATE pedidos SET estado = 'confirmado', confirmado_at = NOW(), pago_estado = 'aprobado', pago_id = $2 WHERE id = $1 RETURNING *",
+          [pedido.id, pago.id]
+        );
+        confirmado = formatPedido(result.rows[0], await leerItems(client, pedido.id));
+      }
+    } else if (pedido?.pago_id === pago.id && ['refunded', 'charged_back', 'cancelled'].includes(pago.estado)) {
+      await client.query("UPDATE pedidos SET pago_estado = 'revision', pago_revision = $2 WHERE id = $1",
+        [pedido.id, `Pago ${pago.id}: Mercado Pago informó ${pago.estado}. Verificar antes de despachar.`]);
+    }
+    await client.query('COMMIT');
+    return confirmado;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }

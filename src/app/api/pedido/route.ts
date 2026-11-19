@@ -30,8 +30,8 @@ export async function POST(req: NextRequest) {
 
     const lineas = pedido.items.map((i) => `• ${i.qty}x ${i.nombre} — ${formatoCLP.format(i.precio * i.qty)}`);
     const saludo = pedido.cliente_nombre
-      ? `Hola! Soy ${pedido.cliente_nombre}, quisiera reservar este pedido para retiro en tienda:`
-      : 'Hola! Quisiera reservar este pedido para retiro en tienda:';
+      ? `Hola! Soy ${pedido.cliente_nombre}, quisiera reservar este pedido:`
+      : 'Hola! Quisiera reservar este pedido:';
     const mensaje = [saludo, '', ...lineas, '', `Total: ${formatoCLP.format(pedido.total)}`].join('\n');
     const waUrl = `https://wa.me/${tienda.whatsappNumber}?text=${encodeURIComponent(mensaje)}`;
 

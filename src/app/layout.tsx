@@ -21,27 +21,27 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://casaycosas-next.ver
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: 'Casa y Cosas — Panguipulli',
+    default: 'Casa y Cosas',
     template: '%s — Casa y Cosas'
   },
   description:
-    'Tienda de hogar, mate, artesanías, perfumes y más en Panguipulli, Región de Los Ríos. Catálogo online, retiro en tienda y pedidos por WhatsApp.',
-  keywords: ['Panguipulli', 'tienda', 'hogar', 'artesanías', 'mate', 'perfumes', 'Los Ríos', 'catálogo'],
+    'Tienda de hogar, mate, artesanías, perfumes y más. Catálogo online y atención por redes sociales.',
+  keywords: ['tienda', 'hogar', 'artesanías', 'mate', 'perfumes', 'catálogo'],
   authors: [{ name: 'Jerson Hernández' }],
   openGraph: {
     type: 'website',
     locale: 'es_CL',
     url: siteUrl,
-    siteName: 'Casa y Cosas — Panguipulli',
-    title: 'Casa y Cosas — Panguipulli',
+    siteName: 'Casa y Cosas',
+    title: 'Casa y Cosas',
     description:
-      'Detalles especiales para Ti y para tu Hogar. Catálogo online, retiro en tienda y pedidos por WhatsApp.',
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Casa y Cosas — Panguipulli' }]
+      'Detalles especiales para Ti y para tu Hogar. Catálogo online y atención por redes sociales.',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Casa y Cosas' }]
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Casa y Cosas — Panguipulli',
-    description: 'Tienda de hogar, mate, artesanías y más en Panguipulli.',
+    title: 'Casa y Cosas',
+    description: 'Tienda de hogar, mate, artesanías y más.',
     images: ['/og-image.png']
   },
   icons: {
@@ -58,34 +58,13 @@ export const viewport: Viewport = {
 
 const localBusinessJsonLd = {
   '@context': 'https://schema.org',
-  '@type': 'Store',
+  '@type': 'OnlineStore',
   name: 'Casa y Cosas',
-  description: 'Tienda de hogar, mate, artesanías, perfumes y más en Panguipulli, Región de Los Ríos.',
+  description: 'Tienda de hogar, mate, artesanías, perfumes y más.',
   image: [`${siteUrl}/og-image.png`],
   url: siteUrl,
   telephone: `+${tienda.whatsappNumber}`,
   priceRange: '$$',
-  address: {
-    '@type': 'PostalAddress',
-    streetAddress: tienda.storeAddress,
-    addressLocality: 'Panguipulli',
-    addressRegion: 'Los Ríos',
-    addressCountry: 'CL'
-  },
-  geo: {
-    '@type': 'GeoCoordinates',
-    latitude: -39.6476,
-    longitude: -72.4717
-  },
-  openingHoursSpecification: [
-    {
-      '@type': 'OpeningHoursSpecification',
-      dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-      opens: '10:00',
-      closes: '20:00'
-    }
-  ],
-  hasMap: tienda.mapsUrl,
   sameAs: [
     tienda.instagramUrl,
     tienda.facebookUrl,
@@ -99,7 +78,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="font-body text-verde-noche">
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd).replace(/</g, '\\u003c') }}
         />
         <CartProvider>{children}</CartProvider>
         <Analytics />

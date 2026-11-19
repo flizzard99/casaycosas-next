@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
+import { origenCheckout } from '@/lib/mercadoPago';
 import CatalogClient from '@/components/CatalogClient';
 import { getProductosPublicos, getConfig } from '@/lib/db';
 
@@ -10,7 +11,7 @@ export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: 'Catálogo',
-  description: 'Catálogo completo de Casa y Cosas. Hogar, mate, artesanías, perfumes y más en Panguipulli.'
+  description: 'Catálogo completo de Casa y Cosas. Hogar, mate, artesanías, perfumes y más.'
 };
 
 export default async function CatalogoPage() {
@@ -39,7 +40,7 @@ export default async function CatalogoPage() {
         )}
       </main>
       <Footer />
-      <CartDrawer />
+      <CartDrawer pagoEnLinea={!!origenCheckout()} />
     </>
   );
 }

@@ -1,4 +1,4 @@
-# Casa y Cosas — Panguipulli (v2, Next.js)
+# Casa y Cosas (Next.js)
 
 Reescritura completa del sitio en **Next.js 14 (App Router) + TypeScript + Tailwind CSS**,
 manteniendo la misma base de datos Postgres/Supabase que ya usa el sitio actual
@@ -27,9 +27,7 @@ src/
   lib/
     db.ts                  → todas las consultas a Postgres
     auth.ts                → sesión firmada del admin
-    supabaseStorage.ts      → subida de imágenes a Supabase Storage
-public/
-  direccion.png            → mismo mapa/ubicación que el sitio actual
+    imageStorage.ts        → subida de imágenes a Cloudflare R2
 ```
 
 ## 1. Variables de entorno
@@ -48,7 +46,7 @@ cp .env.example .env.local
 - `SESSION_SECRET`: un texto largo y aleatorio (puedes generarlo con
   `openssl rand -base64 32`). Sirve para firmar la sesión del admin — **no la compartas**.
 - Las variables `NEXT_PUBLIC_*`: datos de contacto de la tienda (WhatsApp, Instagram,
-  Facebook, TikTok, dirección y link de Google Maps).
+  Facebook y TikTok).
 
 ### Tabla de referencia (para Vercel → Settings → Environment Variables)
 
@@ -65,8 +63,6 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_INSTAGRAM_URL` | URL del perfil de Instagram | Opcional† | `https://www.instagram.com/casaycosas.panguipulli/` |
 | `NEXT_PUBLIC_FACEBOOK_URL` | URL del perfil de Facebook | Opcional† | `https://www.facebook.com/people/Tienda-Casa-y-Cosas-Panguipulli/61582181283916/` |
 | `NEXT_PUBLIC_TIKTOK_URL` | URL del perfil de TikTok | Opcional† | `https://www.tiktok.com/@tiendacasaycosas` |
-| `NEXT_PUBLIC_MAPS_URL` | URL de Google Maps de la tienda | Opcional† | `https://maps.app.goo.gl/t4b9KeWEd7U4MDPc6` |
-| `NEXT_PUBLIC_STORE_ADDRESS` | Dirección física de la tienda | Opcional† | `Martínez de Rosas 498, Local C, Panguipulli` |
 
 > \* Solo obligatorias si el admin sube imágenes de productos. Sin ellas, el panel funciona
 > pero la subida de imágenes fallará.
@@ -77,7 +73,7 @@ cp .env.example .env.local
 
 ## 2. Instalación y desarrollo local
 
-Requiere Node.js 18 o superior.
+Requiere Node.js 22 o superior.
 
 ```bash
 npm install
@@ -151,3 +147,16 @@ El script requiere `.env.local` con `DATABASE_URL`, `SUPABASE_URL` y `SUPABASE_S
 - Agregar registro de auditoría (quién cambió qué) si lo necesitas más adelante.
 - Optimizar imágenes servidas desde URLs externas (bigcommerce, etc.) migrándolas a Supabase
   Storage con el tiempo.
+
+
+## Pago en línea con Mercado Pago Chile
+
+El checkout cobra los productos en CLP. El cliente paga el despacho al transportista al recibir. La tienda debe informar este método antes de cobrar y coordinar los despachos con el transportista.
+
+1. Crea una aplicación de **Checkout Pro** en Mercado Pago Developers con la cuenta de la tienda.
+2. Configura el evento **Pagos** en Webhooks con la URL `https://casaycosas-next.vercel.app/api/pagos/mercadopago`. Si usas otro dominio, actualiza esa URL y `NEXT_PUBLIC_SITE_URL` juntos.
+3. Guarda el Access Token en `MP_ACCESS_TOKEN` y la firma secreta de Webhooks en `MP_WEBHOOK_SECRET`. Ambas son variables de servidor. El checkout se activa cuando ambas están configuradas.
+4. Prueba primero con credenciales y comprador de prueba, `MP_SANDBOX=true`, una base de desarrollo y una URL HTTPS de ese entorno. En producción usa las credenciales de producción y deja `MP_SANDBOX=false`. Vuelve a desplegar después de cambiar variables.
+5. En **Administración → Pedidos**, comprueba el cambio de pendiente a aprobado tras recibir el webhook. Al despachar, registra el código de seguimiento si el transportista lo facilita.
+
+En una compra en línea el stock se reserva durante 45 minutos. El enlace de Mercado Pago vence 5 minutos antes para dejar tiempo a las notificaciones. Si se aprueba un pago fuera de plazo o llega un cobro duplicado, el pedido queda en **Pagos por revisar**. Confirma la operación con Mercado Pago antes de despachar o reembolsar.

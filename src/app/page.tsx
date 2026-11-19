@@ -1,9 +1,10 @@
 import Header from '@/components/Header';
 import Hero from '@/components/Hero';
 import FeaturedGrid from '@/components/FeaturedGrid';
-import InfoLocalSection from '@/components/InfoLocalSection';
+import SocialSection from '@/components/SocialSection';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
+import { origenCheckout } from '@/lib/mercadoPago';
 import { getFeaturedProducts, getConfig, getProductosPublicos } from '@/lib/db';
 
 export const revalidate = 60;
@@ -34,10 +35,10 @@ export default async function HomePage() {
       <main id="contenido" tabIndex={-1}>
         <Hero />
         <FeaturedGrid productos={featured} titulo={featuredTitle} />
-        <InfoLocalSection />
+        <SocialSection />
       </main>
       <Footer />
-      <CartDrawer />
+      <CartDrawer pagoEnLinea={!!origenCheckout()} />
     </>
   );
 }

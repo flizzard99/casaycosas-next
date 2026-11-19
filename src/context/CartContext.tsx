@@ -20,6 +20,7 @@ type CartContextType = {
   total: number;
   count: number;
   isOpen: boolean;
+  hydrated: boolean;
   open: () => void;
   close: () => void;
 };
@@ -89,6 +90,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     <CartContext.Provider
       value={{
         items,
+        hydrated,
         addItem,
         removeItem,
         updateQty,
