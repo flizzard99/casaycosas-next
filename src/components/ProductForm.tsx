@@ -1,5 +1,6 @@
 'use client';
 
+import AdminIcon from './AdminIcon';
 import { nombreCategoria } from '@/lib/categorias';
 import { useState, useRef, useCallback } from 'react';
 import { fileToDataUrl } from '@/lib/fileToDataUrl';
@@ -343,14 +344,15 @@ export default function ProductForm({ producto, categorias, onGuardado, onCancel
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
-          onClick={() => !alLimite && !subiendo && inputRef.current?.click()}
-          className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors mb-3 ${
+          className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors mb-3 ${
             dragOver ? 'border-verde bg-verde/5' : 'border-verde-noche/20 hover:border-verde-noche/40'
           } ${alLimite || subiendo ? 'opacity-50 pointer-events-none' : ''}`}
         >
-          <p className="text-sm text-verde-noche/70">
-            {alLimite ? 'Límite de imágenes alcanzado' : 'Arrastra imágenes aquí o haz clic para subir'}
-          </p>
+          <button type="button" disabled={alLimite || subiendo} onClick={() => inputRef.current?.click()}
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-verde-noche/20 bg-white px-3 text-sm font-semibold hover:bg-crema/60">
+            <AdminIcon name="subir" /> {alLimite ? 'Límite de imágenes alcanzado' : 'Subir imágenes'}
+          </button>
+          <p className="mt-1 text-xs text-verde-noche/70">También puedes arrastrarlas aquí.</p>
           <p className="text-xs text-verde-noche/40 mt-1">JPG, PNG, WebP, GIF, AVIF (máx 25 MB) · HEIC (máx 4 MB) · hasta {MAX_PRODUCT_IMAGES} fotos</p>
           <input
             ref={inputRef}
@@ -363,69 +365,54 @@ export default function ProductForm({ producto, categorias, onGuardado, onCancel
         </div>
 
         {imagenes.length > 0 && (
-          <p className="text-xs text-verde-noche/50 mb-2">Arrastra para reordenar. La primera imagen es la principal. Pasa el cursor sobre una miniatura y haz clic en ✎ para encuadrarla.</p>
+          <p className="text-xs text-verde-noche/50 mb-2">Arrastra para reordenar. La primera imagen es la principal. Usa el botón de encuadre para ajustar cada foto.</p>
         )}
 
-        <div className="grid grid-cols-4 gap-2 mb-3">
+        <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
           {imagenes.map((url, i) => {
             const { url: urlLimpia, encuadre } = parsearEncuadre(url);
             return (
-            <div
-              key={`${url}-${i}`}
-              draggable
-              onDragStart={() => handleDragStart(i)}
-              onDragOver={(e) => handleDragOver(e, i)}
-              onDrop={() => handleDropReorder(i)}
-              onDragEnd={handleDragEnd}
-              className={`relative w-full aspect-square rounded overflow-hidden bg-crema group ${
-                i === 0 ? 'ring-2 ring-verde' : ''
-              } ${dragOverIndex === i && dragIndex !== null ? 'ring-2 ring-verde-oscuro' : ''}`}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={urlLimpia} alt="" className="w-full h-full pointer-events-none" style={estilosEncuadre(encuadre)} />
-              {i === 0 && (
-                <span className="absolute top-0.5 left-0.5 bg-verde text-white text-[9px] font-semibold px-1 rounded z-10">PORTADA</span>
-              )}
-              {encuadre && (
-                <span className="absolute top-0.5 right-0.5 bg-verde-oscuro text-white text-[9px] font-semibold px-1 rounded z-10">✎</span>
-              )}
-              <button
-                type="button"
-                onClick={() => handleQuitarImagen(i)}
-                className="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-5 h-5 rounded-full text-xs leading-none shadow z-10"
-                aria-label="Quitar imagen"
-              >×</button>
-              <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  type="button"
-                  onClick={() => setEditandoEncuadre(i)}
-                  aria-label="Encuadrar imagen"
-                  className="bg-white/90 text-verde-noche w-7 h-7 rounded text-xs font-semibold"
-                  title="Encuadrar"
-                >✎</button>
-                <button
-                  type="button"
-                  onClick={() => moverImagen(i, -1)}
-                  disabled={i === 0}
-                  aria-label="Mover a la izquierda"
-                  className="bg-white/90 text-verde-noche w-6 h-6 rounded text-xs disabled:opacity-30"
-                >◀</button>
-                <button
-                  type="button"
-                  onClick={() => moverImagen(i, 1)}
-                  disabled={i === imagenes.length - 1}
-                  aria-label="Mover a la derecha"
-                  className="bg-white/90 text-verde-noche w-6 h-6 rounded text-xs disabled:opacity-30"
-                >▶</button>
+              <div
+                key={`${url}-${i}`}
+                draggable
+                onDragStart={() => handleDragStart(i)}
+                onDragOver={(e) => handleDragOver(e, i)}
+                onDrop={() => handleDropReorder(i)}
+                onDragEnd={handleDragEnd}
+                className={`min-w-0 overflow-hidden rounded-lg border border-verde-noche/15 ${dragOverIndex === i && dragIndex !== null ? 'ring-2 ring-verde-oscuro' : ''}`}
+              >
+                <div className="relative aspect-square overflow-hidden bg-crema">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={urlLimpia} alt="" className="h-full w-full pointer-events-none" style={estilosEncuadre(encuadre)} />
+                  {i === 0 && <span className="absolute left-1 top-1 rounded bg-verde-noche px-1.5 py-1 text-[10px] font-semibold text-white">Portada</span>}
+                  {encuadre && <span title="Encuadre aplicado" className="absolute right-1 top-1 rounded bg-verde-noche p-1 text-white"><AdminIcon name="encuadrar" className="size-4" /></span>}
+                </div>
+                <div className="flex justify-between bg-white">
+                  <button type="button" onClick={() => moverImagen(i, -1)} disabled={i === 0}
+                    aria-label={`Mover foto ${i + 1} a la izquierda`} className="grid min-h-11 min-w-0 flex-1 place-items-center hover:bg-crema/60 disabled:opacity-30">
+                    <AdminIcon name="izquierda" />
+                  </button>
+                  <button type="button" onClick={() => moverImagen(i, 1)} disabled={i === imagenes.length - 1}
+                    aria-label={`Mover foto ${i + 1} a la derecha`} className="grid min-h-11 min-w-0 flex-1 place-items-center hover:bg-crema/60 disabled:opacity-30">
+                    <AdminIcon name="derecha" />
+                  </button>
+                  <button type="button" onClick={() => setEditandoEncuadre(i)}
+                    aria-label={`Encuadrar foto ${i + 1}`} title="Encuadrar" className="grid min-h-11 min-w-0 flex-1 place-items-center hover:bg-crema/60">
+                    <AdminIcon name="encuadrar" />
+                  </button>
+                  <button type="button" onClick={() => handleQuitarImagen(i)}
+                    aria-label={`Quitar foto ${i + 1}`} title="Quitar foto" className="grid min-h-11 min-w-0 flex-1 place-items-center text-red-800 hover:bg-red-100">
+                    <AdminIcon name="papelera" />
+                  </button>
+                </div>
               </div>
-            </div>
-          );
+            );
         })}
 
           {subidas.filter((s) => s.estado === 'subiendo').map((s) => (
             <div key={s.id} className="relative w-full aspect-square rounded bg-crema flex items-center justify-center">
               <div className="absolute inset-0 bg-verde/10" style={{ height: `${s.progreso}%` }} />
-              <span className="relative text-xs text-verde-noche/60">…</span>
+              <span className="relative" role="status" aria-label="Subiendo imagen"><AdminIcon name="subir" /></span>
             </div>
           ))}
 
@@ -435,9 +422,9 @@ export default function ProductForm({ producto, categorias, onGuardado, onCancel
               <button
                 type="button"
                 onClick={() => quitarSubida(s.id)}
-                className="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-5 h-5 rounded-full text-xs leading-none shadow"
+                className="absolute right-1 top-1 grid size-9 place-items-center rounded-lg bg-white text-red-800 hover:bg-red-100"
                 aria-label="Quitar error"
-              >×</button>
+              ><AdminIcon name="cerrar" /></button>
             </div>
           ))}
         </div>
@@ -448,16 +435,16 @@ export default function ProductForm({ producto, categorias, onGuardado, onCancel
           <button
             type="button"
             onClick={onCancelar}
-            className="flex-1 py-2.5 rounded-md border border-verde-noche/20 text-sm font-semibold text-verde-noche"
+            className="inline-flex flex-1 items-center justify-center gap-2 py-2.5 rounded-md border border-verde-noche/20 text-sm font-semibold text-verde-noche"
           >
-            Cancelar
+            <AdminIcon name="cerrar" /> Cancelar
           </button>
           <button
             type="submit"
             disabled={guardando || subiendo}
-            className="flex-1 py-2.5 rounded-md bg-verde text-white text-sm font-semibold hover:bg-verde-oscuro disabled:opacity-60"
+            className="inline-flex flex-1 items-center justify-center gap-2 py-2.5 rounded-md bg-verde text-white text-sm font-semibold hover:bg-verde-oscuro disabled:opacity-60"
           >
-            {guardando ? 'Guardando…' : 'Guardar'}
+            <AdminIcon name="guardar" /> {guardando ? 'Guardando…' : 'Guardar'}
           </button>
         </div>
       </form>

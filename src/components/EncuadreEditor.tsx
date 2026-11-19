@@ -1,5 +1,6 @@
 'use client';
 
+import AdminIcon from './AdminIcon';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import Cropper, { type Area, type Point } from 'react-easy-crop';
 import {
@@ -157,20 +158,20 @@ export default function EncuadreEditor({ url, onCancelar, onGuardarEncuadre, onR
           <button
             type="button"
             onClick={() => setModo('encuadrar')}
-            className={`flex-1 text-sm font-semibold py-2 rounded transition-colors ${
+            className={`inline-flex flex-1 items-center justify-center gap-2 text-sm font-semibold py-2 rounded transition-colors ${
               modo === 'encuadrar' ? 'bg-verde text-white' : 'text-verde-noche hover:bg-white'
             }`}
           >
-            Encuadrar
+            <AdminIcon name="encuadrar" /> Encuadrar
           </button>
           <button
             type="button"
             onClick={() => setModo('recortar')}
-            className={`flex-1 text-sm font-semibold py-2 rounded transition-colors ${
+            className={`inline-flex flex-1 items-center justify-center gap-2 text-sm font-semibold py-2 rounded transition-colors ${
               modo === 'recortar' ? 'bg-verde text-white' : 'text-verde-noche hover:bg-white'
             }`}
           >
-            Recortar
+            <AdminIcon name="recortar" /> Recortar
           </button>
         </div>
 
@@ -193,7 +194,7 @@ export default function EncuadreEditor({ url, onCancelar, onGuardarEncuadre, onR
         </div>
 
         <div className="flex items-center gap-3 mb-4">
-          <label htmlFor="zoom-slider" className="text-sm text-verde-noche whitespace-nowrap">Zoom</label>
+          <label htmlFor="zoom-slider" className="inline-flex items-center gap-1 whitespace-nowrap text-sm text-verde-noche"><AdminIcon name="zoom" /> Zoom</label>
           <input
             id="zoom-slider"
             type="range"
@@ -221,16 +222,16 @@ export default function EncuadreEditor({ url, onCancelar, onGuardarEncuadre, onR
               <button
                 type="button"
                 onClick={handleGuardarEncuadre}
-                className="flex-1 min-w-[140px] py-2.5 rounded-md bg-verde text-white text-sm font-semibold hover:bg-verde-oscuro"
+                className="inline-flex min-w-[140px] flex-1 items-center justify-center gap-2 py-2.5 rounded-md bg-verde text-white text-sm font-semibold hover:bg-verde-oscuro"
               >
-                Guardar encuadre
+                <AdminIcon name="guardar" /> Guardar encuadre
               </button>
               <button
                 type="button"
                 onClick={handleRestablecer}
-                className="flex-1 min-w-[140px] py-2.5 rounded-md border border-verde-noche/20 text-sm font-semibold text-verde-noche hover:bg-crema"
+                className="inline-flex min-w-[140px] flex-1 items-center justify-center gap-2 py-2.5 rounded-md border border-verde-noche/20 text-sm font-semibold text-verde-noche hover:bg-crema"
               >
-                Restablecer
+                <AdminIcon name="recargar" /> Restablecer
               </button>
             </>
           ) : (
@@ -238,17 +239,17 @@ export default function EncuadreEditor({ url, onCancelar, onGuardarEncuadre, onR
               type="button"
               onClick={handleRecortar}
               disabled={recortando}
-              className="flex-1 min-w-[140px] py-2.5 rounded-md bg-verde text-white text-sm font-semibold hover:bg-verde-oscuro disabled:opacity-60"
+              className="inline-flex min-w-[140px] flex-1 items-center justify-center gap-2 py-2.5 rounded-md bg-verde text-white text-sm font-semibold hover:bg-verde-oscuro disabled:opacity-60"
             >
-              {recortando ? 'Recortando…' : 'Recortar y reemplazar'}
+              <AdminIcon name="recortar" /> {recortando ? 'Recortando…' : 'Recortar y reemplazar'}
             </button>
           )}
           <button
             type="button"
             onClick={onCancelar}
-            className="flex-1 min-w-[140px] py-2.5 rounded-md border border-verde-noche/20 text-sm font-semibold text-verde-noche hover:bg-crema"
+            className="inline-flex min-w-[140px] flex-1 items-center justify-center gap-2 py-2.5 rounded-md border border-verde-noche/20 text-sm font-semibold text-verde-noche hover:bg-crema"
           >
-            Cancelar
+            <AdminIcon name="cerrar" /> Cancelar
           </button>
         </div>
       </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import AdminIcon from './AdminIcon';
 import { nombreCategoria } from '@/lib/categorias';
 import { useState } from 'react';
 import { adminFetch } from '@/lib/adminFetch';
@@ -69,16 +70,18 @@ export default function CategoryOrderEditor({
               <button
                 onClick={() => mover(i, -1)}
                 disabled={i === 0}
-                className="w-6 h-6 rounded border border-verde-noche/20 text-xs disabled:opacity-30"
+                aria-label={`Subir ${nombreCategoria(cat)}`}
+                className="grid size-10 place-items-center rounded-lg border border-verde-noche/20 bg-white hover:bg-crema disabled:opacity-30"
               >
-                ↑
+                <AdminIcon name="arriba" />
               </button>
               <button
                 onClick={() => mover(i, 1)}
                 disabled={i === orden.length - 1}
-                className="w-6 h-6 rounded border border-verde-noche/20 text-xs disabled:opacity-30"
+                aria-label={`Bajar ${nombreCategoria(cat)}`}
+                className="grid size-10 place-items-center rounded-lg border border-verde-noche/20 bg-white hover:bg-crema disabled:opacity-30"
               >
-                ↓
+                <AdminIcon name="abajo" />
               </button>
             </div>
           </li>
@@ -88,9 +91,9 @@ export default function CategoryOrderEditor({
       <button
         onClick={guardar}
         disabled={guardando}
-        className="w-full py-2 rounded-md bg-verde-oscuro text-white text-sm font-semibold hover:bg-verde-noche disabled:opacity-60"
+        className="inline-flex min-h-11 w-full items-center justify-center gap-2 py-2 rounded-md bg-verde-oscuro text-white text-sm font-semibold hover:bg-verde-noche disabled:opacity-60"
       >
-        {guardando ? 'Guardando…' : 'Guardar orden'}
+        <AdminIcon name="guardar" /> {guardando ? 'Guardando…' : 'Guardar orden'}
       </button>
     </div>
   );

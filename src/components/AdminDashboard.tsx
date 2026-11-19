@@ -1,8 +1,10 @@
 'use client';
 
+import AdminIcon from './AdminIcon';
 import { nombreCategoria } from '@/lib/categorias';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import ProductForm from './ProductForm';
 import CategoryOrderEditor from './CategoryOrderEditor';
 import FeaturedEditor from './FeaturedEditor';
@@ -214,11 +216,11 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     await ejecutarAccion('salir', '/api/auth/logout', { method: 'POST' }, 'Sesión cerrada.', onLogout);
   }
 
-  const navItems: { id: Vista; label: string; icon: string }[] = [
-    { id: 'productos', label: 'Productos', icon: 'M4 6h16M4 12h16M4 18h16' },
-    { id: 'pedidos', label: 'Pedidos', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
-    { id: 'categorias', label: 'Categorías', icon: 'M4 6h16M4 12h16M4 18h7' },
-    { id: 'destacados', label: 'Destacados', icon: 'M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z' },
+  const navItems: { id: Vista; label: string }[] = [
+    { id: 'productos', label: 'Productos' },
+    { id: 'pedidos', label: 'Pedidos' },
+    { id: 'categorias', label: 'Categorías' },
+    { id: 'destacados', label: 'Destacados' },
   ];
 
   return (
@@ -227,7 +229,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col bg-verde-noche lg:flex">
         <div className="px-5 py-5 border-b border-white/10">
           <Link href="/" className="flex items-center gap-2 group">
-            <span className="text-lg">🌿</span>
+            <Image src="/oveja-logo.png" alt="" width={34} height={34} unoptimized />
             <div>
               <p className="font-display text-white text-sm leading-tight">Casa y Cosas</p>
               <p className="text-white/40 text-[10px]">Administración</p>
@@ -245,9 +247,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 vista === item.id ? 'bg-white/15 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'
               }`}
             >
-              <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
-              </svg>
+              <AdminIcon name={item.id} />
               {item.label}
             </a>
           ))}
@@ -259,18 +259,14 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             target="_blank"
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-white/60 hover:text-white hover:bg-white/5 transition-colors"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
+            <AdminIcon name="externo" />
             Ver catálogo
           </Link>
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-white/60 hover:text-white hover:bg-white/5 transition-colors"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
+            <AdminIcon name="salir" />
             Cerrar sesión
           </button>
         </div>
@@ -284,15 +280,15 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               {navItems.find((item) => item.id === vista)?.label}
             </h1>
             <Link href="/catalogo" className="hidden text-sm font-semibold underline sm:inline lg:hidden">Tienda</Link>
-            <button type="button" className="min-h-10 rounded-lg border border-verde-noche/15 px-3 text-sm lg:hidden" onClick={handleLogout}>
-              Salir
+            <button type="button" className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-verde-noche/15 px-2 text-sm lg:hidden" onClick={handleLogout}>
+              <AdminIcon name="salir" className="size-4" /> Salir
             </button>
           {vista === 'productos' && (
             <button
               onClick={() => setCreandoNuevo(true)}
               className="bg-verde text-white text-sm font-semibold px-3 md:px-4 py-2 rounded-lg hover:bg-verde-oscuro whitespace-nowrap flex items-center gap-1.5"
             >
-              <span className="text-base leading-none">+</span>
+              <AdminIcon name="mas" />
               <span className="hidden sm:inline">Nuevo producto</span>
               <span className="sm:hidden">Nuevo</span>
             </button>
@@ -301,7 +297,8 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           <nav aria-label="Administración móvil" className="mt-3 grid grid-cols-4 gap-1 lg:hidden">
             {navItems.map((item) => (
               <a href={`#${item.id}`} key={item.id} aria-current={vista === item.id ? 'page' : undefined}
-                className={`grid min-h-10 place-items-center rounded-lg px-0.5 py-2 text-center text-xs font-semibold sm:text-sm ${vista === item.id ? 'bg-verde-noche text-white' : 'hover:bg-crema/50'}`}>
+                className={`grid min-h-10 place-items-center gap-1 rounded-lg px-0.5 py-2 text-center text-xs font-semibold sm:text-sm ${vista === item.id ? 'bg-verde-noche text-white' : 'hover:bg-crema/50'}`}>
+                <AdminIcon name={item.id} />
                 {item.label}
               </a>
             ))}
@@ -363,9 +360,9 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 >
                   <option value="recientes">Más recientes</option>
                   <option value="nombre">Nombre A-Z</option>
-                  <option value="precio-asc">Precio ↑</option>
-                  <option value="precio-desc">Precio ↓</option>
-                  <option value="stock-desc">Stock ↓</option>
+                  <option value="precio-asc">Precio: menor a mayor</option>
+                  <option value="precio-desc">Precio: mayor a menor</option>
+                  <option value="stock-desc">Mayor stock</option>
                 </select>
               </div>
 
@@ -407,10 +404,11 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                               <button
                                 onClick={() => toggleVisibilidad(p.id, p.visible)}
                               disabled={!!ocupado}
-                                className={`text-[10px] font-semibold px-2 py-1 rounded-full ${p.visible ? 'bg-verde/85 text-white' : 'bg-gray-600/85 text-white'}`}
-                                title={p.visible ? 'Ocultar' : 'Mostrar'}
+                                className={`inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-xs font-semibold ${p.visible ? 'bg-verde-noche text-white' : 'bg-white text-verde-noche'}`}
+                                aria-label={`${p.visible ? 'Ocultar' : 'Mostrar'} ${p.name}`}
                               >
-                                {p.visible ? '●' : '○'}
+                                <AdminIcon name={p.visible ? 'visible' : 'oculto'} className="size-4" />
+                                {p.visible ? 'Visible' : 'Oculto'}
                               </button>
                             </div>
                           </div>
@@ -421,29 +419,27 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                             <p className="mb-2 text-xs font-medium text-verde-oscuro">{nombreCategoria(p.category)}</p>
                             <div className="flex items-center justify-between mb-3">
                               <span className="text-sm font-semibold text-verde">{formatoCLP.format(p.price)}</span>
-                              <button
-                                onClick={() => ajustarStock(p.id, p.stock > 0 ? -1 : 0)}
-                                className={`text-[10px] font-semibold px-2 py-1 rounded-full ${stockColor}`}
-                                title="Stock actual"
-                              >
+                              <span className={`rounded-full px-2 py-1 text-xs font-semibold ${stockColor}`}>
                                 Stock: {p.stock}
-                              </button>
+                              </span>
                             </div>
                             <div className="flex items-center gap-1">
                               <button
                                 onClick={() => ajustarStock(p.id, -1)}
                                 disabled={p.stock <= 0 || !!ocupado}
-                                className="flex-1 py-1.5 rounded-lg border border-verde-noche/15 text-xs hover:bg-crema disabled:opacity-30"
-                              >−</button>
+                                aria-label={`Reducir stock de ${p.name}`}
+                                className="grid min-h-10 flex-1 place-items-center rounded-lg border border-verde-noche/15 hover:bg-crema disabled:opacity-30"
+                              ><AdminIcon name="menos" className="size-4" /></button>
                               <button
                                 onClick={() => ajustarStock(p.id, 1)}
                                 disabled={!!ocupado}
-                                className="flex-1 py-1.5 rounded-lg border border-verde-noche/15 text-xs hover:bg-crema"
-                              >+</button>
+                                aria-label={`Aumentar stock de ${p.name}`}
+                                className="grid min-h-10 flex-1 place-items-center rounded-lg border border-verde-noche/15 hover:bg-crema disabled:opacity-30"
+                              ><AdminIcon name="mas" className="size-4" /></button>
                               <button
                                 onClick={() => setEditando(p)}
-                                className="flex-1 py-1.5 rounded-lg bg-verde text-white text-xs font-semibold hover:bg-verde-oscuro"
-                              >Editar</button>
+                                className="inline-flex min-h-10 flex-1 items-center justify-center gap-1 rounded-lg bg-verde-oscuro px-2 text-xs font-semibold text-white hover:bg-verde-noche"
+                              ><AdminIcon name="editar" className="size-4" /> Editar</button>
                               <button
                                 type="button"
                                 onClick={() => eliminarProducto(p.id)}
@@ -451,9 +447,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                                 className="inline-flex min-h-10 items-center justify-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 text-xs font-semibold text-red-800 hover:border-red-300 hover:bg-red-100 disabled:opacity-50"
                                 aria-label={`Eliminar ${p.name}`}
                               >
-                                <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v5m4-5v5" />
-                                </svg>
+                                <AdminIcon name="papelera" />
                                 Eliminar
                               </button>
                             </div>
@@ -465,12 +459,13 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
                   {/* Paginación */}
                   {totalPaginas > 1 && (
-                    <div className="flex items-center justify-center gap-1 mt-6">
+                    <div className="mt-6 flex flex-wrap items-center justify-center gap-1">
                       <button
                         onClick={() => setPagina((p) => Math.max(1, p - 1))}
                         disabled={paginaActual <= 1}
-                        className="px-3 py-1.5 rounded-lg border border-verde-noche/15 text-sm disabled:opacity-30 hover:bg-crema"
-                      >‹</button>
+                        aria-label="Página anterior"
+                        className="grid size-10 place-items-center rounded-lg border border-verde-noche/15 hover:bg-crema disabled:opacity-30"
+                      ><AdminIcon name="izquierda" /></button>
                       {Array.from({ length: totalPaginas }).map((_, i) => {
                         const num = i + 1;
                         if (totalPaginas > 7 && Math.abs(num - paginaActual) > 2 && num !== 1 && num !== totalPaginas) {
@@ -490,8 +485,9 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       <button
                         onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
                         disabled={paginaActual >= totalPaginas}
-                        className="px-3 py-1.5 rounded-lg border border-verde-noche/15 text-sm disabled:opacity-30 hover:bg-crema"
-                      >›</button>
+                        aria-label="Página siguiente"
+                        className="grid size-10 place-items-center rounded-lg border border-verde-noche/15 hover:bg-crema disabled:opacity-30"
+                      ><AdminIcon name="derecha" /></button>
                     </div>
                   )}
                 </>
@@ -509,8 +505,8 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     {Object.entries(ESTADOS_PEDIDO).map(([estado, nombre]) => <option key={estado} value={estado}>{nombre}</option>)}
                   </select>
                 </label>
-                <button type="button" className="min-h-11 rounded-lg border border-verde-noche/20 bg-white px-3 text-sm font-semibold"
-                  onClick={() => setRecargarPedidos((valor) => valor + 1)}>Actualizar</button>
+                <button type="button" className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-verde-noche/20 bg-white px-3 text-sm font-semibold"
+                  onClick={() => setRecargarPedidos((valor) => valor + 1)}><AdminIcon name="recargar" /> Actualizar</button>
               </div>
               {errorPedidos ? <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{errorPedidos}</p>
                 : cargandoPedidos ? <p role="status" className="p-4 text-sm">Cargando pedidos…</p>
@@ -549,9 +545,9 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                           {ped.estado === 'pendiente' && !ped.pago_estado && (
                             <div className="flex gap-2">
                               <button disabled={!!ocupado} onClick={() => procesarPedido(ped.id, 'confirmar')}
-                                className="min-h-10 flex-1 rounded-lg bg-verde-oscuro px-2 text-sm font-semibold text-white disabled:opacity-50">Confirmar</button>
+                                className="min-h-10 flex-1 rounded-lg bg-verde-oscuro px-2 text-sm font-semibold text-white disabled:opacity-50"><span className="inline-flex items-center gap-1"><AdminIcon name="check" /> Confirmar</span></button>
                               <button disabled={!!ocupado} onClick={() => procesarPedido(ped.id, 'cancelar')}
-                                className="min-h-10 flex-1 rounded-lg border border-red-200 px-2 text-sm font-semibold text-red-700 disabled:opacity-50">Cancelar</button>
+                                className="min-h-10 flex-1 rounded-lg border border-red-200 px-2 text-sm font-semibold text-red-700 disabled:opacity-50"><span className="inline-flex items-center gap-1"><AdminIcon name="cerrar" /> Cancelar</span></button>
                             </div>
                           )}
                           {ped.estado === 'confirmado' && ped.pago_estado !== 'revision' && !ped.despachado_at && (
@@ -564,7 +560,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                                 <input name="codigo" maxLength={80} className="mt-1 block min-h-10 w-full rounded-lg border border-verde-noche/20 px-2" />
                               </label>
                               <button disabled={!!ocupado} type="submit" className="min-h-10 rounded-lg bg-verde-oscuro px-3 text-sm font-semibold text-white disabled:opacity-50">
-                                Registrar despacho
+                                <span className="inline-flex items-center gap-1"><AdminIcon name="despacho" /> Registrar despacho</span>
                               </button>
                             </form>
                           )}

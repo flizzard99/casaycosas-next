@@ -1,5 +1,6 @@
 'use client';
 
+import AdminIcon from './AdminIcon';
 import { nombreCategoria } from '@/lib/categorias';
 import { useEffect, useMemo, useState } from 'react';
 import type { Producto, FeaturedConfig } from '@/lib/types';
@@ -120,23 +121,27 @@ export default function FeaturedEditor({ productos, featureConfigInicial, onGuar
             <p className="text-xs text-verde-noche/50 italic">Ninguno seleccionado aún.</p>
           )}
           {productosSeleccionados.map((p, i) => (
-            <div key={p.id} className="flex items-center gap-2 bg-crema/50 rounded px-3 py-1.5">
-              <span className="text-xs text-verde-noche/50 font-semibold w-5">{i + 1}.</span>
-              <span className="text-sm text-verde-noche flex-1 truncate">{p.name}</span>
-              <span className="text-[11px] text-verde-oscuro">{nombreCategoria(p.category)}</span>
-              <button onClick={() => mover(p.id, -1)} disabled={i === 0} className="text-xs px-1.5 disabled:opacity-30">
-                ↑
-              </button>
-              <button
-                onClick={() => mover(p.id, 1)}
-                disabled={i === productosSeleccionados.length - 1}
-                className="text-xs px-1.5 disabled:opacity-30"
-              >
-                ↓
-              </button>
-              <button onClick={() => toggle(p.id)} className="text-xs text-red-500 px-1.5">
-                ×
-              </button>
+            <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-crema/50 px-3 py-2">
+              <div className="min-w-0 flex-1 basis-24">
+                <p className="break-words text-sm text-verde-noche">{i + 1}. {p.name}</p>
+                <p className="text-xs text-verde-oscuro">{nombreCategoria(p.category)}</p>
+              </div>
+              <div className="flex shrink-0 gap-1">
+                <button type="button" onClick={() => mover(p.id, -1)} disabled={i === 0}
+                  aria-label={`Subir ${p.name}`}
+                  className="grid size-10 place-items-center rounded-lg border border-verde-noche/15 bg-white hover:bg-crema disabled:opacity-30">
+                  <AdminIcon name="arriba" />
+                </button>
+                <button type="button" onClick={() => mover(p.id, 1)} disabled={i === productosSeleccionados.length - 1}
+                  aria-label={`Bajar ${p.name}`}
+                  className="grid size-10 place-items-center rounded-lg border border-verde-noche/15 bg-white hover:bg-crema disabled:opacity-30">
+                  <AdminIcon name="abajo" />
+                </button>
+                <button type="button" onClick={() => toggle(p.id)} aria-label={`Quitar ${p.name} de destacados`}
+                  className="grid size-10 place-items-center rounded-lg border border-red-200 bg-red-50 text-red-800 hover:bg-red-100">
+                  <AdminIcon name="cerrar" />
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -175,14 +180,14 @@ export default function FeaturedEditor({ productos, featureConfigInicial, onGuar
       </div>
 
       {error && <p className="text-sm text-red-600 mt-3">{error}</p>}
-      {ok && <p className="text-sm text-verde mt-3">✓ Guardado correctamente.</p>}
+      {ok && <p role="status" className="mt-3 flex items-center gap-2 text-sm text-verde-oscuro"><AdminIcon name="check" /> Guardado correctamente.</p>}
 
       <button
         onClick={guardar}
         disabled={guardando || seleccionados.length !== MAX}
-        className="mt-4 w-full py-2.5 rounded-md bg-verde text-white text-sm font-semibold hover:bg-verde-oscuro disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 py-2.5 rounded-md bg-verde text-white text-sm font-semibold hover:bg-verde-oscuro disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
-        {guardando ? 'Guardando…' : `Guardar destaque (${seleccionados.length}/${MAX})`}
+        <AdminIcon name="guardar" /> {guardando ? 'Guardando…' : `Guardar destaque (${seleccionados.length}/${MAX})`}
       </button>
     </div>
   );
