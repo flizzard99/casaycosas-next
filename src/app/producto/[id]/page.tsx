@@ -1,4 +1,4 @@
-import { nombreCategoria } from '@/lib/categorias';
+import { LINEAS, lineaProducto } from '@/lib/lineas';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { cache } from 'react';
@@ -16,15 +16,16 @@ export const dynamicParams = true;
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   try {
     const producto = await getProducto(Number(params.id));
-    if (!producto) return { title: 'Producto no encontrado' };
+    const linea = producto?.visible && lineaProducto(producto);
+    if (!producto || !linea) return { title: 'Producto no encontrado', robots: { index: false, follow: false } };
     return {
       title: producto.name,
       description:
-        producto.description || `${producto.name} en Casa y Cosas. ${nombreCategoria(producto.category)}.`,
+        producto.description || `${producto.name} en Casa y Cosas. ${LINEAS[linea].nombre}.`,
       alternates: { canonical: `/producto/${producto.id}` },
       openGraph: {
         title: producto.name,
-        description: producto.description || `${producto.name} — ${nombreCategoria(producto.category)}`,
+        description: producto.description || `${producto.name} — ${LINEAS[linea].nombre}`,
         images: producto.images?.length ? producto.images : producto.image_url ? [producto.image_url] : []
       }
     };
@@ -35,18 +36,17 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 
 export default async function ProductoPage({ params }: { params: { id: string } }) {
   const producto = await getProducto(Number(params.id));
-  if (!producto || !producto.visible) notFound();
+  const linea = producto?.visible && lineaProducto(producto);
+  if (!producto || !linea) notFound();
 
-  let categorias: string[] = [];
   let relacionados: Awaited<ReturnType<typeof getProductosPublicos>> = [];
   try {
     const todos = await getProductosPublicos();
-    categorias = Array.from(new Set(todos.map((p) => p.category)));
     relacionados = todos
-      .filter((p) => p.category === producto.category && p.id !== producto.id && p.stock > 0)
+      .filter((p) => lineaProducto(p) === linea && p.id !== producto.id && p.stock > 0)
       .slice(0, 4);
   } catch {
-    categorias = [];
+    relacionados = [];
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://casaycosas-next.vercel.app';
@@ -54,8 +54,8 @@ export default async function ProductoPage({ params }: { params: { id: string } 
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: producto.name,
-    description: producto.description || `${producto.name} — ${nombreCategoria(producto.category)}`,
-    category: producto.category,
+    description: producto.description || `${producto.name} — ${LINEAS[linea].nombre}`,
+    category: LINEAS[linea].nombre,
     image: producto.images?.length ? producto.images : producto.image_url ? [producto.image_url] : [],
     offers: {
       '@type': 'Offer',
@@ -68,17 +68,17 @@ export default async function ProductoPage({ params }: { params: { id: string } 
   };
 
   return (
-    <>
+    <div className="shop" data-linea={linea}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd).replace(/</g, '\\u003c') }}
       />
-      <Header categorias={categorias} />
-      <main id="contenido" tabIndex={-1} className="min-h-[60vh] bg-crema/40">
-        <ProductDetailClient producto={producto} relacionados={relacionados} />
+      <Header linea={linea} />
+      <main id="contenido" tabIndex={-1} className="min-h-[60vh]">
+        <ProductDetailClient linea={linea} producto={producto} relacionados={relacionados} />
       </main>
       <Footer />
       <CartDrawer />
-    </>
+    </div>
   );
 }

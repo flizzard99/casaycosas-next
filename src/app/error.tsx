@@ -19,7 +19,7 @@ export default function Error({
       <h1 className="font-display text-6xl text-verde-oscuro mb-4">¡Ups!</h1>
       <p className="text-verde-noche text-lg mb-2">Algo se rompió.</p>
       <p className="text-verde-noche/60 text-sm mb-8">
-        Ocurrió un error inesperado. Podés volver al inicio o al catálogo, o intentar de nuevo.
+        Ocurrió un error inesperado. Puedes volver a las colecciones o intentar de nuevo.
       </p>
       <div className="flex flex-col sm:flex-row gap-3">
         <button
@@ -32,13 +32,7 @@ export default function Error({
           href="/"
           className="px-6 py-3 rounded-md border border-verde-oscuro text-verde-oscuro text-sm font-semibold uppercase tracking-wide hover:bg-verde-oscuro hover:text-white transition-colors"
         >
-          Ir al inicio
-        </Link>
-        <Link
-          href="/catalogo"
-          className="px-6 py-3 rounded-md border border-verde-oscuro text-verde-oscuro text-sm font-semibold uppercase tracking-wide hover:bg-verde-oscuro hover:text-white transition-colors"
-        >
-          Ver catálogo
+          Ver colecciones
         </Link>
       </div>
     </div>

@@ -1,15 +1,11 @@
 'use client';
 
-import { nombreCategoria } from '@/lib/categorias';
+import { LINEAS, type Linea } from '@/lib/lineas';
+import ThemeToggle from './ThemeToggle';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useRef } from 'react';
 import { useCart } from '@/context/CartContext';
-
-function categoriaHref(cat: string) {
-  return `/catalogo/${encodeURIComponent(cat)}`;
-}
 
 function CartIcon({ count }: { count: number }) {
   return (
@@ -28,80 +24,35 @@ function CartIcon({ count }: { count: number }) {
   );
 }
 
-export default function Header({ categorias = [] }: { categorias?: string[] }) {
+export default function Header({ linea }: { linea?: Linea }) {
   const { count, open } = useCart();
   const pathname = usePathname();
-  const menu = useRef<HTMLDetailsElement>(null);
-
-  function cerrarMenu() {
-    if (menu.current) menu.current.open = false;
-  }
-
-  useEffect(cerrarMenu, [pathname]);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-verde-noche/15 bg-white">
-      <a
-        href="#contenido"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-2 focus:z-10 focus:rounded focus:bg-white focus:p-3"
-      >
+    <header className="shop-header">
+      <a href="#contenido" className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-2 focus:z-10 focus:rounded focus:bg-white focus:p-3">
         Saltar al contenido
       </a>
-      <div className="store-shell flex min-h-16 items-center justify-between gap-3 py-2">
-        <Link href="/" className="flex shrink-0 items-center gap-2 font-display text-lg text-verde-noche">
-          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-verde-noche">
-            <Image src="/oveja-logo.png" alt="" width={35} height={35} unoptimized />
-          </span>
+      <div className="store-shell shop-header-inner">
+        <Link href="/" className="shop-brand">
+          <span className="shop-brand-icon"><Image src="/oveja-logo.png" alt="" width={33} height={33} unoptimized /></span>
           <span>Casa y Cosas</span>
         </Link>
-
-        <nav aria-label="Navegación principal" className="flex items-center gap-2 sm:gap-4">
-          <Link href="/catalogo" aria-current={pathname === '/catalogo' ? 'page' : undefined} className="hidden font-semibold hover:underline sm:inline">
-            Catálogo
-          </Link>
-          <Link href="/#contacto" className="hidden font-semibold hover:underline md:inline">
-            Redes sociales
-          </Link>
-          <details
-            ref={menu}
-            className="relative"
-            onKeyDown={(event) => {
-              if (event.key === 'Escape' && menu.current?.open) {
-                cerrarMenu();
-                menu.current.querySelector('summary')?.focus();
-              }
-            }}
-            onBlur={(event) => {
-              if (!event.currentTarget.contains(event.relatedTarget)) cerrarMenu();
-            }}
-          >
-            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1 rounded-lg px-2 text-sm font-semibold hover:bg-crema/50 [&::-webkit-details-marker]:hidden">
-              <span className="sm:hidden">Menú</span>
-              <span className="hidden sm:inline">Categorías</span>
-              <span aria-hidden="true">⌄</span>
-            </summary>
-            <ul className="absolute right-0 top-full mt-2 max-h-[65dvh] w-52 max-w-[70vw] overflow-y-auto rounded-xl border border-verde-noche/15 bg-white p-1.5 shadow-lg">
-              <li><Link href="/catalogo" onClick={cerrarMenu} className="block rounded-lg px-3 py-2 font-semibold hover:bg-crema/50">Todo el catálogo</Link></li>
-              {categorias.map((cat) => (
-                <li key={cat}>
-                  <Link href={categoriaHref(cat)} prefetch={false} onClick={cerrarMenu} className="block rounded-lg px-3 py-2 hover:bg-crema/50">
-                    {nombreCategoria(cat)}
-                  </Link>
-                </li>
-              ))}
-              <li className="md:hidden"><Link href="/#contacto" onClick={cerrarMenu} className="block rounded-lg px-3 py-2 hover:bg-crema/50">Redes sociales</Link></li>
-            </ul>
-          </details>
-          <button
-            type="button"
-            onClick={() => { cerrarMenu(); open(); }}
-            className="relative grid size-11 place-items-center rounded-lg border border-verde-noche/20 hover:bg-crema/50"
-            aria-label={count ? `Abrir carrito, ${count} productos` : 'Abrir carrito'}
-            aria-haspopup="dialog"
-          >
+        <nav aria-label="Colecciones" className="shop-nav">
+          {Object.values(LINEAS).map((coleccion) => (
+            <Link key={coleccion.href} href={coleccion.href} aria-current={pathname === coleccion.href ? 'page' : undefined}
+              className={linea === coleccion.href.slice(1) ? 'shop-nav-active' : undefined}>
+              {coleccion.nombre}
+            </Link>
+          ))}
+        </nav>
+        <div className="shop-tools">
+          <ThemeToggle />
+          <button type="button" onClick={open} className="shop-icon-button relative"
+            aria-label={count ? `Abrir carrito, ${count} productos` : 'Abrir carrito'} aria-haspopup="dialog">
             <CartIcon count={count} />
           </button>
-        </nav>
+        </div>
       </div>
     </header>
   );

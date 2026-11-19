@@ -1,6 +1,7 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+import { lineaProducto } from '@/lib/lineas';
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
@@ -26,8 +27,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     const id = parseIdOrBadRequest(params.id);
     if (id === null) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
     const producto = await getProductoById(id);
-    if (!producto) return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
-    return NextResponse.json(producto);
+    if (!producto || ((!producto.visible || !lineaProducto(producto)) && !isAdminRequest())) {
+      return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
+    }
+    return NextResponse.json(producto, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (e: unknown) {
     console.error('[API Error] producto GET:', e);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });

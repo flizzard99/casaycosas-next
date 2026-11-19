@@ -31,31 +31,6 @@ body {
   margin-inline: auto;
 }
 
-.store-hero .store-shell {
-  width: min(100%, 75rem);
-  z-index: 1;
-}
-
-.store-hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(ellipse at 80% 40%, #588157 0, transparent 68%);
-}
-
-@media (min-width: 48rem) {
-  .store-hero::after {
-    content: '';
-    position: absolute;
-    inset: 0 max(0px, calc((100% - 75rem) / 2)) 0 52%;
-    z-index: 0;
-    pointer-events: none;
-    background: url('/oveja-portada.webp') center / min(120%, 34rem) auto no-repeat;
-    opacity: 0.58;
-  }
-}
-
 .balance-text {
   text-wrap: balance;
 }

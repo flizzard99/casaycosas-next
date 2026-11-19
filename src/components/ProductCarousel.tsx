@@ -35,7 +35,7 @@ export default function ProductCarousel({ images, alt }: { images: string[]; alt
 
   if (total === 0) {
     return (
-      <div className="w-full h-full flex items-center justify-center text-verde-oscuro/40 text-sm bg-crema">
+      <div className="w-full h-full flex items-center justify-center shop-muted text-sm shop-image-surface">
         Sin imagen
       </div>
     );
@@ -45,7 +45,7 @@ export default function ProductCarousel({ images, alt }: { images: string[]; alt
 
   return (
     <div
-      className="product-watermark relative h-full w-full overflow-hidden bg-crema/40"
+      className="product-watermark relative h-full w-full overflow-hidden shop-image-surface"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onKeyDown={handleKeyDown}
@@ -69,18 +69,18 @@ export default function ProductCarousel({ images, alt }: { images: string[]; alt
           <button
             onClick={anterior}
             aria-label="Foto anterior"
-            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-verde-noche w-11 h-11 rounded-full flex items-center justify-center text-sm font-semibold"
+            className="absolute left-2 top-1/2 -translate-y-1/2 shop-panel border hover:opacity-90 w-11 h-11 rounded-full flex items-center justify-center text-sm font-semibold"
           >
             ‹
           </button>
           <button
             onClick={siguiente}
             aria-label="Foto siguiente"
-            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-verde-noche w-11 h-11 rounded-full flex items-center justify-center text-sm font-semibold"
+            className="absolute right-2 top-1/2 -translate-y-1/2 shop-panel border hover:opacity-90 w-11 h-11 rounded-full flex items-center justify-center text-sm font-semibold"
           >
             ›
           </button>
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-verde-noche/90 px-3 py-1 text-xs text-white" aria-live="polite">
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full shop-stock-badge px-3 py-1 text-xs" aria-live="polite">
             {indice + 1} / {total}
           </div>
         </>

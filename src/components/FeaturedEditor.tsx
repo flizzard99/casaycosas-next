@@ -23,9 +23,9 @@ export default function FeaturedEditor({ productos, featureConfigInicial, onGuar
   const [ok, setOk] = useState(false);
 
   useEffect(() => {
-    setSeleccionados(featureConfigInicial.productIds);
+    setSeleccionados(featureConfigInicial.productIds.filter((id) => productos.some((producto) => producto.id === id)));
     setTitulo(featureConfigInicial.title);
-  }, [featureConfigInicial]);
+  }, [featureConfigInicial, productos]);
 
   const filtrados = useMemo(() => {
     const term = busqueda.trim().toLowerCase();
@@ -97,7 +97,7 @@ export default function FeaturedEditor({ productos, featureConfigInicial, onGuar
     <div className="bg-white rounded-lg shadow-sm p-5">
       <h3 className="font-display text-lg text-verde-noche mb-1">Productos destacados</h3>
       <p className="text-xs text-verde-noche/60 mb-4">
-        Selecciona exactamente {MAX} productos que aparecerán en la página principal.
+        Selecciona exactamente {MAX} productos que aparecerán como destacados en sus colecciones.
       </p>
 
       <label className="block text-sm font-medium text-verde-noche mb-1">Título de la sección</label>

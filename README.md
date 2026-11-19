@@ -160,3 +160,10 @@ El carrito dirige a «Finalizar compra». WhatsApp queda disponible para consult
 5. En **Administración → Pedidos**, comprueba el cambio de pendiente a aprobado tras recibir el webhook. Al despachar, registra el código de seguimiento si el transportista lo facilita.
 
 En una compra en línea el stock se reserva durante 45 minutos. El enlace de Mercado Pago vence 5 minutos antes para dejar tiempo a las notificaciones. Si se aprueba un pago fuera de plazo o llega un cobro duplicado, el pedido queda en **Pagos por revisar**. Confirma la operación con Mercado Pago antes de despachar o reembolsar.
+
+
+## Colecciones públicas
+
+La portada enlaza a `/matera` y `/cristiana`. El catálogo, las fichas públicas y las compras usan la misma clasificación en `src/lib/lineas.ts`. Los productos quedan en el inventario de administración con su categoría original.
+
+Para incorporar un producto, en el panel asígnale una categoría de la colección, como `matera`, `mate`, `cristiana`, `Libreria Cristiana` o `papeleria`. Las categorías anteriores de oficina y los artículos identificables de `hogar` se incluyen en su colección. El tipo específico del producto se obtiene de su categoría y nombre.

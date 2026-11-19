@@ -1,6 +1,7 @@
 'use client';
 
 import AdminIcon from './AdminIcon';
+import { LINEAS, lineaProducto } from '@/lib/lineas';
 import { nombreCategoria } from '@/lib/categorias';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -14,6 +15,7 @@ import { parsearEncuadre, estilosEncuadre } from '@/lib/encuadre';
 import type { Pedido } from '@/lib/db';
 
 const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
+const GRUPOS_PUBLICOS = [...LINEAS.matera.grupos, ...LINEAS.cristiana.grupos];
 const FEATURED_DEFAULT: FeaturedConfig = { productIds: [], title: 'Productos más vendidos' };
 const PAGE_SIZE = 24;
 
@@ -117,6 +119,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     return () => controller.abort();
   }, [vista, filtroPedido, paginaPedidos, recargarPedidos]);
 
+  const publicables = useMemo(() => productos.filter((producto) => producto.visible && lineaProducto(producto)), [productos]);
   const categorias = useMemo(() => [...new Set(productos.map((p) => p.category))].sort(), [productos]);
 
   const kpis = useMemo(() => {
@@ -255,12 +258,12 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
         <div className="px-3 py-4 border-t border-white/10 space-y-1">
           <Link
-            href="/catalogo"
+            href="/"
             target="_blank"
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-white/60 hover:text-white hover:bg-white/5 transition-colors"
           >
             <AdminIcon name="externo" />
-            Ver catálogo
+            Ver colecciones
           </Link>
           <button
             onClick={handleLogout}
@@ -279,7 +282,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             <h1 className="flex-1 font-display text-xl text-verde-noche">
               {navItems.find((item) => item.id === vista)?.label}
             </h1>
-            <Link href="/catalogo" className="hidden text-sm font-semibold underline sm:inline lg:hidden">Tienda</Link>
+            <Link href="/" className="hidden text-sm font-semibold underline sm:inline lg:hidden">Tienda</Link>
             <button type="button" className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-verde-noche/15 px-2 text-sm lg:hidden" onClick={handleLogout}>
               <AdminIcon name="salir" className="size-4" /> Salir
             </button>
@@ -416,7 +419,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                             <div className="flex items-start justify-between gap-2 mb-2">
                               <h3 className="text-sm font-medium text-verde-noche line-clamp-2 leading-tight">{p.name}</h3>
                             </div>
-                            <p className="mb-2 text-xs font-medium text-verde-oscuro">{nombreCategoria(p.category)}</p>
+                            <p className="mb-2 text-xs font-medium text-verde-oscuro">{nombreCategoria(p.category)}{!lineaProducto(p) && ' · Fuera de las colecciones'}</p>
                             <div className="flex items-center justify-between mb-3">
                               <span className="text-sm font-semibold text-verde">{formatoCLP.format(p.price)}</span>
                               <span className={`rounded-full px-2 py-1 text-xs font-semibold ${stockColor}`}>
@@ -582,16 +585,16 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           )}
 
           {/* Categorías */}
-          {vista === 'categorias' && categorias.length > 0 && (
+          {vista === 'categorias' && (
             <div className="max-w-md">
-              <CategoryOrderEditor categorias={categorias} ordenInicial={categoryOrder} onGuardado={setCategoryOrder} />
+              <CategoryOrderEditor categorias={GRUPOS_PUBLICOS} ordenInicial={categoryOrder} onGuardado={setCategoryOrder} />
             </div>
           )}
 
           {/* Destacados */}
           {vista === 'destacados' && !cargando && productos.length > 0 && (
             <div className="max-w-md">
-              <FeaturedEditor productos={productos} featureConfigInicial={featured} onGuardado={setFeatured} />
+              <FeaturedEditor productos={publicables} featureConfigInicial={featured} onGuardado={setFeatured} />
             </div>
           )}
         </main>

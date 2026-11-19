@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { lineaProducto } from './lineas';
 import type { Producto, ProductoInput, Config, FeaturedConfig } from './types';
 
 export function parseIdOrBadRequest(id: string): number | null {
@@ -268,9 +269,9 @@ export async function crearPedido(items: { id: number; qty: number }[], clienteN
     const itemsDetalle: { producto_id: number; nombre: string; qty: number; precio: number }[] = [];
 
     for (const item of [...items].sort((a, b) => a.id - b.id)) {
-      const res = await client.query('SELECT id, name, price, stock FROM productos WHERE id = $1 AND visible IS TRUE FOR UPDATE', [item.id]);
-      if (!res.rows.length) throw new Error(`Producto ${item.id} no encontrado`);
+      const res = await client.query('SELECT id, name, category, price, stock FROM productos WHERE id = $1 AND visible IS TRUE FOR UPDATE', [item.id]);
       const p = res.rows[0];
+      if (!p || !lineaProducto(p)) throw new Error(`Producto ${item.id} no encontrado`);
       if (!Number.isInteger(p.price) || p.price <= 0) throw new Error('Total de compra inválido');
       if ((p.stock || 0) < item.qty) {
         throw new Error(`Stock insuficiente para "${p.name}" (disponible: ${p.stock || 0}, solicitado: ${item.qty})`);
@@ -430,7 +431,7 @@ export async function getProductosPublicos(): Promise<Producto[]> {
     `SELECT id, name, description, category, image_url, instagram_url, price, stock, visible, created_at, images[1:1] AS images
      FROM productos WHERE visible = TRUE ORDER BY created_at DESC`
   );
-  return result.rows.map(formatProducto);
+  return result.rows.filter(lineaProducto).map(formatProducto);
 }
 
 /** Lista completa para el panel admin (incluye ocultos y todas las imágenes) */
@@ -588,12 +589,11 @@ export async function saveConfig(config: Config): Promise<void> {
 }
 
 /** Devuelve hasta 4 productos visibles correspondientes a los IDs destacados, en orden */
-export async function getFeaturedProducts(): Promise<Producto[]> {
+export async function getFeaturedProducts(productIds: number[]): Promise<Producto[]> {
+  const ids = productIds.filter((id) => Number.isFinite(id));
+  if (!ids.length) return [];
   await ensureSchema();
   const pool = getPool();
-  const config = await getConfig();
-  const ids = config.featured.productIds.filter((id) => Number.isFinite(id));
-  if (!ids.length) return [];
   const result = await pool.query(
     `SELECT id, name, description, category, image_url, instagram_url, price, stock, visible, created_at, images[1:1] AS images
      FROM productos WHERE id = ANY($1) AND visible = TRUE`,

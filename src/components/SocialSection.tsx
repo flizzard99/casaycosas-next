@@ -48,11 +48,11 @@ export default function SocialSection() {
   ];
 
   return (
-    <section id="contacto" className="border-t border-verde-noche/10 bg-crema/30 py-10 sm:py-16">
+    <section id="contacto" className="shop-social py-10 sm:py-16">
       <div className="store-shell">
         <div>
-          <h2 className="font-display text-3xl text-verde-noche">Encuéntranos en redes sociales</h2>
-          <p className="mt-3 text-verde-noche/80">Consulta por productos o escríbenos sobre tu pedido.</p>
+          <h2 className="font-display text-3xl">Encuéntranos en redes sociales</h2>
+          <p className="mt-3 shop-muted">Consulta por productos o escríbenos sobre tu pedido.</p>
           <div className="mt-5 flex flex-wrap gap-2">
             {redes.map(({ nombre, url }) => {
               const Icon = ICON_COMPONENTS[nombre];
@@ -62,7 +62,7 @@ export default function SocialSection() {
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-verde-noche/20 bg-white px-3 text-sm font-semibold hover:bg-crema"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg shop-control border px-3 text-sm font-semibold"
                 >
                   <span aria-hidden="true"><Icon /></span>
                   {nombre}

@@ -134,10 +134,10 @@ export default function PedidoEstadoClient({ pedidoInicial, referencia }: Props)
 
             {(pedido.estado === 'expirado' || pedido.estado === 'cancelado') && (
               <Link
-                href="/catalogo"
+                href="/"
                 className="w-full block text-center bg-verde text-white text-sm font-semibold py-3 rounded-lg hover:bg-verde-oscuro"
               >
-                Volver al catálogo
+                Volver a las colecciones
               </Link>
             )}
           </div>

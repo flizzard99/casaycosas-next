@@ -2,7 +2,7 @@
 
 import AdminIcon from './AdminIcon';
 import { nombreCategoria } from '@/lib/categorias';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { adminFetch } from '@/lib/adminFetch';
 
 export default function CategoryOrderEditor({
@@ -18,6 +18,10 @@ export default function CategoryOrderEditor({
   const [orden, setOrden] = useState<string[]>(inicial);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    setOrden([...ordenInicial.filter((c) => categorias.includes(c)), ...categorias.filter((c) => !ordenInicial.includes(c))]);
+  }, [ordenInicial, categorias]);
 
   function mover(index: number, direccion: -1 | 1) {
     const destino = index + direccion;
@@ -58,7 +62,7 @@ export default function CategoryOrderEditor({
   return (
     <div className="bg-white rounded-lg p-5 shadow-sm">
       <h3 className="font-display text-lg text-verde-noche mb-1">Orden de categorías</h3>
-      <p className="text-xs text-verde-noche/60 mb-4">Así se ordenan las secciones en el catálogo público.</p>
+      <p className="text-xs text-verde-noche/60 mb-4">Así se ordenan los filtros dentro de cada colección.</p>
       <ul className="space-y-1.5 mb-4">
         {orden.map((cat, i) => (
           <li

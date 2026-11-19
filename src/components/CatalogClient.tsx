@@ -1,8 +1,7 @@
 'use client';
 
-import { nombreCategoria } from '@/lib/categorias';
+import { grupoProducto, LINEAS, normalizarBusqueda, type Linea } from '@/lib/lineas';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
 import ProductCard from './ProductCard';
 import type { Producto } from '@/lib/types';
 
@@ -32,15 +31,16 @@ const INICIALES: Filtros = {
 
 const nombres = new Intl.Collator('es-CL', { sensitivity: 'base' });
 
-function normalizar(texto: string) {
-  return texto.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
-}
-
-export default function CatalogClient({ productos, categorias, categoriaActual }: {
-  productos: Producto[];
-  categorias: string[];
-  categoriaActual?: string;
-}) {
+export default function CatalogClient({ productos, linea, ordenGrupos }: { productos: Producto[]; linea: Linea; ordenGrupos: string[] }) {
+  const indice = useMemo(() => productos.map((producto) => ({
+    producto,
+    grupo: grupoProducto(producto, linea),
+    texto: normalizarBusqueda(`${producto.name} ${producto.category} ${producto.description || ''}`)
+  })), [productos, linea]);
+  const categorias = useMemo(() => {
+    const grupos = new Set<string>(LINEAS[linea].grupos.filter((grupo) => indice.some((entrada) => entrada.grupo === grupo)));
+    return [...ordenGrupos.filter((grupo) => grupos.delete(grupo)), ...grupos];
+  }, [indice, linea, ordenGrupos]);
   const [filtros, setFiltros] = useState(INICIALES);
   const campoBusqueda = useRef<HTMLInputElement>(null);
 
@@ -51,7 +51,7 @@ export default function CatalogClient({ productos, categorias, categoriaActual }
       const cantidad = Number(query.get('cantidad'));
       setFiltros({
         busqueda: (query.get('q') ?? '').slice(0, 120),
-        categoria: !categoriaActual && categorias.includes(categoria) ? categoria : '',
+        categoria: categorias.some((grupo) => grupo === categoria) ? categoria : '',
         orden: ORDENES.find((opcion) => opcion.value === query.get('orden'))?.value ?? 'recientes',
         disponibles: query.get('stock') === '1',
         cantidad: Number.isSafeInteger(cantidad) && cantidad > PAGE_SIZE
@@ -62,7 +62,7 @@ export default function CatalogClient({ productos, categorias, categoriaActual }
     leerFiltros();
     window.addEventListener('popstate', leerFiltros);
     return () => window.removeEventListener('popstate', leerFiltros);
-  }, [categoriaActual, categorias, productos.length]);
+  }, [categorias, productos.length]);
 
   function actualizar(cambios: Partial<Filtros>) {
     const siguientes = { ...filtros, cantidad: PAGE_SIZE, ...cambios };
@@ -82,16 +82,11 @@ export default function CatalogClient({ productos, categorias, categoriaActual }
     window.history.replaceState(window.history.state, '', url);
   }
 
-  const indice = useMemo(() => productos.map((producto) => ({
-    producto,
-    texto: normalizar(`${producto.name} ${producto.category} ${producto.description || ''}`)
-  })), [productos]);
-
   const resultados = useMemo(() => {
-    const palabras = normalizar(filtros.busqueda).trim().split(/\s+/).filter(Boolean);
+    const palabras = normalizarBusqueda(filtros.busqueda).trim().split(/\s+/).filter(Boolean);
     const coincidencias = indice
-      .filter(({ producto, texto }) =>
-        (!filtros.categoria || producto.category === filtros.categoria) &&
+      .filter(({ producto, texto, grupo }) =>
+        (!filtros.categoria || grupo === filtros.categoria) &&
         (!filtros.disponibles || producto.stock > 0) &&
         palabras.every((palabra) => texto.includes(palabra)))
       .map(({ producto }) => producto);
@@ -108,29 +103,27 @@ export default function CatalogClient({ productos, categorias, categoriaActual }
   return (
     <section aria-label="Productos del catálogo" className="store-shell pb-14 pt-7 md:pb-20">
       {!!productos.length && (
-        <div className="rounded-2xl border border-verde-noche/15 bg-white p-4 sm:p-5">
-          <div className={`grid gap-3 ${categoriaActual ? 'sm:grid-cols-[2fr_1fr]' : 'grid-cols-2 lg:grid-cols-[2fr_1fr_1fr]'}`}>
-            <label className={`grid gap-1.5 text-sm font-semibold ${categoriaActual ? '' : 'col-span-2 lg:col-span-1'}`}>
+        <div className="shop-panel rounded-2xl border p-4 sm:p-5">
+          <div className="mb-4 flex flex-wrap gap-2" aria-label="Tipos de producto" role="group">
+            {['', ...categorias].map((grupo) => (
+              <button type="button" key={grupo} aria-pressed={filtros.categoria === grupo}
+                className="shop-chip" onClick={() => actualizar({ categoria: grupo })}>
+                {grupo || 'Todos'}
+              </button>
+            ))}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-[2fr_1fr]">
+            <label className="grid gap-1.5 text-sm font-semibold">
               Buscar productos
               <input ref={campoBusqueda} type="search" value={filtros.busqueda} maxLength={120}
                 onChange={(event) => actualizar({ busqueda: event.target.value })}
-                placeholder="Nombre, categoría o descripción"
-                className="min-h-11 min-w-0 rounded-lg border border-verde-noche/25 px-3 text-base font-normal" />
+                placeholder="Nombre o descripción"
+                className="shop-control min-h-11 min-w-0 rounded-lg border px-3 text-base font-normal" />
             </label>
-            {!categoriaActual && (
-              <label className="grid min-w-0 gap-1.5 text-sm font-semibold">
-                Categoría
-                <select value={filtros.categoria} onChange={(event) => actualizar({ categoria: event.target.value })}
-                  className="min-h-11 min-w-0 rounded-lg border border-verde-noche/25 bg-white px-3 text-base font-normal">
-                  <option value="">Todas</option>
-                  {categorias.map((categoria) => <option key={categoria} value={categoria}>{nombreCategoria(categoria)}</option>)}
-                </select>
-              </label>
-            )}
             <label className="grid min-w-0 gap-1.5 text-sm font-semibold">
               Ordenar por
               <select value={filtros.orden} onChange={(event) => actualizar({ orden: event.target.value as Filtros['orden'] })}
-                className="min-h-11 min-w-0 rounded-lg border border-verde-noche/25 bg-white px-3 text-base font-normal">
+                className="shop-control min-h-11 min-w-0 rounded-lg border px-3 text-base font-normal">
                 {ORDENES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
               </select>
             </label>
@@ -139,12 +132,12 @@ export default function CatalogClient({ productos, categorias, categoriaActual }
             <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
               <input type="checkbox" checked={filtros.disponibles}
                 onChange={(event) => actualizar({ disponibles: event.target.checked })}
-                className="size-4 accent-verde-oscuro" />
+                className="shop-checkbox size-4" />
               Solo en stock
             </label>
             {hayFiltros && (
               <button type="button" onClick={() => { actualizar(INICIALES); campoBusqueda.current?.focus(); }}
-                className="min-h-11 text-sm font-semibold text-verde-oscuro underline underline-offset-4">
+                className="min-h-11 text-sm font-semibold underline underline-offset-4">
                 Limpiar filtros
               </button>
             )}
@@ -152,7 +145,7 @@ export default function CatalogClient({ productos, categorias, categoriaActual }
         </div>
       )}
 
-      <p role="status" className="my-5 text-sm font-medium text-verde-noche/80">
+      <p role="status" className="my-5 shop-muted text-sm font-medium">
         {resultados.length} {resultados.length === 1 ? 'producto' : 'productos'}
         {visibles.length < resultados.length && ` · Mostrando ${visibles.length}`}
       </p>
@@ -162,16 +155,15 @@ export default function CatalogClient({ productos, categorias, categoriaActual }
           {visibles.map((producto) => <ProductCard key={producto.id} producto={producto} />)}
         </div>
       ) : (
-        <div className="rounded-2xl border border-verde-noche/15 bg-white p-6">
+        <div className="shop-panel rounded-2xl border p-6">
           <h2 className="font-semibold">{hayFiltros ? 'No hay resultados con estos filtros' : 'Aún no hay productos disponibles'}</h2>
-          {categoriaActual && <Link href="/catalogo" className="mt-3 inline-block text-sm font-semibold underline">Ver todo el catálogo</Link>}
         </div>
       )}
 
       {visibles.length < resultados.length && (
         <div className="mt-8 text-center">
           <button type="button" onClick={() => actualizar({ cantidad: filtros.cantidad + PAGE_SIZE })}
-            className="min-h-12 rounded-lg bg-verde-noche px-6 text-sm font-semibold text-white hover:bg-verde-oscuro">
+            className="shop-button">
             Ver más productos
           </button>
         </div>
