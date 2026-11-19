@@ -1,3 +1,4 @@
+import { nombreCategoria } from '@/lib/categorias';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { cache } from 'react';
@@ -19,11 +20,11 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
     return {
       title: producto.name,
       description:
-        producto.description || `${producto.name} en Casa y Cosas. ${producto.category}.`,
+        producto.description || `${producto.name} en Casa y Cosas. ${nombreCategoria(producto.category)}.`,
       alternates: { canonical: `/producto/${producto.id}` },
       openGraph: {
         title: producto.name,
-        description: producto.description || `${producto.name} — ${producto.category}`,
+        description: producto.description || `${producto.name} — ${nombreCategoria(producto.category)}`,
         images: producto.images?.length ? producto.images : producto.image_url ? [producto.image_url] : []
       }
     };
@@ -53,7 +54,7 @@ export default async function ProductoPage({ params }: { params: { id: string } 
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: producto.name,
-    description: producto.description || `${producto.name} — ${producto.category}`,
+    description: producto.description || `${producto.name} — ${nombreCategoria(producto.category)}`,
     category: producto.category,
     image: producto.images?.length ? producto.images : producto.image_url ? [producto.image_url] : [],
     offers: {

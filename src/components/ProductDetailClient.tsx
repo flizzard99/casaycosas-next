@@ -1,5 +1,6 @@
 'use client';
 
+import { nombreCategoria } from '@/lib/categorias';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
@@ -31,7 +32,7 @@ export default function ProductDetailClient({ producto, relacionados = [] }: { p
         </div>
 
         <div className="flex flex-col md:py-6">
-          <div className="text-sm capitalize text-verde-oscuro font-semibold">{producto.category}</div>
+          <div className="text-sm text-verde-oscuro font-semibold">{nombreCategoria(producto.category)}</div>
           <h1 className="font-display balance-text mt-2 text-3xl text-verde-noche sm:text-4xl">{producto.name}</h1>
           <p className="text-2xl font-semibold text-verde mt-3">{formatoCLP.format(producto.price)}</p>
 

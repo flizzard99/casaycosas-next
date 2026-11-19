@@ -1,5 +1,6 @@
 'use client';
 
+import { nombreCategoria } from '@/lib/categorias';
 import { useState } from 'react';
 import { adminFetch } from '@/lib/adminFetch';
 
@@ -61,9 +62,9 @@ export default function CategoryOrderEditor({
         {orden.map((cat, i) => (
           <li
             key={cat}
-            className="flex items-center justify-between bg-crema/60 rounded px-3 py-2 text-sm capitalize text-verde-noche"
+            className="flex items-center justify-between bg-crema/60 rounded px-3 py-2 text-sm text-verde-noche"
           >
-            <span>{cat}</span>
+            <span>{nombreCategoria(cat)}</span>
             <div className="flex gap-1">
               <button
                 onClick={() => mover(i, -1)}

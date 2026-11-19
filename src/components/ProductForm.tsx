@@ -1,5 +1,6 @@
 'use client';
 
+import { nombreCategoria } from '@/lib/categorias';
 import { useState, useRef, useCallback } from 'react';
 import { fileToDataUrl } from '@/lib/fileToDataUrl';
 import type { Producto } from '@/lib/types';
@@ -290,10 +291,10 @@ export default function ProductForm({ producto, categorias, onGuardado, onCancel
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="flex-1 px-3 py-2 rounded border border-verde-noche/20 text-sm capitalize"
+            className="flex-1 px-3 py-2 rounded border border-verde-noche/20 text-sm"
           >
             {categorias.map((c) => (
-              <option key={c} value={c}>{c}</option>
+              <option key={c} value={c}>{nombreCategoria(c)}</option>
             ))}
           </select>
         </div>

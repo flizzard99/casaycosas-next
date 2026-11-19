@@ -1,5 +1,6 @@
 'use client';
 
+import { nombreCategoria } from '@/lib/categorias';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import ProductForm from './ProductForm';
@@ -338,11 +339,11 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 <select
                   value={categoriaFiltro}
                   onChange={(e) => setCategoriaFiltro(e.target.value)}
-                  className="px-3 py-2 rounded-lg border border-verde-noche/15 text-sm bg-white capitalize"
+                  className="px-3 py-2 rounded-lg border border-verde-noche/15 text-sm bg-white"
                 >
                   <option value="todas">Todas las categorías</option>
                   {categorias.map((c) => (
-                    <option key={c} value={c} className="capitalize">{c}</option>
+                    <option key={c} value={c}>{nombreCategoria(c)}</option>
                   ))}
                 </select>
                 <select
@@ -417,7 +418,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                             <div className="flex items-start justify-between gap-2 mb-2">
                               <h3 className="text-sm font-medium text-verde-noche line-clamp-2 leading-tight">{p.name}</h3>
                             </div>
-                            <p className="text-[11px] text-sage font-medium uppercase tracking-wide mb-2 capitalize">{p.category}</p>
+                            <p className="mb-2 text-xs font-medium text-verde-oscuro">{nombreCategoria(p.category)}</p>
                             <div className="flex items-center justify-between mb-3">
                               <span className="text-sm font-semibold text-verde">{formatoCLP.format(p.price)}</span>
                               <button
@@ -444,11 +445,17 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                                 className="flex-1 py-1.5 rounded-lg bg-verde text-white text-xs font-semibold hover:bg-verde-oscuro"
                               >Editar</button>
                               <button
+                                type="button"
                                 onClick={() => eliminarProducto(p.id)}
-                              disabled={!!ocupado}
-                                className="px-2 py-1.5 rounded-lg text-red-500 hover:bg-red-50 text-xs"
-                                aria-label="Eliminar"
-                              >🗑</button>
+                                disabled={!!ocupado}
+                                className="inline-flex min-h-10 items-center justify-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 text-xs font-semibold text-red-800 hover:border-red-300 hover:bg-red-100 disabled:opacity-50"
+                                aria-label={`Eliminar ${p.name}`}
+                              >
+                                <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v5m4-5v5" />
+                                </svg>
+                                Eliminar
+                              </button>
                             </div>
                           </div>
                         </div>

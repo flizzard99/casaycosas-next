@@ -1,5 +1,6 @@
 'use client';
 
+import { nombreCategoria } from '@/lib/categorias';
 import { useEffect, useMemo, useState } from 'react';
 import type { Producto, FeaturedConfig } from '@/lib/types';
 import { adminFetch } from '@/lib/adminFetch';
@@ -122,7 +123,7 @@ export default function FeaturedEditor({ productos, featureConfigInicial, onGuar
             <div key={p.id} className="flex items-center gap-2 bg-crema/50 rounded px-3 py-1.5">
               <span className="text-xs text-verde-noche/50 font-semibold w-5">{i + 1}.</span>
               <span className="text-sm text-verde-noche flex-1 truncate">{p.name}</span>
-              <span className="text-[11px] text-sage capitalize">{p.category}</span>
+              <span className="text-[11px] text-verde-oscuro">{nombreCategoria(p.category)}</span>
               <button onClick={() => mover(p.id, -1)} disabled={i === 0} className="text-xs px-1.5 disabled:opacity-30">
                 ↑
               </button>
@@ -167,7 +168,7 @@ export default function FeaturedEditor({ productos, featureConfigInicial, onGuar
                 className="w-4 h-4 accent-verde-oscuro"
               />
               <span className="text-sm text-verde-noche flex-1 truncate">{p.name}</span>
-              <span className="text-[11px] text-sage capitalize">{p.category}</span>
+              <span className="text-[11px] text-verde-oscuro">{nombreCategoria(p.category)}</span>
             </label>
           );
         })}

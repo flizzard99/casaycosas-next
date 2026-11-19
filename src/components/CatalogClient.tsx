@@ -1,5 +1,6 @@
 'use client';
 
+import { nombreCategoria } from '@/lib/categorias';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import ProductCard from './ProductCard';
@@ -122,7 +123,7 @@ export default function CatalogClient({ productos, categorias, categoriaActual }
                 <select value={filtros.categoria} onChange={(event) => actualizar({ categoria: event.target.value })}
                   className="min-h-11 min-w-0 rounded-lg border border-verde-noche/25 bg-white px-3 text-base font-normal">
                   <option value="">Todas</option>
-                  {categorias.map((categoria) => <option key={categoria}>{categoria}</option>)}
+                  {categorias.map((categoria) => <option key={categoria} value={categoria}>{nombreCategoria(categoria)}</option>)}
                 </select>
               </label>
             )}

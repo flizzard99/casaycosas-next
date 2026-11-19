@@ -1,3 +1,4 @@
+import { nombreCategoria } from '@/lib/categorias';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -20,7 +21,7 @@ function decodificarCategoria(categoria: string) {
 
 export async function generateMetadata({ params }: { params: { categoria: string } }): Promise<Metadata> {
   const categoria = decodificarCategoria(params.categoria);
-  const capitalizada = categoria.charAt(0).toUpperCase() + categoria.slice(1);
+  const capitalizada = nombreCategoria(categoria);
   return {
     title: `${capitalizada} — Catálogo`,
     description: `Productos de la categoría "${capitalizada}" en Casa y Cosas.`,
@@ -47,7 +48,7 @@ export default async function CategoriaPage({ params }: { params: { categoria: s
             <Link href="/catalogo" className="mb-3 inline-block text-sm font-semibold text-verde-oscuro hover:underline">
               ← Todo el catálogo
             </Link>
-            <h1 className="balance-text font-display text-4xl capitalize text-verde-noche sm:text-5xl">{categoria}</h1>
+            <h1 className="balance-text font-display text-4xl text-verde-noche sm:text-5xl">{nombreCategoria(categoria)}</h1>
           </div>
         </div>
 

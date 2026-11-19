@@ -1,5 +1,6 @@
 'use client';
 
+import { nombreCategoria } from '@/lib/categorias';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -53,7 +54,7 @@ export default function ProductCard({ producto }: { producto: Producto }) {
       </Link>
       <div className="p-4 flex flex-col flex-1">
         <Link href={`/producto/${producto.id}`} prefetch={false}>
-          <div className="text-xs font-medium capitalize text-verde-oscuro">{producto.category}</div>
+          <div className="text-xs font-medium text-verde-oscuro">{nombreCategoria(producto.category)}</div>
           <h3 className="mt-1 text-sm font-semibold leading-snug text-verde-noche hover:underline sm:text-base">{producto.name}</h3>
         </Link>
         <p className="mt-2 flex-1 text-base font-semibold text-verde-oscuro">{formatoCLP.format(producto.price)}</p>

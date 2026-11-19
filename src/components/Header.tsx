@@ -1,5 +1,6 @@
 'use client';
 
+import { nombreCategoria } from '@/lib/categorias';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -83,8 +84,8 @@ export default function Header({ categorias = [] }: { categorias?: string[] }) {
               <li><Link href="/catalogo" onClick={cerrarMenu} className="block rounded-lg px-3 py-2 font-semibold hover:bg-crema/50">Todo el catálogo</Link></li>
               {categorias.map((cat) => (
                 <li key={cat}>
-                  <Link href={categoriaHref(cat)} prefetch={false} onClick={cerrarMenu} className="block rounded-lg px-3 py-2 capitalize hover:bg-crema/50">
-                    {cat}
+                  <Link href={categoriaHref(cat)} prefetch={false} onClick={cerrarMenu} className="block rounded-lg px-3 py-2 hover:bg-crema/50">
+                    {nombreCategoria(cat)}
                   </Link>
                 </li>
               ))}
