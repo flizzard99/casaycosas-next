@@ -21,20 +21,25 @@ export default async function CatalogoPage() {
   if (resultado.status === 'fulfilled') productos = resultado.value;
   if (config.status === 'fulfilled') categoryOrder = config.value.categoryOrder;
 
-  const categorias = Array.from(new Set(productos.map((p) => p.category)));
+  const disponibles = new Set(productos.map((producto) => producto.category));
+  const categorias = [...new Set(categoryOrder)]
+    .filter((categoria) => disponibles.delete(categoria))
+    .concat([...disponibles].sort((a, b) => a.localeCompare(b, 'es-CL')));
 
   return (
     <>
       <Header categorias={categorias} />
-      <main id="contenido" tabIndex={-1} className="min-h-[60vh] bg-crema/30">
-        <div className="store-shell pt-10 md:pt-14">
-          <Link href="/" className="text-sm text-verde hover:text-verde-oscuro mb-4 inline-block">
-            ← Volver al inicio
-          </Link>
-          <h1 className="font-display text-3xl md:text-4xl text-verde-oscuro mb-2">Todos los productos</h1>
+      <main id="contenido" tabIndex={-1} className="min-h-[60vh]">
+        <div className="border-b border-verde-noche/10 bg-crema/35">
+          <div className="store-shell py-8 sm:py-12">
+            <Link href="/" className="mb-3 inline-block text-sm font-semibold text-verde-oscuro hover:underline">
+              ← Inicio
+            </Link>
+            <h1 className="font-display text-4xl text-verde-noche sm:text-5xl">Catálogo</h1>
+          </div>
         </div>
         {resultado.status === 'fulfilled' ? (
-          <CatalogClient productosIniciales={productos} categoryOrder={categoryOrder} />
+          <CatalogClient productos={productos} categorias={categorias} />
         ) : (
           <p className="store-shell py-6" role="status">El catálogo está temporalmente fuera de servicio. Vuelve a intentarlo en unos minutos.</p>
         )}

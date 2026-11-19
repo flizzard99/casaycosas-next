@@ -48,7 +48,9 @@ export default function Header({ categorias = [] }: { categorias?: string[] }) {
       </a>
       <div className="store-shell flex min-h-16 items-center justify-between gap-3 py-2">
         <Link href="/" className="flex shrink-0 items-center gap-2 font-display text-lg text-verde-noche">
-          <Image src="/oveja-logo.png" alt="" width={36} height={36} unoptimized />
+          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-verde-noche">
+            <Image src="/oveja-logo.png" alt="" width={35} height={35} unoptimized />
+          </span>
           <span>Casa y Cosas</span>
         </Link>
 

@@ -33,6 +33,7 @@ body {
 
 .store-hero .store-shell {
   width: min(100%, 75rem);
+  z-index: 1;
 }
 
 .store-hero::before {
@@ -48,10 +49,10 @@ body {
     content: '';
     position: absolute;
     inset: 8% 0 8% 55%;
-    z-index: -1;
+    z-index: 0;
     pointer-events: none;
-    background: url('/oveja-logo.png') center / min(65%, 17rem) auto no-repeat;
-    opacity: 0.20;
+    background: url('/oveja-logo.png') center / min(68%, 19rem) auto no-repeat;
+    opacity: 0.58;
   }
 }
 
@@ -76,13 +77,10 @@ body {
 .product-watermark::after {
   content: '';
   position: absolute;
-  inset: auto 5% 5% auto;
-  width: clamp(1.75rem, 19%, 5rem);
-  aspect-ratio: 1;
+  inset: 0;
   pointer-events: none;
-  background: url('/oveja-logo.png') center / contain no-repeat;
-  opacity: 0.72;
-  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 55%));
+  background: url('/oveja-logo.png') center / min(65%, 19rem) auto no-repeat;
+  opacity: 0.27;
 }
 
 .cart-dialog::backdrop {
