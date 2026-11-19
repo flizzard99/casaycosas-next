@@ -19,11 +19,6 @@ export default function ProductDetailClient({ producto, relacionados = [] }: { p
   const [agregado, setAgregado] = useState(false);
   const maxQty = producto.stock || 1;
 
-  function comprarAhora() {
-    const msg = `Hola! Quisiera reservar: ${qty}x ${producto.name} — ${formatoCLP.format(producto.price * qty)}`;
-    window.open(`https://wa.me/${tienda.whatsappNumber}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
-  }
-
   return (
     <div className="store-shell py-7 sm:py-10">
       <Link href="/catalogo" className="text-sm text-verde hover:text-verde-oscuro mb-6 inline-block">
@@ -98,14 +93,6 @@ export default function ProductDetailClient({ producto, relacionados = [] }: { p
             >
               {sinStock ? 'Sin stock' : agregado ? '✓ Agregado al carrito' : 'Agregar al carrito'}
             </button>
-            {!sinStock && (
-              <button
-                onClick={comprarAhora}
-                className="flex-1 px-6 py-3 rounded-md bg-verde-noche text-white text-sm font-semibold uppercase tracking-wide hover:bg-verde-oscuro transition-colors"
-              >
-                Consultar por WhatsApp
-              </button>
-            )}
           </div>
 
           {producto.instagram_url && (

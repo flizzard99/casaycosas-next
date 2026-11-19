@@ -5,7 +5,6 @@ import ProductDetailClient from '@/components/ProductDetailClient';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
-import { origenCheckout } from '@/lib/mercadoPago';
 import { getProductoById, getProductosPublicos } from '@/lib/db';
 
 const getProducto = cache((id: number) => getProductoById(id));
@@ -78,7 +77,7 @@ export default async function ProductoPage({ params }: { params: { id: string } 
         <ProductDetailClient producto={producto} relacionados={relacionados} />
       </main>
       <Footer />
-      <CartDrawer pagoEnLinea={!!origenCheckout()} />
+      <CartDrawer />
     </>
   );
 }

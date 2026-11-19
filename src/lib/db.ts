@@ -240,7 +240,7 @@ async function leerItems(db: Pick<Pool, 'query'>, id: number): Promise<PedidoIte
   return result.rows;
 }
 
-export async function crearPedido(items: { id: number; qty: number }[], clienteNombre: string, clienteWhatsapp: string, clienteEmail = '', compra?: Compra): Promise<Pedido> {
+export async function crearPedido(items: { id: number; qty: number }[], clienteNombre: string, clienteWhatsapp: string, clienteEmail: string, compra: Compra): Promise<Pedido> {
   await ensureSchema();
   await ensurePedidosSchema();
   const pool = getPool();
@@ -248,22 +248,20 @@ export async function crearPedido(items: { id: number; qty: number }[], clienteN
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    if (compra) {
-      await client.query('SELECT pg_advisory_xact_lock(440812, hashtext($1))', [compra.referencia]);
-      const existente = await client.query('SELECT * FROM pedidos WHERE pago_referencia = $1', [compra.referencia]);
-      if (existente.rows.length) {
-        const row = existente.rows[0];
-        const detalle = await leerItems(client, row.id);
-        if (row.total !== compra.totalEsperado || detalle.length !== items.length ||
-            !items.every((item) => detalle.some((linea) => linea.producto_id === item.id && linea.qty === item.qty)) ||
-            row.cliente_nombre !== clienteNombre || row.cliente_whatsapp !== clienteWhatsapp || row.cliente_email !== clienteEmail ||
-            row.despacho?.region !== compra.despacho.region || row.despacho?.comuna !== compra.despacho.comuna ||
-            row.despacho?.direccion !== compra.despacho.direccion) {
-          throw new Error('La sesión de pago corresponde a otro carrito o despacho.');
-        }
-        await client.query('COMMIT');
-        return formatPedido(row, detalle);
+    await client.query('SELECT pg_advisory_xact_lock(440812, hashtext($1))', [compra.referencia]);
+    const existente = await client.query('SELECT * FROM pedidos WHERE pago_referencia = $1', [compra.referencia]);
+    if (existente.rows.length) {
+      const row = existente.rows[0];
+      const detalle = await leerItems(client, row.id);
+      if (row.total !== compra.totalEsperado || detalle.length !== items.length ||
+          !items.every((item) => detalle.some((linea) => linea.producto_id === item.id && linea.qty === item.qty)) ||
+          row.cliente_nombre !== clienteNombre || row.cliente_whatsapp !== clienteWhatsapp || row.cliente_email !== clienteEmail ||
+          row.despacho?.region !== compra.despacho.region || row.despacho?.comuna !== compra.despacho.comuna ||
+          row.despacho?.direccion !== compra.despacho.direccion) {
+        throw new Error('La sesión de pago corresponde a otro carrito o despacho.');
       }
+      await client.query('COMMIT');
+      return formatPedido(row, detalle);
     }
 
     let total = 0;
@@ -273,7 +271,7 @@ export async function crearPedido(items: { id: number; qty: number }[], clienteN
       const res = await client.query('SELECT id, name, price, stock FROM productos WHERE id = $1 AND visible IS TRUE FOR UPDATE', [item.id]);
       if (!res.rows.length) throw new Error(`Producto ${item.id} no encontrado`);
       const p = res.rows[0];
-      if (compra && (!Number.isInteger(p.price) || p.price <= 0)) throw new Error('Total de compra inválido');
+      if (!Number.isInteger(p.price) || p.price <= 0) throw new Error('Total de compra inválido');
       if ((p.stock || 0) < item.qty) {
         throw new Error(`Stock insuficiente para "${p.name}" (disponible: ${p.stock || 0}, solicitado: ${item.qty})`);
       }
@@ -282,13 +280,13 @@ export async function crearPedido(items: { id: number; qty: number }[], clienteN
       await client.query('UPDATE productos SET stock = stock - $1 WHERE id = $2', [item.qty, p.id]);
     }
 
-    if (compra && (total <= 0 || total > 2147483647)) throw new Error('Total de compra inválido');
-    if (compra && total !== compra.totalEsperado) throw new Error('El precio de los productos cambió. Actualiza el carrito.');
+    if (total <= 0 || total > 2147483647) throw new Error('Total de compra inválido');
+    if (total !== compra.totalEsperado) throw new Error('El precio de los productos cambió. Actualiza el carrito.');
 
     const pedidoRes = await client.query(
       `INSERT INTO pedidos (cliente_nombre, cliente_whatsapp, cliente_email, total, estado, pago_referencia, pago_estado, despacho)
-       VALUES ($1, $2, $3, $4, 'pendiente', $5, $6, $7) RETURNING *`,
-      [clienteNombre, clienteWhatsapp, clienteEmail, total, compra?.referencia ?? null, compra ? 'pendiente' : null, compra?.despacho ?? null]
+       VALUES ($1, $2, $3, $4, 'pendiente', $5, 'pendiente', $6) RETURNING *`,
+      [clienteNombre, clienteWhatsapp, clienteEmail, total, compra.referencia, compra.despacho]
     );
     const pedidoId = pedidoRes.rows[0].id;
 

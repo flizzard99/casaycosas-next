@@ -2,20 +2,13 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { useCart } from '@/context/CartContext';
 
 const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 
-export default function CartDrawer({ pagoEnLinea = false }: { pagoEnLinea?: boolean }) {
+export default function CartDrawer() {
   const { items, isOpen, close, updateQty, removeItem, total, clear } = useCart();
-  const [nombre, setNombre] = useState('');
-  const [email, setEmail] = useState('');
-  const [emailError, setEmailError] = useState('');
-  const [bloqueado, setBloqueado] = useState(false);
-  const [error, setError] = useState('');
-  const router = useRouter();
   const drawerRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -24,50 +17,6 @@ export default function CartDrawer({ pagoEnLinea = false }: { pagoEnLinea?: bool
     if (isOpen && !drawer.open) drawer.showModal();
     if (!isOpen && drawer.open) drawer.close();
   }, [isOpen]);
-
-  function validarEmail(valor: string): boolean {
-    if (!valor.trim()) return true;
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor.trim());
-  }
-
-  async function reservarPedido() {
-    if (!items.length || bloqueado) return;
-    if (!validarEmail(email)) {
-      setEmailError('Email inválido. Déjalo vacío si no quieres recibir notificaciones.');
-      return;
-    }
-    setBloqueado(true);
-    setError('');
-    setEmailError('');
-    try {
-      const res = await fetch('/api/pedido', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: items.map((i) => ({ id: i.id, qty: i.qty })),
-          nombre: nombre.trim(),
-          email: email.trim()
-        })
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || 'No se pudo procesar el pedido');
-        return;
-      }
-      const waUrl = data.whatsappUrl as string | undefined;
-      const estadoUrl = data.estadoUrl as string;
-      if (waUrl) window.open(waUrl, '_blank');
-      clear();
-      setNombre('');
-      setEmail('');
-      close();
-      router.push(estadoUrl || `/pedido/${data.pedidoId}`);
-    } catch {
-      setError('Error de conexión. Intenta nuevamente.');
-    } finally {
-      setBloqueado(false);
-    }
-  }
 
   return (
     <dialog
@@ -144,62 +93,16 @@ export default function CartDrawer({ pagoEnLinea = false }: { pagoEnLinea?: bool
             <span className="font-semibold text-verde-noche">{formatoCLP.format(total)}</span>
           </div>
 
-          {items.length > 0 && !pagoEnLinea && (
+          {items.length > 0 && (
             <>
-              <input
-                type="text"
-                aria-label="Tu nombre (opcional)"
-                autoComplete="name"
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-                placeholder="Tu nombre (opcional)"
-                className="w-full mb-2 px-3 py-2 rounded-md border border-verde-noche/20 bg-crema/30 text-sm focus:outline-none focus:ring-2 focus:ring-verde"
-                maxLength={50}
-              />
-              <input
-                type="email"
-                aria-label="Tu correo para seguimiento (opcional)"
-                autoComplete="email"
-                aria-invalid={!!emailError}
-                aria-describedby={emailError ? 'cart-email-error' : undefined}
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); setEmailError(''); }}
-                placeholder="Tu email (opcional, para seguimiento)"
-                className="w-full mb-1 px-3 py-2 rounded-md border border-verde-noche/20 bg-crema/30 text-sm focus:outline-none focus:ring-2 focus:ring-verde"
-                maxLength={200}
-              />
-              {emailError && <p id="cart-email-error" role="alert" className="text-xs text-red-600 mb-1">{emailError}</p>}
-              <p className="text-[11px] text-verde-noche/40 mb-3 leading-relaxed">
-                Reservaremos el stock 48h. Recibirás un enlace para seguir tu pedido. WhatsApp queda opcional.
-              </p>
-            </>
-          )}
-
-          {error && (
-            <p role="alert" className="text-xs text-red-600 mb-2 leading-relaxed">{error}</p>
-          )}
-
-          {pagoEnLinea ? (
-            items.length > 0 && (
               <Link href="/comprar" onClick={close}
                 className="flex min-h-12 items-center justify-center rounded-lg bg-verde-oscuro px-3 font-semibold text-white hover:bg-verde-noche">
                 Finalizar compra
               </Link>
-            )
-          ) : (
-          <button
-            onClick={reservarPedido}
-            disabled={!items.length || bloqueado}
-            className="w-full bg-verde-oscuro text-white text-sm font-semibold py-3 rounded-md hover:bg-verde-noche disabled:bg-gray-300 disabled:cursor-not-allowed"
-          >
-            {bloqueado ? 'Reservando…' : 'Reservar pedido'}
-          </button>
-          )}
-
-          {items.length > 0 && (
-            <button onClick={clear} className="w-full text-xs text-verde-noche/50 hover:text-verde-noche mt-2">
-              Vaciar carrito
-            </button>
+              <button type="button" onClick={clear} className="mt-2 min-h-10 w-full text-sm text-verde-noche/70 hover:underline">
+                Vaciar carrito
+              </button>
+            </>
           )}
         </div>
       </div>

@@ -4,7 +4,6 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
-import { origenCheckout } from '@/lib/mercadoPago';
 import CatalogClient from '@/components/CatalogClient';
 import { getProductosPublicos } from '@/lib/db';
 
@@ -55,7 +54,7 @@ export default async function CategoriaPage({ params }: { params: { categoria: s
         <CatalogClient key={categoria} productos={productosCategoria} categorias={todos} categoriaActual={categoria} />
       </main>
       <Footer />
-      <CartDrawer pagoEnLinea={!!origenCheckout()} />
+      <CartDrawer />
     </>
   );
 }

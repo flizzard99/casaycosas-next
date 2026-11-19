@@ -3,7 +3,6 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
-import { origenCheckout } from '@/lib/mercadoPago';
 import CatalogClient from '@/components/CatalogClient';
 import { getProductosPublicos, getConfig } from '@/lib/db';
 
@@ -45,7 +44,7 @@ export default async function CatalogoPage() {
         )}
       </main>
       <Footer />
-      <CartDrawer pagoEnLinea={!!origenCheckout()} />
+      <CartDrawer />
     </>
   );
 }

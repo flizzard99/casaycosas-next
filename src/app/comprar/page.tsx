@@ -19,7 +19,14 @@ export default function ComprarPage() {
         <Link href="/catalogo" className="text-sm font-semibold underline">Volver al catálogo</Link>
         <h1 className="mb-6 mt-4 font-display text-4xl">Finalizar compra</h1>
         {origenCheckout() ? <CheckoutClient /> : (
-          <p>El pago en línea aún no está disponible. Escríbenos por <a href={tienda.whatsappUrl} className="underline">WhatsApp</a> para hacer tu pedido.</p>
+          <section className="max-w-lg rounded-xl border border-verde-noche/15 bg-white p-5" aria-labelledby="pago-no-disponible">
+            <h2 id="pago-no-disponible" className="font-semibold">El pago en línea aún no está disponible</h2>
+            <p className="mt-2 text-sm">Tus productos siguen en el carrito. Puedes volver a intentar más tarde.</p>
+            <a href={tienda.whatsappUrl} target="_blank" rel="noopener noreferrer"
+              className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline">
+              Consultar por WhatsApp
+            </a>
+          </section>
         )}
       </main>
       <Footer />

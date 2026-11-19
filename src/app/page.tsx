@@ -4,7 +4,6 @@ import FeaturedGrid from '@/components/FeaturedGrid';
 import SocialSection from '@/components/SocialSection';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
-import { origenCheckout } from '@/lib/mercadoPago';
 import { getFeaturedProducts, getConfig, getProductosPublicos } from '@/lib/db';
 
 export const revalidate = 60;
@@ -38,7 +37,7 @@ export default async function HomePage() {
         <SocialSection />
       </main>
       <Footer />
-      <CartDrawer pagoEnLinea={!!origenCheckout()} />
+      <CartDrawer />
     </>
   );
 }

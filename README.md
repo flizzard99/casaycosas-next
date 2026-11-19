@@ -151,7 +151,7 @@ El script requiere `.env.local` con `DATABASE_URL`, `SUPABASE_URL` y `SUPABASE_S
 
 ## Pago en línea con Mercado Pago Chile
 
-El checkout cobra los productos en CLP. El cliente paga el despacho al transportista al recibir. La tienda debe informar este método antes de cobrar y coordinar los despachos con el transportista.
+El carrito dirige a «Finalizar compra». WhatsApp queda disponible para consultas. El checkout cobra los productos en CLP. El cliente paga el despacho al transportista al recibir. La tienda debe informar este método antes de cobrar y coordinar los despachos con el transportista.
 
 1. Crea una aplicación de **Checkout Pro** en Mercado Pago Developers con la cuenta de la tienda.
 2. Configura el evento **Pagos** en Webhooks con la URL `https://casaycosas-next.vercel.app/api/pagos/mercadopago`. Si usas otro dominio, actualiza esa URL y `NEXT_PUBLIC_SITE_URL` juntos.
