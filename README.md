@@ -167,3 +167,8 @@ En una compra en línea el stock se reserva durante 45 minutos. El enlace de Mer
 La portada enlaza a `/matera` y `/cristiana`. El catálogo, las fichas públicas y las compras usan la misma clasificación en `src/lib/lineas.ts`. Los productos quedan en el inventario de administración con su categoría original.
 
 Para incorporar un producto, en el panel asígnale una categoría de la colección, como `matera`, `mate`, `cristiana`, `Libreria Cristiana` o `papeleria`. Las categorías anteriores de oficina y los artículos identificables de `hogar` se incluyen en su colección. El tipo específico del producto se obtiene de su categoría y nombre.
+
+
+### Remate
+
+En **Administración → Productos**, usa **Mover a Remate** para asignar un producto a `/remate`. Un producto oculto conserva ese estado. Puedes ajustar su precio con **Editar** y usar **Quitar de Remate** para devolverlo a la clasificación normal. El filtro **En remate** muestra los productos asignados.

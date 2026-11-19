@@ -104,14 +104,14 @@ export default function CatalogClient({ productos, linea, ordenGrupos }: { produ
     <section aria-label="Productos del catálogo" className="store-shell pb-14 pt-7 md:pb-20">
       {!!productos.length && (
         <div className="shop-panel rounded-2xl border p-4 sm:p-5">
-          <div className="mb-4 flex flex-wrap gap-2" aria-label="Tipos de producto" role="group">
+          {categorias.length > 0 && <div className="mb-4 flex flex-wrap gap-2" aria-label="Tipos de producto" role="group">
             {['', ...categorias].map((grupo) => (
               <button type="button" key={grupo} aria-pressed={filtros.categoria === grupo}
                 className="shop-chip" onClick={() => actualizar({ categoria: grupo })}>
                 {grupo || 'Todos'}
               </button>
             ))}
-          </div>
+          </div>}
           <div className="grid gap-3 sm:grid-cols-[2fr_1fr]">
             <label className="grid gap-1.5 text-sm font-semibold">
               Buscar productos
@@ -156,7 +156,7 @@ export default function CatalogClient({ productos, linea, ordenGrupos }: { produ
         </div>
       ) : (
         <div className="shop-panel rounded-2xl border p-6">
-          <h2 className="font-semibold">{hayFiltros ? 'No hay resultados con estos filtros' : 'Aún no hay productos disponibles'}</h2>
+          <h2 className="font-semibold">{hayFiltros ? 'No hay resultados con estos filtros' : linea === 'remate' ? 'Por ahora no hay productos en remate' : 'Aún no hay productos disponibles'}</h2>
         </div>
       )}
 

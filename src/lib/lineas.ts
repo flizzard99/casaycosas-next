@@ -19,10 +19,19 @@ export const LINEAS = {
     alt: 'Biblia con una oveja en la portada',
     grupos: ['Biblias', 'Papelería', 'Regalos y Lecturas'],
   },
+  remate: {
+    nombre: 'Remate',
+    href: '/remate',
+    titulo: 'Remate',
+    descripcion: 'Últimas unidades y productos seleccionados del inventario, hasta agotar stock.',
+    imagen: '/oveja-portada.webp',
+    alt: '',
+    grupos: [],
+  },
 } as const;
 
 export type Linea = keyof typeof LINEAS;
-type ProductoDeLinea = Pick<Producto, 'category' | 'name'>;
+type ProductoDeLinea = Pick<Producto, 'category' | 'name'> & Partial<Pick<Producto, 'remate'>>;
 
 export function normalizarBusqueda(texto: string) {
   return texto.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim();
@@ -36,6 +45,7 @@ const categorias = {
 const papeleria = /\b(cuaderno|cuadernos|libreta|libretas|lapiz|lapices|boligrafo|marcador|marcadores|destacador|destacadores|separador|separadores|senaladores|notas|notitas|goma|clip|clips|tijera|pizarra|planificador|corcheteras|sticker|estuche|kit oficina|lapicero|cinta adhesiva)\b/;
 
 export function lineaProducto(producto: ProductoDeLinea): Linea | null {
+  if (producto.remate) return 'remate';
   const categoria = normalizarBusqueda(producto.category);
   if (categorias.matera.includes(categoria)) return 'matera';
   if (categorias.cristiana.includes(categoria)) return 'cristiana';
@@ -48,6 +58,7 @@ export function lineaProducto(producto: ProductoDeLinea): Linea | null {
 }
 
 export function grupoProducto(producto: ProductoDeLinea, linea: Linea) {
+  if (linea === 'remate') return 'Remate';
   const nombre = normalizarBusqueda(producto.name);
   if (linea === 'matera') {
     if (/^yerbas?\b/.test(nombre)) return 'Yerbas';

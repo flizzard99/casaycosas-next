@@ -25,7 +25,7 @@ export default async function ShopSection({ linea }: { linea: Linea }) {
         <section className="shop-section-hero">
           <div className="store-shell shop-section-layout">
             <div className="shop-section-copy">
-              <p className="shop-eyebrow">{coleccion.nombre}</p>
+              {linea !== 'remate' && <p className="shop-eyebrow">{coleccion.nombre}</p>}
               <h1>{coleccion.titulo}</h1>
               <p className="shop-section-description">{coleccion.descripcion}</p>
               <Link href="#productos" className="shop-button">Ver productos <span aria-hidden="true">↓</span></Link>
@@ -33,15 +33,15 @@ export default async function ShopSection({ linea }: { linea: Linea }) {
             <div className="shop-section-photo">
               <Image src={coleccion.imagen} alt={coleccion.alt} fill
                 sizes="(min-width: 1280px) 520px, (min-width: 768px) 44vw, 88vw" priority />
-              <span className="shop-mascot-mark">
+              {linea !== 'remate' && <span className="shop-mascot-mark">
                 <Image src="/oveja-logo.png" alt="" width={52} height={54} unoptimized />
-              </span>
+              </span>}
             </div>
           </div>
         </section>
         <section id="productos" className="shop-products scroll-mt-28">
           <div className="store-shell pt-10 sm:pt-14">
-            <h2 className="shop-display text-3xl sm:text-4xl">Productos de la colección</h2>
+            <h2 className="shop-display text-3xl sm:text-4xl">{linea === 'remate' ? 'Productos en remate' : 'Productos de la colección'}</h2>
           </div>
           {listado.status === 'fulfilled' ? (
             <CatalogClient productos={productos} linea={linea} ordenGrupos={config?.categoryOrder ?? []} />

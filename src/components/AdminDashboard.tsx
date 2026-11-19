@@ -20,7 +20,7 @@ const FEATURED_DEFAULT: FeaturedConfig = { productIds: [], title: 'Productos má
 const PAGE_SIZE = 24;
 
 type Vista = 'productos' | 'categorias' | 'destacados' | 'pedidos';
-type FiltroEstado = 'todos' | 'en-stock' | 'agotado' | 'ocultos';
+type FiltroEstado = 'todos' | 'en-stock' | 'agotado' | 'ocultos' | 'remate';
 const ESTADOS_PEDIDO = {
   pendiente: 'Pendientes',
   confirmado: 'Confirmados',
@@ -137,7 +137,8 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         estadoFiltro === 'todos' ||
         (estadoFiltro === 'en-stock' && p.stock > 0) ||
         (estadoFiltro === 'agotado' && p.stock <= 0) ||
-        (estadoFiltro === 'ocultos' && !p.visible);
+        (estadoFiltro === 'ocultos' && !p.visible) ||
+        (estadoFiltro === 'remate' && p.remate);
       return porCategoria && porTexto && porEstado;
     });
 
@@ -192,6 +193,14 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     return ejecutarAccion(`producto-${id}`, `/api/productos/${id}/visibility`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visible: !visible })
     }, visible ? 'Producto oculto.' : 'Producto publicado.', actualizarProducto);
+  }
+
+  function alternarRemate(producto: Producto) {
+    return ejecutarAccion(`producto-${producto.id}`, `/api/productos/${producto.id}/remate`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ remate: !producto.remate })
+    }, producto.remate ? 'Producto retirado de Remate.' : 'Producto asignado a Remate.', actualizarProducto);
   }
 
   function eliminarProducto(id: number) {
@@ -347,6 +356,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   ))}
                 </select>
                 <select
+                  aria-label="Estado del producto"
                   value={estadoFiltro}
                   onChange={(e) => setEstadoFiltro(e.target.value as FiltroEstado)}
                   className="px-3 py-2 rounded-lg border border-verde-noche/15 text-sm bg-white"
@@ -355,6 +365,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   <option value="en-stock">En stock</option>
                   <option value="agotado">Agotados</option>
                   <option value="ocultos">Ocultos</option>
+                  <option value="remate">En remate</option>
                 </select>
                 <select
                   value={orden}
@@ -419,7 +430,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                             <div className="flex items-start justify-between gap-2 mb-2">
                               <h3 className="text-sm font-medium text-verde-noche line-clamp-2 leading-tight">{p.name}</h3>
                             </div>
-                            <p className="mb-2 text-xs font-medium text-verde-oscuro">{nombreCategoria(p.category)}{!lineaProducto(p) && ' · Fuera de las colecciones'}</p>
+                            <p className="mb-2 text-xs font-medium text-verde-oscuro">{nombreCategoria(p.category)}{p.remate ? ' · En Remate' : !lineaProducto(p) ? ' · Fuera de las colecciones' : ''}</p>
                             <div className="flex items-center justify-between mb-3">
                               <span className="text-sm font-semibold text-verde">{formatoCLP.format(p.price)}</span>
                               <span className={`rounded-full px-2 py-1 text-xs font-semibold ${stockColor}`}>
@@ -454,6 +465,12 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                                 Eliminar
                               </button>
                             </div>
+                            <button type="button" onClick={() => alternarRemate(p)} disabled={!!ocupado}
+                              aria-label={`${p.remate ? 'Quitar de Remate' : 'Mover a Remate'}: ${p.name}`}
+                              className="mt-2 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-2 text-xs font-semibold text-amber-950 hover:bg-amber-100 disabled:opacity-50">
+                              <AdminIcon name="categorias" className="size-4" />
+                              {p.remate ? 'Quitar de Remate' : 'Mover a Remate'}
+                            </button>
                           </div>
                         </div>
                       );

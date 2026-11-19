@@ -67,6 +67,7 @@ async function initializeSchema() {
         ADD COLUMN IF NOT EXISTS stock INTEGER DEFAULT 0,
         ADD COLUMN IF NOT EXISTS images TEXT[] DEFAULT '{}',
         ADD COLUMN IF NOT EXISTS visible BOOLEAN DEFAULT TRUE,
+        ADD COLUMN IF NOT EXISTS remate BOOLEAN NOT NULL DEFAULT FALSE,
         ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()
     `);
     await client.query(
@@ -269,7 +270,7 @@ export async function crearPedido(items: { id: number; qty: number }[], clienteN
     const itemsDetalle: { producto_id: number; nombre: string; qty: number; precio: number }[] = [];
 
     for (const item of [...items].sort((a, b) => a.id - b.id)) {
-      const res = await client.query('SELECT id, name, category, price, stock FROM productos WHERE id = $1 AND visible IS TRUE FOR UPDATE', [item.id]);
+      const res = await client.query('SELECT id, name, category, price, stock, remate FROM productos WHERE id = $1 AND visible IS TRUE FOR UPDATE', [item.id]);
       const p = res.rows[0];
       if (!p || !lineaProducto(p)) throw new Error(`Producto ${item.id} no encontrado`);
       if (!Number.isInteger(p.price) || p.price <= 0) throw new Error('Total de compra inválido');
@@ -414,6 +415,7 @@ function formatProducto(row: Record<string, unknown>): Producto {
     category: row.category as string,
     image_url: limpiarImageUrl(row.image_url as string) || images[0] || '',
     instagram_url: (row.instagram_url as string) || '',
+    remate: row.remate === true,
     visible: row.visible !== false,
     price: (row.price as number) || 0,
     stock: (row.stock as number) || 0,
@@ -428,7 +430,7 @@ export async function getProductosPublicos(): Promise<Producto[]> {
   await ensureSchema();
   const pool = getPool();
   const result = await pool.query(
-    `SELECT id, name, description, category, image_url, instagram_url, price, stock, visible, created_at, images[1:1] AS images
+    `SELECT id, name, description, category, image_url, instagram_url, price, stock, visible, remate, created_at, images[1:1] AS images
      FROM productos WHERE visible = TRUE ORDER BY created_at DESC`
   );
   return result.rows.filter(lineaProducto).map(formatProducto);
@@ -446,7 +448,7 @@ export async function getProductoById(id: number): Promise<Producto | null> {
   await ensureSchema();
   const pool = getPool();
   const result = await pool.query(
-    `SELECT id, name, description, category, image_url, instagram_url, price, stock, visible, created_at, images[1:10] AS images
+    `SELECT id, name, description, category, image_url, instagram_url, price, stock, visible, remate, created_at, images[1:10] AS images
      FROM productos WHERE id = $1`,
     [id]
   );
@@ -501,6 +503,15 @@ export async function deleteProducto(id: number): Promise<boolean> {
   const pool = getPool();
   const result = await pool.query(`DELETE FROM productos WHERE id = $1`, [id]);
   return (result.rowCount ?? 0) > 0;
+}
+
+export async function setRemate(id: number, remate: boolean): Promise<Producto | null> {
+  await ensureSchema();
+  const result = await getPool().query(
+    'UPDATE productos SET remate = $2 WHERE id = $1 RETURNING *',
+    [id, remate]
+  );
+  return result.rows.length ? formatProducto(result.rows[0]) : null;
 }
 
 export async function setVisibilidad(id: number, visible: boolean): Promise<Producto | null> {
@@ -595,7 +606,7 @@ export async function getFeaturedProducts(productIds: number[]): Promise<Product
   await ensureSchema();
   const pool = getPool();
   const result = await pool.query(
-    `SELECT id, name, description, category, image_url, instagram_url, price, stock, visible, created_at, images[1:1] AS images
+    `SELECT id, name, description, category, image_url, instagram_url, price, stock, visible, remate, created_at, images[1:1] AS images
      FROM productos WHERE id = ANY($1) AND visible = TRUE`,
     [ids]
   );

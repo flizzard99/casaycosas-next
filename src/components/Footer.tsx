@@ -12,6 +12,7 @@ export default function Footer() {
         <nav aria-label="Enlaces del pie de página" className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
           <Link href="/matera" className="hover:underline">Matera</Link>
           <Link href="/cristiana" className="hover:underline">Cristiana</Link>
+          <Link href="/remate" className="hover:underline">Remate</Link>
           <Link href="/#contacto" className="hover:underline">Redes sociales</Link>
           <a href={tienda.whatsappUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">WhatsApp</a>
           <Link href="/admin" className="hover:underline">Administración</Link>

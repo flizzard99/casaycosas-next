@@ -6,6 +6,7 @@ export type Producto = {
   image_url: string;
   instagram_url: string;
   visible: boolean;
+  remate: boolean;
   price: number;
   stock: number;
   images: string[];
