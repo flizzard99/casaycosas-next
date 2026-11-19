@@ -21,23 +21,23 @@ export default function ProductDetailClient({ producto, relacionados = [] }: { p
 
   function comprarAhora() {
     const msg = `Hola! Quisiera reservar: ${qty}x ${producto.name} — ${formatoCLP.format(producto.price * qty)} (retiro en tienda)`;
-    window.open(`https://wa.me/${tienda.whatsappNumber}?text=${encodeURIComponent(msg)}`, '_blank');
+    window.open(`https://wa.me/${tienda.whatsappNumber}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-6 md:px-0 py-8">
+    <div className="store-shell py-7 sm:py-10">
       <Link href="/catalogo" className="text-sm text-verde hover:text-verde-oscuro mb-6 inline-block">
         ← Volver al catálogo
       </Link>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="relative h-80 md:h-[28rem] rounded-lg overflow-hidden shadow-sm">
+        <div className="relative aspect-square overflow-hidden rounded-xl border border-verde-noche/10">
           <ProductCarousel images={imagenes} alt={producto.name} />
         </div>
 
-        <div className="flex flex-col">
-          <div className="text-xs uppercase tracking-wide text-sage font-semibold">{producto.category}</div>
-          <h1 className="font-display text-3xl text-verde-oscuro mt-2">{producto.name}</h1>
+        <div className="flex flex-col md:py-6">
+          <div className="text-sm capitalize text-verde-oscuro font-semibold">{producto.category}</div>
+          <h1 className="font-display balance-text mt-2 text-3xl text-verde-noche sm:text-4xl">{producto.name}</h1>
           <p className="text-2xl font-semibold text-verde mt-3">{formatoCLP.format(producto.price)}</p>
 
           {producto.stock > 0 ? (
@@ -58,6 +58,8 @@ export default function ProductDetailClient({ producto, relacionados = [] }: { p
               <div className="flex items-center border border-verde-noche/20 rounded-md">
                 <button
                   onClick={() => setQty((q) => Math.max(1, q - 1))}
+                  disabled={qty === 1}
+                  aria-label="Reducir cantidad"
                   className="w-9 h-9 flex items-center justify-center text-lg font-medium hover:bg-crema transition-colors rounded-l-md"
                 >
                   −
@@ -66,6 +68,7 @@ export default function ProductDetailClient({ producto, relacionados = [] }: { p
                 <button
                   onClick={() => setQty((q) => Math.min(maxQty, q + 1))}
                   disabled={qty >= maxQty}
+                  aria-label="Aumentar cantidad"
                   className="w-9 h-9 flex items-center justify-center text-lg font-medium hover:bg-crema transition-colors rounded-r-md disabled:opacity-30"
                 >
                   +
@@ -100,7 +103,7 @@ export default function ProductDetailClient({ producto, relacionados = [] }: { p
                 onClick={comprarAhora}
                 className="flex-1 px-6 py-3 rounded-md bg-verde-noche text-white text-sm font-semibold uppercase tracking-wide hover:bg-verde-oscuro transition-colors"
               >
-                Comprar ahora
+                Consultar por WhatsApp
               </button>
             )}
           </div>
@@ -130,7 +133,7 @@ export default function ProductDetailClient({ producto, relacionados = [] }: { p
       {relacionados.length > 0 && (
         <div className="mt-16">
           <h2 className="font-display text-2xl text-verde-oscuro mb-6">Te puede interesar</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+          <div className="store-grid">
             {relacionados.map((p) => (
               <ProductCard key={p.id} producto={p} />
             ))}

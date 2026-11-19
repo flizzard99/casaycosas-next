@@ -23,9 +23,10 @@ export default function CategoriaClient({ productos }: { productos: Producto[] }
   const hasMore = filtrados.length > visibles.length;
 
   return (
-    <section className="px-6 md:px-14 py-10 md:py-14">
+    <section className="store-shell pb-14 pt-6 md:pb-20">
       <input
-        type="text"
+        type="search"
+          aria-label="Buscar productos"
         value={busqueda}
         onChange={(e) => { setBusqueda(e.target.value); setVisibleCount(PAGE_SIZE); }}
         placeholder="Buscar en esta categoría..."
@@ -37,7 +38,7 @@ export default function CategoriaClient({ productos }: { productos: Producto[] }
           No encontramos productos que coincidan con tu búsqueda. Prueba con otra palabra.
         </p>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-5 max-w-6xl mx-auto">
+        <div className="store-grid">
           {visibles.map((p) => (
             <ProductCard key={p.id} producto={p} />
           ))}

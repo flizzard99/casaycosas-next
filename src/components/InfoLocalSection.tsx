@@ -42,59 +42,53 @@ const ICON_COMPONENTS: Record<string, React.FC> = {
 
 export default function InfoLocalSection() {
   const redes = [
-    { nombre: 'Instagram', url: tienda.instagramUrl, color: '#E1306C' },
-    { nombre: 'WhatsApp', url: tienda.whatsappUrl, color: '#25D366' },
-    { nombre: 'Facebook', url: tienda.facebookUrl, color: '#1877F2' },
-    { nombre: 'TikTok', url: tienda.tiktokUrl, color: '#111111' }
+    { nombre: 'Instagram', url: tienda.instagramUrl },
+    { nombre: 'WhatsApp', url: tienda.whatsappUrl },
+    { nombre: 'Facebook', url: tienda.facebookUrl },
+    { nombre: 'TikTok', url: tienda.tiktokUrl }
   ];
 
   return (
-    <section id="contacto" className="pb-20 pt-6">
-      <div className="px-6 md:px-14">
-        <div className="flex flex-wrap gap-10 justify-center items-center max-w-4xl mx-auto">
-          {/* Mapa a la izquierda */}
-          <a
-            href={tienda.mapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="relative block flex-1 min-w-[240px] max-w-[360px] rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(52,78,65,0.15)] transition-transform duration-300 hover:scale-[1.05] cursor-zoom-in"
-          >
-            <Image
-              src="/direccion.png"
-              alt="Ubicación de la tienda"
-              width={360}
-              height={360}
-              className="w-full h-auto block"
-            />
-            <span className="absolute bottom-3.5 left-3.5 bg-white px-3.5 py-2 rounded text-xs font-semibold text-verde-noche shadow">
-              📍 {tienda.storeAddress}
-            </span>
-          </a>
-
-          {/* Datos + Redes a la derecha */}
-          <div className="flex-1 min-w-[280px] text-center">
-            <h3 className="font-display text-2xl text-verde-oscuro mb-2">Visítanos</h3>
-            <p className="text-verde-noche/70 mb-6 text-sm">{tienda.storeAddress}</p>
-            <div className="flex gap-2.5 flex-wrap justify-center mb-6">
-              {redes.map((r) => (
+    <section id="contacto" className="border-t border-verde-noche/10 bg-crema/30 py-10 sm:py-16">
+      <div className="store-shell grid items-center gap-6 md:grid-cols-2 md:gap-12">
+        <div>
+          <h2 className="font-display text-3xl text-verde-noche">Visítanos en Panguipulli</h2>
+          <address className="mt-3 not-italic text-verde-noche/80">{tienda.storeAddress}</address>
+          <div className="mt-5 flex flex-wrap gap-2">
+            {redes.map(({ nombre, url }) => {
+              const Icon = ICON_COMPONENTS[nombre];
+              return (
                 <a
-                  key={r.nombre}
-                  href={r.url}
+                  key={nombre}
+                  href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-white px-5 py-3 rounded-full text-sm font-semibold transition-transform hover:-translate-y-0.5 hover:opacity-90"
-                  style={{ backgroundColor: r.color }}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-verde-noche/20 bg-white px-3 text-sm font-semibold hover:bg-crema"
                 >
-                  {(() => {
-                    const Icon = ICON_COMPONENTS[r.nombre];
-                    return Icon ? <Icon /> : null;
-                  })()}
-                  {r.nombre}
+                  <span aria-hidden="true"><Icon /></span>
+                  {nombre}
                 </a>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </div>
+        <a
+          href={tienda.mapsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="relative block aspect-[2/1] overflow-hidden rounded-xl border border-verde-noche/15"
+        >
+          <Image
+            src="/direccion.png"
+            alt=""
+            fill
+            sizes="(min-width: 1280px) 570px, (min-width: 768px) 50vw, 100vw"
+            className="object-cover"
+          />
+          <span className="absolute bottom-3 left-3 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-verde-noche shadow">
+            Cómo llegar
+          </span>
+        </a>
       </div>
     </section>
   );

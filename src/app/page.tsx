@@ -4,7 +4,6 @@ import FeaturedGrid from '@/components/FeaturedGrid';
 import InfoLocalSection from '@/components/InfoLocalSection';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
-import FloatWhatsApp from '@/components/FloatWhatsApp';
 import { getFeaturedProducts, getConfig, getProductosPublicos } from '@/lib/db';
 
 export const revalidate = 60;
@@ -32,21 +31,13 @@ export default async function HomePage() {
   return (
     <>
       <Header categorias={categorias} />
-      <Hero />
-      <div
-        style={{
-          backgroundImage: 'url(/patron-seamless.png)',
-          backgroundSize: 'cover',
-          backgroundRepeat: 'no-repeat',
-          backgroundPosition: 'center'
-        }}
-      >
+      <main id="contenido" tabIndex={-1}>
+        <Hero />
         <FeaturedGrid productos={featured} titulo={featuredTitle} />
         <InfoLocalSection />
-      </div>
+      </main>
       <Footer />
       <CartDrawer />
-      <FloatWhatsApp />
     </>
   );
 }

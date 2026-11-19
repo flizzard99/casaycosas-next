@@ -1,12 +1,20 @@
 import type { Metadata, Viewport } from 'next';
-import { Anton, Work_Sans } from 'next/font/google';
+import localFont from 'next/font/local';
 import { CartProvider } from '@/context/CartContext';
 import { Analytics } from '@vercel/analytics/react';
 import { tienda } from '@/lib/config';
 import './globals.css';
 
-const anton = Anton({ subsets: ['latin'], weight: '400', variable: '--font-anton' });
-const workSans = Work_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-worksans' });
+const anton = localFont({
+  src: './fonts/anton-latin-400-normal.woff2',
+  weight: '400',
+  variable: '--font-anton'
+});
+const workSans = localFont({
+  src: './fonts/work-sans-latin-wght-normal.woff2',
+  weight: '100 900',
+  variable: '--font-worksans'
+});
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://casaycosas-next.vercel.app';
 

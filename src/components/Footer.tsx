@@ -1,15 +1,21 @@
 import Link from 'next/link';
+import { tienda } from '@/lib/config';
 
 export default function Footer() {
   return (
-    <footer className="bg-verde-noche text-crema py-10 px-6 text-center">
-      <div className="font-display text-base tracking-wide text-white">
-        TIENDA CASA Y COSAS, PANGUIPULLI
-        <Link href="/admin" aria-label="Acceso administrador" className="text-[10px] align-super opacity-20 hover:opacity-100 transition-opacity no-underline">
-          ®
-        </Link>
+    <footer className="bg-verde-noche py-7 text-crema">
+      <div className="store-shell flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="font-display text-lg text-white">Casa y Cosas</p>
+          <p className="mt-1 text-sm">Panguipulli, Región de Los Ríos</p>
+        </div>
+        <nav aria-label="Enlaces del pie de página" className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+          <Link href="/catalogo" className="hover:underline">Catálogo</Link>
+          <Link href="/#contacto" className="hover:underline">Visítanos</Link>
+          <a href={tienda.whatsappUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">WhatsApp</a>
+          <Link href="/admin" className="hover:underline">Administración</Link>
+        </nav>
       </div>
-      <div className="mt-2 text-xs text-[#B9C4B4] italic">Desarrollado por Jerson Hernández</div>
     </footer>
   );
 }

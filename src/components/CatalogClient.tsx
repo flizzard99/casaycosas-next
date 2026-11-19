@@ -67,10 +67,11 @@ export default function CatalogClient({ productosIniciales, categoryOrder }: Pro
   const hasMore = filtrados.length > totalVisible;
 
   return (
-    <section id="catalogo" className="px-6 md:px-14 py-14 md:py-20">
+    <section id="catalogo" className="store-shell pb-14 pt-6 md:pb-20">
       <div className="flex flex-col md:flex-row md:items-center gap-4 mb-8">
         <input
-          type="text"
+          type="search"
+          aria-label="Buscar productos"
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
           placeholder="Buscar productos..."
@@ -79,7 +80,8 @@ export default function CatalogClient({ productosIniciales, categoryOrder }: Pro
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setCategoriaActiva(null)}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${
+            aria-pressed={categoriaActiva === null}
+            className={`min-h-9 px-3 py-1.5 rounded-full text-xs font-semibold border ${
               categoriaActiva === null ? 'bg-verde-oscuro text-white border-verde-oscuro' : 'border-verde-oscuro/30 text-verde-oscuro'
             }`}
           >
@@ -89,7 +91,8 @@ export default function CatalogClient({ productosIniciales, categoryOrder }: Pro
             <button
               key={cat}
               onClick={() => setCategoriaActiva(cat)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold border capitalize ${
+              aria-pressed={categoriaActiva === cat}
+              className={`min-h-9 px-3 py-1.5 rounded-full text-xs font-semibold border capitalize ${
                 categoriaActiva === cat ? 'bg-verde-oscuro text-white border-verde-oscuro' : 'border-verde-oscuro/30 text-verde-oscuro'
               }`}
             >
@@ -101,8 +104,7 @@ export default function CatalogClient({ productosIniciales, categoryOrder }: Pro
 
       {grupos.length === 0 && (
         <p className="text-sm text-verde-oscuro/70">
-          No encontramos productos que coincidan con tu búsqueda. Prueba con otra palabra o revisa el
-          catálogo completo en WhatsApp.
+          {productosIniciales.length ? 'No encontramos productos con esos filtros.' : 'Aún no hay productos en el catálogo.'}
         </p>
       )}
 
@@ -110,7 +112,7 @@ export default function CatalogClient({ productosIniciales, categoryOrder }: Pro
         {visibleGroups.map(([categoria, items]) => (
           <div key={categoria}>
             <h2 className="font-display text-2xl text-verde-oscuro mb-6 capitalize">{categoria}</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-5 max-w-6xl mx-auto">
+            <div className="store-grid">
               {items.map((p) => (
                 <ProductCard key={p.id} producto={p} />
               ))}

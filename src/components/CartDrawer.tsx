@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useCart } from '@/context/CartContext';
 
 const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
@@ -16,40 +16,14 @@ export default function CartDrawer() {
   const [bloqueado, setBloqueado] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
-  const drawerRef = useRef<HTMLDivElement>(null);
-  const closeBtnRef = useRef<HTMLButtonElement>(null);
-
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      close();
-      return;
-    }
-    if (e.key !== 'Tab' || !drawerRef.current) return;
-    const focusable = drawerRef.current.querySelectorAll<HTMLElement>(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    );
-    if (!focusable.length) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  }, [close]);
+  const drawerRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
-    if (!isOpen) return;
-    document.body.style.overflow = 'hidden';
-    closeBtnRef.current?.focus();
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.body.style.overflow = '';
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, handleKeyDown]);
+    const drawer = drawerRef.current;
+    if (!drawer) return;
+    if (isOpen && !drawer.open) drawer.showModal();
+    if (!isOpen && drawer.open) drawer.close();
+  }, [isOpen]);
 
   function validarEmail(valor: string): boolean {
     if (!valor.trim()) return true;
@@ -96,22 +70,17 @@ export default function CartDrawer() {
   }
 
   return (
-    <div className={`fixed inset-0 z-50 flex justify-end transition-opacity duration-300 ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
-      <div
-        className={`absolute inset-0 bg-black/40 cursor-pointer transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}
-        onClick={close}
-        aria-hidden="true"
-      />
-      <div
-        ref={drawerRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Carrito de compras"
-        className={`relative w-full max-w-sm bg-white h-full flex flex-col shadow-xl transition-transform duration-300 ease-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
-      >
+    <dialog
+      ref={drawerRef}
+      onClose={() => { if (!drawerRef.current?.open) close(); }}
+      onClick={(event) => { if (event.target === event.currentTarget) close(); }}
+      aria-labelledby="cart-title"
+      className="cart-dialog fixed inset-y-0 left-auto right-0 m-0 h-dvh max-h-none w-full max-w-md bg-white text-verde-noche shadow-xl"
+    >
+      <div className="flex h-full flex-col overflow-y-auto">
         <div className="flex items-center justify-between px-5 py-4 border-b border-verde-noche/10">
-          <h2 className="font-display text-lg text-verde-noche">Tu carrito</h2>
-          <button ref={closeBtnRef} onClick={close} aria-label="Cerrar carrito" className="text-verde-noche/60 hover:text-verde-noche text-xl leading-none">
+          <h2 id="cart-title" className="font-display text-xl text-verde-noche">Tu carrito</h2>
+          <button autoFocus onClick={close} aria-label="Cerrar carrito" className="grid size-11 place-items-center rounded-lg text-2xl hover:bg-crema/50">
             ×
           </button>
         </div>
@@ -120,7 +89,7 @@ export default function CartDrawer() {
           {items.length === 0 && (
             <div className="text-center py-10">
               <p className="text-sm text-verde-noche/60 mb-3">Tu carrito está vacío.</p>
-              <Link href="/catalogo" className="text-sm text-verde hover:text-verde-oscuro font-medium">
+              <Link href="/catalogo" onClick={close} className="text-sm text-verde hover:text-verde-oscuro font-medium">
                 Explora nuestro catálogo →
               </Link>
             </div>
@@ -130,9 +99,9 @@ export default function CartDrawer() {
             const atMax = item.qty >= maxStock;
             return (
               <div key={item.id} className="flex gap-3 items-center">
-                <div className="w-14 h-14 rounded bg-crema flex-shrink-0 overflow-hidden relative">
+                <div className={`relative size-14 shrink-0 overflow-hidden rounded bg-crema/40 ${item.image_url ? 'product-watermark' : ''}`}>
                   {item.image_url && (
-                    <Image src={item.image_url} alt={item.name} fill className="object-cover" sizes="56px" />
+                    <Image src={item.image_url} alt="" fill className="object-cover" sizes="56px" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -142,7 +111,7 @@ export default function CartDrawer() {
                     <button
                       onClick={() => updateQty(item.id, item.qty - 1)}
                       aria-label={`Reducir ${item.name}`}
-                      className="w-6 h-6 rounded border border-verde-noche/20 text-sm"
+                      className="w-9 h-9 rounded border border-verde-noche/20 text-sm"
                     >
                       −
                     </button>
@@ -151,7 +120,7 @@ export default function CartDrawer() {
                       onClick={() => updateQty(item.id, item.qty + 1)}
                       disabled={atMax}
                       aria-label={`Aumentar ${item.name}`}
-                      className="w-6 h-6 rounded border border-verde-noche/20 text-sm disabled:opacity-30"
+                      className="w-9 h-9 rounded border border-verde-noche/20 text-sm disabled:opacity-30"
                     >
                       +
                     </button>
@@ -179,6 +148,8 @@ export default function CartDrawer() {
             <>
               <input
                 type="text"
+                aria-label="Tu nombre (opcional)"
+                autoComplete="name"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
                 placeholder="Tu nombre (opcional)"
@@ -187,13 +158,17 @@ export default function CartDrawer() {
               />
               <input
                 type="email"
+                aria-label="Tu correo para seguimiento (opcional)"
+                autoComplete="email"
+                aria-invalid={!!emailError}
+                aria-describedby={emailError ? 'cart-email-error' : undefined}
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setEmailError(''); }}
                 placeholder="Tu email (opcional, para seguimiento)"
                 className="w-full mb-1 px-3 py-2 rounded-md border border-verde-noche/20 bg-crema/30 text-sm focus:outline-none focus:ring-2 focus:ring-verde"
                 maxLength={200}
               />
-              {emailError && <p className="text-xs text-red-600 mb-1">{emailError}</p>}
+              {emailError && <p id="cart-email-error" role="alert" className="text-xs text-red-600 mb-1">{emailError}</p>}
               <p className="text-[11px] text-verde-noche/40 mb-3 leading-relaxed">
                 Reservaremos el stock 48h. Recibirás un enlace para seguir tu pedido. WhatsApp queda opcional.
               </p>
@@ -201,13 +176,13 @@ export default function CartDrawer() {
           )}
 
           {error && (
-            <p className="text-xs text-red-600 mb-2 leading-relaxed">{error}</p>
+            <p role="alert" className="text-xs text-red-600 mb-2 leading-relaxed">{error}</p>
           )}
 
           <button
             onClick={reservarPedido}
             disabled={!items.length || bloqueado}
-            className="w-full bg-verde text-white text-sm font-semibold py-3 rounded-md hover:bg-verde-oscuro disabled:bg-gray-300 disabled:cursor-not-allowed"
+            className="w-full bg-verde-oscuro text-white text-sm font-semibold py-3 rounded-md hover:bg-verde-noche disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
             {bloqueado ? 'Reservando…' : 'Reservar pedido'}
           </button>
@@ -219,6 +194,6 @@ export default function CartDrawer() {
           )}
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }

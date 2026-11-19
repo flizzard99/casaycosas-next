@@ -26,62 +26,81 @@ function getPool(): Pool {
   return globalForPg.pgPool;
 }
 
-let schemaReady = false;
+let schemaInitialization: Promise<void> | undefined;
 
 /**
  * Crea las tablas si no existen y agrega columnas nuevas de forma segura.
  * Es exactamente compatible con la tabla "productos" que ya usa tu sitio actual,
  * así que no se pierde ningún dato existente.
  */
-export async function ensureSchema() {
-  if (schemaReady) return;
-  const pool = getPool();
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS productos (
-      id SERIAL PRIMARY KEY,
-      name TEXT NOT NULL,
-      description TEXT DEFAULT '',
-      category TEXT NOT NULL,
-      image_url TEXT DEFAULT '',
-      instagram_url TEXT DEFAULT '',
-      visible BOOLEAN DEFAULT TRUE,
-      price INTEGER DEFAULT 0,
-      stock INTEGER DEFAULT 0,
-      created_at TIMESTAMP DEFAULT NOW()
-    )
-  `);
-  await Promise.all([
-    pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS price INTEGER DEFAULT 0`),
-    pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS stock INTEGER DEFAULT 0`),
-    pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS images TEXT[] DEFAULT '{}'`),
-    pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS visible BOOLEAN DEFAULT TRUE`),
-    pool.query(`ALTER TABLE productos ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`)
-  ]);
-  await pool.query(
-    `CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value JSONB DEFAULT '{}'::jsonb)`
-  );
-  await pool.query(`
-    CREATE OR REPLACE FUNCTION update_updated_at()
-    RETURNS TRIGGER AS $$
-    BEGIN
-      NEW.updated_at = NOW();
-      RETURN NEW;
-    END;
-    $$ LANGUAGE plpgsql
-  `);
-  await pool.query(`
-    DO $$ BEGIN
-      IF NOT EXISTS (
-        SELECT 1 FROM pg_trigger WHERE tgname = 'set_updated_at'
-      ) THEN
-        CREATE TRIGGER set_updated_at
-          BEFORE UPDATE ON productos
-          FOR EACH ROW
-          EXECUTE FUNCTION update_updated_at();
-      END IF;
-    END $$
-  `);
-  schemaReady = true;
+export function ensureSchema() {
+  schemaInitialization ??= initializeSchema().catch((error) => {
+    schemaInitialization = undefined;
+    throw error;
+  });
+  return schemaInitialization;
+}
+
+async function initializeSchema() {
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock(440811, 1)');
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS productos (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT DEFAULT '',
+        category TEXT NOT NULL,
+        image_url TEXT DEFAULT '',
+        instagram_url TEXT DEFAULT '',
+        visible BOOLEAN DEFAULT TRUE,
+        price INTEGER DEFAULT 0,
+        stock INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      ALTER TABLE productos
+        ADD COLUMN IF NOT EXISTS price INTEGER DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS stock INTEGER DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS images TEXT[] DEFAULT '{}',
+        ADD COLUMN IF NOT EXISTS visible BOOLEAN DEFAULT TRUE,
+        ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()
+    `);
+    await client.query(
+      `CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value JSONB DEFAULT '{}'::jsonb)`
+    );
+    await client.query(`
+      CREATE OR REPLACE FUNCTION update_updated_at()
+      RETURNS TRIGGER
+      SET search_path = pg_catalog
+      AS $$
+      BEGIN
+        NEW.updated_at = NOW();
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql
+    `);
+    await client.query(`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_trigger WHERE tgname = 'set_updated_at' AND tgrelid = 'productos'::regclass
+        ) THEN
+          CREATE TRIGGER set_updated_at
+            BEFORE UPDATE ON productos
+            FOR EACH ROW
+            EXECUTE FUNCTION update_updated_at();
+        END IF;
+      END $$
+    `);
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export type Pedido = {

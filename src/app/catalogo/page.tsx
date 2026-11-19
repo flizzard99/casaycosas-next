@@ -3,7 +3,6 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
-import FloatWhatsApp from '@/components/FloatWhatsApp';
 import CatalogClient from '@/components/CatalogClient';
 import { getProductosPublicos, getConfig } from '@/lib/db';
 
@@ -17,34 +16,30 @@ export const metadata: Metadata = {
 export default async function CatalogoPage() {
   let productos: Awaited<ReturnType<typeof getProductosPublicos>> = [];
   let categoryOrder: string[] = [];
-  try {
-    const [p, config] = await Promise.all([getProductosPublicos(), getConfig()]);
-    productos = p;
-    categoryOrder = config.categoryOrder;
-  } catch {
-    // Sin DB disponible
-  }
+  const [resultado, config] = await Promise.allSettled([getProductosPublicos(), getConfig()]);
+  if (resultado.status === 'fulfilled') productos = resultado.value;
+  if (config.status === 'fulfilled') categoryOrder = config.value.categoryOrder;
 
   const categorias = Array.from(new Set(productos.map((p) => p.category)));
 
   return (
     <>
       <Header categorias={categorias} />
-      <main className="min-h-[60vh] bg-crema/30">
-        <div className="px-6 md:px-14 pt-14 md:pt-20 pb-0">
+      <main id="contenido" tabIndex={-1} className="min-h-[60vh] bg-crema/30">
+        <div className="store-shell pt-10 md:pt-14">
           <Link href="/" className="text-sm text-verde hover:text-verde-oscuro mb-4 inline-block">
             ← Volver al inicio
           </Link>
           <h1 className="font-display text-3xl md:text-4xl text-verde-oscuro mb-2">Todos los productos</h1>
-          <p className="text-sm text-verde-noche/70 mb-2">
-            Explora nuestro catálogo completo, filtrado por categoría.
-          </p>
         </div>
-        <CatalogClient productosIniciales={productos} categoryOrder={categoryOrder} />
+        {resultado.status === 'fulfilled' ? (
+          <CatalogClient productosIniciales={productos} categoryOrder={categoryOrder} />
+        ) : (
+          <p className="store-shell py-6" role="status">El catálogo está temporalmente fuera de servicio. Vuelve a intentarlo en unos minutos.</p>
+        )}
       </main>
       <Footer />
       <CartDrawer />
-      <FloatWhatsApp />
     </>
   );
 }

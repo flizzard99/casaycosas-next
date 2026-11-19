@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { estilosEncuadre, parsearEncuadre } from '@/lib/encuadre';
 import { useState, useRef, useCallback } from 'react';
 
 export default function ProductCarousel({ images, alt }: { images: string[]; alt: string }) {
@@ -40,9 +41,11 @@ export default function ProductCarousel({ images, alt }: { images: string[]; alt
     );
   }
 
+  const { url, encuadre } = parsearEncuadre(images[indice]);
+
   return (
     <div
-      className="relative w-full h-full bg-crema"
+      className="product-watermark relative h-full w-full overflow-hidden bg-crema/40"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onKeyDown={handleKeyDown}
@@ -52,12 +55,13 @@ export default function ProductCarousel({ images, alt }: { images: string[]; alt
       aria-roledescription="carrusel"
     >
       <Image
-        src={images[indice]}
+        src={url}
         alt={`${alt} — foto ${indice + 1}`}
         fill
-        className="object-contain"
-        sizes="(max-width: 768px) 100vw, 50vw"
-        priority
+        style={estilosEncuadre(encuadre)}
+        sizes="(min-width: 1024px) 500px, (min-width: 768px) 50vw, 100vw"
+        loading="eager"
+        fetchPriority={indice === 0 ? 'high' : undefined}
       />
 
       {total > 1 && (
@@ -65,28 +69,19 @@ export default function ProductCarousel({ images, alt }: { images: string[]; alt
           <button
             onClick={anterior}
             aria-label="Foto anterior"
-            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-verde-noche w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold"
+            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-verde-noche w-11 h-11 rounded-full flex items-center justify-center text-sm font-semibold"
           >
             ‹
           </button>
           <button
             onClick={siguiente}
             aria-label="Foto siguiente"
-            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-verde-noche w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold"
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-verde-noche w-11 h-11 rounded-full flex items-center justify-center text-sm font-semibold"
           >
             ›
           </button>
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-            {images.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setIndice(i)}
-                aria-label={`Ir a la foto ${i + 1}`}
-                className={`w-2 h-2 rounded-full transition-colors ${
-                  i === indice ? 'bg-verde-oscuro' : 'bg-white/60'
-                }`}
-              />
-            ))}
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-verde-noche/90 px-3 py-1 text-xs text-white" aria-live="polite">
+            {indice + 1} / {total}
           </div>
         </>
       )}

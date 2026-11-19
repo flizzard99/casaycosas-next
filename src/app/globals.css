@@ -7,7 +7,7 @@ html {
 }
 
 body {
-  background-color: #DAD7CD;
+  background-color: #faf9f5;
 }
 
 ::-webkit-scrollbar {
@@ -18,10 +18,85 @@ body {
   border-radius: 8px;
 }
 ::-webkit-scrollbar-track {
-  background-color: #DAD7CD;
+  background-color: #faf9f5;
 }
 
 :focus-visible {
   outline: 2px solid #588157;
   outline-offset: 2px;
+}
+
+.store-shell {
+  width: min(100% - 2.5rem, 75rem);
+  margin-inline: auto;
+}
+
+.store-hero .store-shell {
+  width: min(100%, 75rem);
+}
+
+.store-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 80% 40%, #588157 0, transparent 68%);
+}
+
+@media (min-width: 48rem) {
+  .store-hero::after {
+    content: '';
+    position: absolute;
+    inset: 8% 0 8% 55%;
+    z-index: -1;
+    pointer-events: none;
+    background: url('/oveja-logo.png') center / min(65%, 17rem) auto no-repeat;
+    opacity: 0.20;
+  }
+}
+
+.balance-text {
+  text-wrap: balance;
+}
+
+.store-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(0.625rem, 2vw, 1.25rem);
+}
+
+@media (min-width: 40rem) {
+  .store-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: 64rem) {
+  .store-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+.product-watermark::after {
+  content: '';
+  position: absolute;
+  inset: auto 5% 5% auto;
+  width: clamp(1.75rem, 19%, 5rem);
+  aspect-ratio: 1;
+  pointer-events: none;
+  background: url('/oveja-logo.png') center / contain no-repeat;
+  opacity: 0.72;
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 55%));
+}
+
+.cart-dialog::backdrop {
+  background: rgb(23 39 30 / 55%);
+}
+
+html:has(.cart-dialog[open]) {
+  overscroll-behavior: contain;
+}
+
+#contacto, #contenido {
+  scroll-margin-top: 5.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
 }

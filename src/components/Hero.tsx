@@ -1,47 +1,24 @@
-import Image from 'next/image';
 import Link from 'next/link';
 
 export default function Hero() {
   return (
-    <section
-      className="text-white text-center px-6 md:px-14 py-14 md:py-16 relative overflow-hidden"
-      style={{ backgroundColor: '#766153' }}
-    >
-      <div className="absolute inset-0 opacity-10 pointer-events-none">
-        <div className="absolute -top-10 -left-10 w-60 h-60 rounded-full bg-sage blur-3xl" />
-        <div className="absolute -bottom-16 -right-10 w-72 h-72 rounded-full bg-verde-oscuro blur-3xl" />
-      </div>
-      <div
-        className="absolute inset-0 flex items-center justify-center pointer-events-none"
-        style={{ opacity: 0.18 }}
-      >
-        <Image
-          src="/ovejafondo.png"
-          alt=""
-          aria-hidden="true"
-          fill
-          priority
-          className="object-contain"
-          sizes="90vw"
-        />
-      </div>
-      <div className="relative">
-        <div className="text-xs md:text-sm tracking-[0.2em] uppercase text-white/90 mb-4">
-          Tienda en Panguipulli
+    <section className="store-hero relative isolate overflow-hidden bg-verde-noche px-5 text-white">
+      <div className="store-shell relative py-16 sm:py-24 lg:py-28">
+        <div className="max-w-xl">
+          <p className="mb-4 text-sm font-semibold text-crema">Panguipulli, Región de Los Ríos</p>
+          <h1 className="balance-text font-display text-4xl leading-tight sm:text-5xl lg:text-6xl">
+            Detalles especiales para tu hogar
+          </h1>
+          <p className="mt-5 max-w-md text-base leading-relaxed text-white/90">
+            Hogar, mate, artesanías y perfumes. Elige tus favoritos y retira tu pedido en tienda.
+          </p>
+          <Link
+            href="/catalogo"
+            className="mt-7 inline-flex min-h-12 items-center rounded-lg bg-crema px-6 font-semibold text-verde-noche hover:bg-white"
+          >
+            Explorar catálogo <span aria-hidden="true" className="ml-3">→</span>
+          </Link>
         </div>
-        <h1 className="font-display text-4xl md:text-6xl leading-tight max-w-4xl mx-auto text-white">
-          Detalles especiales para Ti y para tu Hogar
-        </h1>
-        <p className="max-w-lg mx-auto mt-6 text-sm md:text-base text-white leading-relaxed">
-          Un catálogo armado para recorrer con calma. Agrega tus artículos al carrito, selecciona el
-          canal de comunicación y coordinamos tu pedido.
-        </p>
-        <Link
-          href="/catalogo"
-          className="inline-block mt-8 px-8 py-3 rounded-md bg-white text-verde-noche text-sm font-semibold uppercase tracking-wide hover:bg-crema transition-colors"
-        >
-          Ver catálogo
-        </Link>
       </div>
     </section>
   );

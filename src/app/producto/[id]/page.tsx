@@ -5,7 +5,6 @@ import dynamic from 'next/dynamic';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
-import FloatWhatsApp from '@/components/FloatWhatsApp';
 import { getProductoById, getProductosPublicos } from '@/lib/db';
 
 const ProductDetailClient = dynamic(() => import('@/components/ProductDetailClient'), { ssr: false });
@@ -76,12 +75,11 @@ export default async function ProductoPage({ params }: { params: { id: string } 
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
       />
       <Header categorias={categorias} />
-      <main className="min-h-[60vh] bg-crema/40">
+      <main id="contenido" tabIndex={-1} className="min-h-[60vh] bg-crema/40">
         <ProductDetailClient producto={producto} relacionados={relacionados} />
       </main>
       <Footer />
       <CartDrawer />
-      <FloatWhatsApp />
     </>
   );
 }
