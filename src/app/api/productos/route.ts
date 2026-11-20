@@ -1,6 +1,7 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+import { validarInventario } from '@/lib/validarInventario';
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { getProductosPublicos, getProductosAdmin, createProducto } from '@/lib/db';
@@ -15,8 +16,8 @@ function isAdminRequest(req: NextRequest) {
 
 function validarProducto(body: Record<string, unknown>): string[] {
   const errores: string[] = [];
-  if (!body.name || !(body.name as string).trim()) errores.push('El nombre es obligatorio');
-  if (!body.category || !(body.category as string).trim()) errores.push('La categoría es obligatoria');
+  if (typeof body.name !== 'string' || !body.name.trim()) errores.push('El nombre es obligatorio');
+  if (typeof body.category !== 'string' || !body.category.trim()) errores.push('La categoría es obligatoria');
   if (body.name && (body.name as string).length > 200) errores.push('El nombre no puede superar 200 caracteres');
   if (body.description && (body.description as string).length > 2000) errores.push('La descripción no puede superar 2000 caracteres');
   return errores;
@@ -42,7 +43,10 @@ export async function POST(req: NextRequest) {
   }
   try {
     const body = await req.json();
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: 'Producto inválido' }, { status: 400 });
     const errores = validarProducto(body);
+    const errorInventario = validarInventario(body);
+    if (errorInventario) errores.push(errorInventario);
     if (errores.length) return NextResponse.json({ error: errores.join('. ') }, { status: 400 });
 
     const producto = await createProducto(body);

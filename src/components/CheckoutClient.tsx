@@ -2,7 +2,7 @@
 
 import { useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { useCart } from '@/context/CartContext';
+import { claveCarrito, useCart } from '@/context/CartContext';
 
 const clp = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' });
 const campos = [
@@ -25,7 +25,7 @@ export default function CheckoutClient() {
     event.preventDefault();
     if (procesando || !items.length || total < 1 || seguimiento) return;
     const datos = Object.fromEntries(new FormData(event.currentTarget));
-    const productos = items.map(({ id, qty }) => ({ id, qty }));
+    const productos = items.map(({ id, qty, varianteId }) => ({ id, qty, varianteId }));
     const clave = JSON.stringify({ datos, productos, total });
     const referencia = intento.current?.clave === clave ? intento.current.referencia : crypto.randomUUID();
     intento.current = { clave, referencia };
@@ -79,10 +79,10 @@ export default function CheckoutClient() {
         <h2 id="resumen-compra" className="font-semibold">Resumen de tu compra</h2>
         <ul className="my-4 space-y-2 text-sm">
           {items.map((item) => (
-            <li key={item.id} className="flex justify-between gap-3">
+            <li key={claveCarrito(item)} className="flex justify-between gap-3">
               <div>
                 <span>{item.qty} × {item.name}</span>
-                <button type="button" onClick={() => removeItem(item.id)} disabled={procesando || !!seguimiento}
+                <button type="button" onClick={() => removeItem(item.id, item.varianteId)} disabled={procesando || !!seguimiento}
                   aria-label={`Quitar ${item.name} del carrito`} className="shop-muted mt-1 block min-h-8 text-xs underline disabled:opacity-50">
                   Quitar
                 </button>

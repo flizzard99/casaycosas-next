@@ -9,13 +9,14 @@ export type CartItem = {
   image_url: string;
   qty: number;
   stock?: number;
+  varianteId?: string;
 };
 
 type CartContextType = {
   items: CartItem[];
   addItem: (item: Omit<CartItem, 'qty'>, qty?: number) => void;
-  removeItem: (id: number) => void;
-  updateQty: (id: number, qty: number) => void;
+  removeItem: (id: number, varianteId?: string) => void;
+  updateQty: (id: number, qty: number, varianteId?: string) => void;
   clear: () => void;
   total: number;
   count: number;
@@ -24,6 +25,8 @@ type CartContextType = {
   open: () => void;
   close: () => void;
 };
+
+export const claveCarrito = (item: Pick<CartItem, 'id' | 'varianteId'>) => `${item.id}:${item.varianteId ?? ''}`;
 
 const CartContext = createContext<CartContextType | null>(null);
 const STORAGE_KEY = 'casaycosas_cart';
@@ -54,25 +57,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   function addItem(item: Omit<CartItem, 'qty'>, qty = 1) {
     setItems((prev) => {
-      const existente = prev.find((p) => p.id === item.id);
+      const clave = claveCarrito(item);
+      const existente = prev.find((p) => claveCarrito(p) === clave);
       const maxStock = item.stock ?? Infinity;
       if (existente) {
         const newQty = Math.min(existente.qty + qty, maxStock);
-        return prev.map((p) => (p.id === item.id ? { ...p, qty: newQty } : p));
+        return prev.map((p) => (claveCarrito(p) === clave ? { ...p, ...item, qty: newQty } : p));
       }
       return [...prev, { ...item, qty: Math.min(qty, maxStock) }];
     });
   }
 
-  function removeItem(id: number) {
-    setItems((prev) => prev.filter((p) => p.id !== id));
+  function removeItem(id: number, varianteId?: string) {
+    setItems((prev) => prev.filter((p) => claveCarrito(p) !== claveCarrito({ id, varianteId })));
   }
 
-  function updateQty(id: number, qty: number) {
-    if (qty <= 0) return removeItem(id);
+  function updateQty(id: number, qty: number, varianteId?: string) {
+    if (qty <= 0) return removeItem(id, varianteId);
     setItems((prev) =>
       prev.map((p) => {
-        if (p.id !== id) return p;
+        if (claveCarrito(p) !== claveCarrito({ id, varianteId })) return p;
         const maxStock = p.stock ?? Infinity;
         return { ...p, qty: Math.min(qty, maxStock) };
       })

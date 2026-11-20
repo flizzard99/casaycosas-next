@@ -47,7 +47,7 @@ export default function PedidoEstadoClient({ pedidoInicial, referencia }: Props)
     try {
       const pendiente = JSON.parse(sessionStorage.getItem('cyc-pago') || 'null');
       if (pendiente?.referencia !== referencia) return;
-      const actual = items.map(({ id, qty }) => ({ id, qty }));
+      const actual = items.map(({ id, qty, varianteId }) => ({ id, qty, varianteId }));
       if (JSON.stringify(actual) === JSON.stringify(pendiente.productos)) clear();
       sessionStorage.removeItem('cyc-pago');
     } catch {

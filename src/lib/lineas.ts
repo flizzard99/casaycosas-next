@@ -8,7 +8,7 @@ export const LINEAS = {
     descripcion: 'Yerbas, mates, bombillas y accesorios para preparar y compartir un buen mate.',
     imagen: '/matera-algarrobo.webp',
     alt: 'Mate de algarrobo con bombilla',
-    grupos: ['Yerbas', 'Mates', 'Bombillas', 'Accesorios'],
+    grupos: ['Yerbas Mate', 'Mates', 'Decant', 'Accesorios'],
   },
   cristiana: {
     nombre: 'Cristiana',
@@ -17,7 +17,7 @@ export const LINEAS = {
     descripcion: 'Biblias, papelería y detalles cristianos para leer, escribir y regalar.',
     imagen: '/cristiana-biblia.webp',
     alt: 'Biblia con una oveja en la portada',
-    grupos: ['Biblias', 'Papelería', 'Regalos y Lecturas'],
+    grupos: ['Biblias', 'Biblias Personalizadas', 'Restauraciones', 'Papelería y Accesorios'],
   },
   remate: {
     nombre: 'Remate',
@@ -26,7 +26,7 @@ export const LINEAS = {
     descripcion: 'Últimas unidades y productos seleccionados del inventario, hasta agotar stock.',
     imagen: '/oveja-portada.webp',
     alt: '',
-    grupos: [],
+    grupos: ['Artículos Oficina', 'Artesanías', 'Belleza', 'Hogar', 'Juguetería', 'Perfumería'],
   },
 } as const;
 
@@ -44,30 +44,48 @@ const categorias = {
 
 const papeleria = /\b(cuaderno|cuadernos|libreta|libretas|lapiz|lapices|boligrafo|marcador|marcadores|destacador|destacadores|separador|separadores|senaladores|notas|notitas|goma|clip|clips|tijera|pizarra|planificador|corcheteras|sticker|estuche|kit oficina|lapicero|cinta adhesiva)\b/;
 
+export function categoriaDefinida(categoria: string) {
+  const buscada = normalizarBusqueda(categoria);
+  for (const linea of ['matera', 'cristiana', 'remate'] as const) {
+    const grupo = LINEAS[linea].grupos.find((opcion) => normalizarBusqueda(opcion) === buscada);
+    if (grupo) return { linea, grupo };
+  }
+  return null;
+}
+
 export function lineaProducto(producto: ProductoDeLinea): Linea | null {
   if (producto.remate) return 'remate';
+  const definida = categoriaDefinida(producto.category);
+  if (definida && definida.linea !== 'remate') return definida.linea;
   const categoria = normalizarBusqueda(producto.category);
   if (categorias.matera.includes(categoria)) return 'matera';
   if (categorias.cristiana.includes(categoria)) return 'cristiana';
   if (categoria !== 'hogar') return null;
 
   const nombre = normalizarBusqueda(producto.name);
-  if (/\b(yerba|yerbero|matero|bombilla)\b/.test(nombre)) return 'matera';
-  if (/\b(biblia|biblico|himnario|pan de vida)\b/.test(nombre) || papeleria.test(nombre)) return 'cristiana';
+  if (/\b(yerba|yerbero|matero|bombilla|decant)\b/.test(nombre)) return 'matera';
+  if (/\b(biblia|biblico|himnario|pan de vida|restauracion)\b/.test(nombre) || papeleria.test(nombre)) return 'cristiana';
   return null;
 }
 
 export function grupoProducto(producto: ProductoDeLinea, linea: Linea) {
-  if (linea === 'remate') return 'Remate';
+  const definida = categoriaDefinida(producto.category);
+  if (definida?.linea === linea) return definida.grupo;
   const nombre = normalizarBusqueda(producto.name);
+  const categoria = normalizarBusqueda(producto.category);
+  if (linea === 'remate') {
+    if (categoria === 'perfumes') return 'Perfumería';
+    if (categoria === 'articulos de oficina') return 'Artículos Oficina';
+    return 'Hogar';
+  }
   if (linea === 'matera') {
-    if (/^yerbas?\b/.test(nombre)) return 'Yerbas';
-    if (/^bombillas?\b/.test(nombre)) return 'Bombillas';
+    if (/\bdecants?\b/.test(nombre)) return 'Decant';
+    if (/^yerbas?\b/.test(nombre) || categoria === 'yerbas') return 'Yerbas Mate';
     if (/^(mate|matero)\b/.test(nombre)) return 'Mates';
     return 'Accesorios';
   }
-  if (papeleria.test(nombre) || /^(papeleria|articulos (de )?oficina)$/.test(normalizarBusqueda(producto.category))) return 'Papelería';
-  if (/^biblias?\b/.test(nombre)) return 'Biblias';
-  return 'Regalos y Lecturas';
+  if (/\brestauraciones?\b/.test(nombre) || /\brestauracion\b/.test(nombre)) return 'Restauraciones';
+  if (/^biblias?\b/.test(nombre) && /\bpersonalizad[ao]s?\b/.test(nombre)) return 'Biblias Personalizadas';
+  if (!papeleria.test(nombre) && /^biblias?\b/.test(nombre)) return 'Biblias';
+  return 'Papelería y Accesorios';
 }
-

@@ -1,7 +1,7 @@
 'use client';
 
 import { grupoProducto, LINEAS, type Linea } from '@/lib/lineas';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import ProductCarousel from './ProductCarousel';
@@ -9,16 +9,21 @@ import ProductCard from './ProductCard';
 import type { Producto } from '@/lib/types';
 import { tienda } from '@/lib/config';
 
-const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
+import { precioActual } from '@/lib/precios';
+import PrecioProducto from './PrecioProducto';
 
 export default function ProductDetailClient({ linea, producto, relacionados = [] }: { linea: Linea; producto: Producto; relacionados?: Producto[] }) {
   const { addItem } = useCart();
   const sinStock = producto.stock <= 0;
   const imagenes = producto.images?.length ? producto.images : producto.image_url ? [producto.image_url] : [];
 
+  const colorId = useId();
+  const [varianteId, setVarianteId] = useState('');
+  const variante = producto.variantes.find((v) => v.id === varianteId);
+  const requiereColor = producto.variantes.length > 0;
   const [qty, setQty] = useState(1);
   const [agregado, setAgregado] = useState(false);
-  const maxQty = producto.stock || 1;
+  const maxQty = variante?.stock ?? (requiereColor ? 0 : producto.stock);
 
   return (
     <div className="store-shell py-7 sm:py-10">
@@ -34,7 +39,7 @@ export default function ProductDetailClient({ linea, producto, relacionados = []
         <div className="flex flex-col md:py-6">
           <div className="shop-accent text-sm font-semibold">{grupoProducto(producto, linea)}</div>
           <h1 className="shop-display balance-text mt-2 text-3xl sm:text-4xl">{producto.name}</h1>
-          <p className="shop-accent text-2xl font-semibold mt-3">{formatoCLP.format(producto.price)}</p>
+          <PrecioProducto producto={producto} className="shop-accent text-2xl font-semibold mt-3" />
 
           {producto.stock > 0 ? (
             <p className="shop-muted text-xs mt-1">Stock disponible: {producto.stock}</p>
@@ -48,7 +53,21 @@ export default function ProductDetailClient({ linea, producto, relacionados = []
             <p className="shop-muted text-sm leading-relaxed mt-5">{producto.description}</p>
           )}
 
-          {!sinStock && (
+          {requiereColor && (
+            <div className="mt-6 grid max-w-sm gap-2 text-sm font-semibold">
+              <label htmlFor={colorId}>Color</label>
+              <select id={colorId} className="shop-control min-h-11 rounded-lg border px-3" value={varianteId}
+                onChange={(event) => { setVarianteId(event.target.value); setQty(1); setAgregado(false); }}>
+                <option value="">Selecciona un color</option>
+                {producto.variantes.map((v) => (
+                  <option key={v.id} value={v.id} disabled={v.stock <= 0}>{v.color}{v.stock <= 0 ? ' · Agotado' : ''}</option>
+                ))}
+              </select>
+              {variante && <span role="status" className="shop-muted text-xs">Stock de {variante.color}: {variante.stock}</span>}
+            </div>
+          )}
+
+          {!sinStock && maxQty > 0 && (
             <div className="flex items-center gap-3 mt-6">
               <span className="shop-muted text-sm">Cantidad:</span>
               <div className="flex items-center border shop-divider rounded-md">
@@ -75,14 +94,15 @@ export default function ProductDetailClient({ linea, producto, relacionados = []
 
           <div className="flex flex-col sm:flex-row gap-3 mt-4">
             <button
-              disabled={sinStock}
+              disabled={maxQty <= 0}
               onClick={() => {
                 addItem({
                   id: producto.id,
-                  name: producto.name,
-                  price: producto.price,
+                  name: variante ? `${producto.name} (${variante.color})` : producto.name,
+                  varianteId: variante?.id,
+                  price: precioActual(producto),
                   image_url: imagenes[0] || '',
-                  stock: producto.stock
+                  stock: maxQty
                 }, qty);
                 setQty(1);
                 setAgregado(true);
@@ -90,7 +110,7 @@ export default function ProductDetailClient({ linea, producto, relacionados = []
               }}
               className="shop-button flex-1"
             >
-              {sinStock ? 'Sin stock' : agregado ? '✓ Agregado al carrito' : 'Agregar al carrito'}
+              {sinStock ? 'Sin stock' : requiereColor && !variante ? 'Selecciona un color' : agregado ? '✓ Agregado al carrito' : 'Agregar al carrito'}
             </button>
           </div>
 

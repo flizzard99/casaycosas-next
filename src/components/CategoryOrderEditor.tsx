@@ -1,7 +1,6 @@
 'use client';
 
 import AdminIcon from './AdminIcon';
-import { nombreCategoria } from '@/lib/categorias';
 import { useState } from 'react';
 import { adminFetch } from '@/lib/adminFetch';
 
@@ -65,12 +64,12 @@ export default function CategoryOrderEditor({
             key={cat}
             className="flex items-center justify-between bg-crema/60 rounded px-3 py-2 text-sm text-verde-noche"
           >
-            <span>{nombreCategoria(cat)}</span>
+            <span>{cat}</span>
             <div className="flex gap-1">
               <button
                 onClick={() => mover(i, -1)}
                 disabled={i === 0}
-                aria-label={`Subir ${nombreCategoria(cat)}`}
+                aria-label={`Subir ${cat}`}
                 className="grid size-10 place-items-center rounded-lg border border-verde-noche/20 bg-white hover:bg-crema disabled:opacity-30"
               >
                 <AdminIcon name="arriba" />
@@ -78,7 +77,7 @@ export default function CategoryOrderEditor({
               <button
                 onClick={() => mover(i, 1)}
                 disabled={i === orden.length - 1}
-                aria-label={`Bajar ${nombreCategoria(cat)}`}
+                aria-label={`Bajar ${cat}`}
                 className="grid size-10 place-items-center rounded-lg border border-verde-noche/20 bg-white hover:bg-crema disabled:opacity-30"
               >
                 <AdminIcon name="abajo" />

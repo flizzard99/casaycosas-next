@@ -55,7 +55,7 @@ body {
   inset: 0;
   pointer-events: none;
   background: url('/oveja-logo.png') center / min(65%, 19rem) auto no-repeat;
-  opacity: 0.27;
+  opacity: 0.32;
 }
 
 .cart-dialog::backdrop {

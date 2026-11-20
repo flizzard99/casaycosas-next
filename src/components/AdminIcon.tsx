@@ -1,4 +1,5 @@
 const paths = {
+  diseno: 'M4 4h16v16H4zM4 16l5-5 4 4 3-3 4 4M15 8h.01',
   productos: 'M3 7h18v13H3zM3 7l3-4h12l3 4M9 11h6',
   pedidos: 'M6 6h3m6 0h3v15H6V6m3-3h6v5H9zM9 13h6m-6 4h6',
   categorias: 'M3 4h8l10 10-7 7L3 10V4zM7 8h.01',

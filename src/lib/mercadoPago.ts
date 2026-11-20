@@ -47,7 +47,7 @@ export async function crearPreferencia(pedido: Pedido, referencia: string, orige
     method: 'POST',
     body: JSON.stringify({
       items: pedido.items.map((item) => ({
-        id: String(item.producto_id),
+        id: item.variante_id ? `${item.producto_id}-${item.variante_id}` : String(item.producto_id),
         title: item.nombre,
         quantity: item.qty,
         unit_price: item.precio,

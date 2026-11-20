@@ -1,6 +1,7 @@
 'use client';
 
 import AdminIcon from './AdminIcon';
+import { LINEAS, categoriaDefinida, grupoProducto, lineaProducto } from '@/lib/lineas';
 import { nombreCategoria } from '@/lib/categorias';
 import { useState, useRef, useCallback } from 'react';
 import { fileToDataUrl } from '@/lib/fileToDataUrl';
@@ -12,7 +13,6 @@ import EncuadreEditor from './EncuadreEditor';
 
 type Props = {
   producto?: Producto | null;
-  categorias: string[];
   onGuardado: () => void;
   onCancelar: () => void;
 };
@@ -48,12 +48,17 @@ function archivoValido(file: File): string | null {
   return null;
 }
 
-export default function ProductForm({ producto, categorias, onGuardado, onCancelar }: Props) {
+export default function ProductForm({ producto, onGuardado, onCancelar }: Props) {
   const esEdicion = !!producto;
   const [name, setName] = useState(producto?.name || '');
   const [description, setDescription] = useState(producto?.description || '');
-  const [category, setCategory] = useState(producto?.category || categorias[0] || '');
-  const [categoriaNueva, setCategoriaNueva] = useState('');
+  const [category, setCategory] = useState(producto?.category || '');
+  const lineaAnterior = producto && lineaProducto(producto);
+  const categoriaAnterior = producto && lineaAnterior ? grupoProducto(producto, lineaAnterior) : '';
+  const grupos = Object.values(LINEAS);
+  const esCategoriaActual = grupos.some((linea) => linea.grupos.some((grupo) => grupo === category));
+  const [precioOferta, setPrecioOferta] = useState(producto?.precioOferta?.toString() ?? '');
+  const [variantes, setVariantes] = useState(producto?.variantes ?? []);
   const [price, setPrice] = useState(producto?.price?.toString() || '0');
   const [stock, setStock] = useState(producto?.stock?.toString() || '0');
   const [instagramUrl, setInstagramUrl] = useState(producto?.instagram_url || '');
@@ -223,7 +228,7 @@ export default function ProductForm({ producto, categorias, onGuardado, onCancel
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    const categoriaFinal = categoriaNueva.trim() || category;
+    const categoriaFinal = category;
     if (!name.trim() || !categoriaFinal.trim()) {
       setError('El nombre y la categoría son obligatorios.');
       return;
@@ -238,8 +243,11 @@ export default function ProductForm({ producto, categorias, onGuardado, onCancel
         name: name.trim(),
         description,
         category: categoriaFinal.trim(),
-        price: Math.max(0, parseInt(price, 10) || 0),
-        stock: Math.max(0, parseInt(stock, 10) || 0),
+        price: Number(price),
+        stock: variantes.length ? 0 : Number(stock),
+        precioOferta: precioOferta === '' ? null : Number(precioOferta),
+        variantes,
+        version: producto?.updated_at,
         instagram_url: instagramUrl,
         image_url: imagenes[0] || '',
         images: imagenes
@@ -287,45 +295,80 @@ export default function ProductForm({ producto, categorias, onGuardado, onCancel
           className="w-full px-3 py-2 rounded border border-verde-noche/20 mb-3 text-sm"
         />
 
-        <label className="block text-sm font-medium text-verde-noche mb-1">Categoría</label>
-        <div className="flex gap-2 mb-3">
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="flex-1 px-3 py-2 rounded border border-verde-noche/20 text-sm"
-          >
-            {categorias.map((c) => (
-              <option key={c} value={c}>{nombreCategoria(c)}</option>
+        <label className="mb-3 grid gap-1 text-sm font-medium">
+          Categoría
+          <select value={category} required onChange={(event) => setCategory(event.target.value)}
+            className="min-h-11 rounded-lg border border-verde-noche/20 px-3">
+            <option value="">Elige una categoría</option>
+            {category && !esCategoriaActual && (
+              <option value={category}>{categoriaAnterior || nombreCategoria(category)} · Categoría actual</option>
+            )}
+            {grupos.map((linea) => (
+              <optgroup key={linea.nombre} label={linea.nombre}>
+                {linea.grupos.map((grupo) => <option key={grupo} value={grupo}>{grupo}</option>)}
+              </optgroup>
             ))}
           </select>
-        </div>
-        <input
-          value={categoriaNueva}
-          onChange={(e) => setCategoriaNueva(e.target.value)}
-          placeholder="O escribe una categoría nueva"
-          className="w-full px-3 py-2 rounded border border-verde-noche/20 mb-3 text-sm"
-        />
+        </label>
+        {categoriaDefinida(category)?.linea === 'remate' && category !== producto?.category && (
+          <p className="mb-3 text-xs text-verde-noche/75">Esta categoría asigna el producto a Remate al guardar.</p>
+        )}
 
-        <div className="grid grid-cols-2 gap-3 mb-3">
-          <div>
-            <label className="block text-sm font-medium text-verde-noche mb-1">Precio (CLP)</label>
-            <input
-              type="number"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              className="w-full px-3 py-2 rounded border border-verde-noche/20 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-verde-noche mb-1">Stock</label>
-            <input
-              type="number"
-              value={stock}
-              onChange={(e) => setStock(e.target.value)}
-              className="w-full px-3 py-2 rounded border border-verde-noche/20 text-sm"
-            />
-          </div>
+        <div className="mb-3 grid grid-cols-2 gap-3">
+          <label className="grid gap-1 text-sm font-medium">
+            Precio normal (CLP)
+            <input type="number" min="0" step="1" required value={price} onChange={(event) => setPrice(event.target.value)}
+              className="min-h-11 min-w-0 rounded-lg border border-verde-noche/20 px-3" />
+          </label>
+          <label className="grid gap-1 text-sm font-medium">
+            Precio oferta (CLP)
+            <input type="number" min="1" max={Math.max(1, Number(price) - 1)} step="1" value={precioOferta}
+              onChange={(event) => setPrecioOferta(event.target.value)} placeholder="Sin oferta"
+              className="min-h-11 min-w-0 rounded-lg border border-verde-noche/20 px-3" />
+          </label>
         </div>
+
+        <fieldset className="mb-4 rounded-lg border border-verde-noche/20 p-3">
+          <legend className="px-1 text-sm font-semibold">Inventario</legend>
+          {!variantes.length ? (
+            <label className="mb-2 grid max-w-40 gap-1 text-sm">
+              Stock general
+              <input type="number" min="0" max="1000000" step="1" required value={stock} onChange={(event) => setStock(event.target.value)}
+                className="min-h-10 min-w-0 rounded-lg border border-verde-noche/20 px-3" />
+            </label>
+          ) : (
+            <>
+              <p className="mb-2 text-sm">Stock total: {variantes.reduce((total, v) => total + v.stock, 0)}</p>
+              {variantes.map((variante, i) => (
+                <div key={variante.id} className="mb-2 grid grid-cols-[minmax(0,1fr)_4.6rem_auto] items-end gap-2">
+                  <label className="grid gap-1 text-sm">Color {i + 1}
+                    <input required maxLength={40} value={variante.color}
+                      onChange={(event) => setVariantes((prev) => prev.map((v) => v.id === variante.id ? { ...v, color: event.target.value } : v))}
+                      className="min-h-10 min-w-0 rounded-lg border border-verde-noche/20 px-2" />
+                  </label>
+                  <label className="grid gap-1 text-sm">Stock
+                    <input type="number" required min="0" max="1000000" step="1" value={variante.stock}
+                      onChange={(event) => setVariantes((prev) => prev.map((v) => v.id === variante.id ? { ...v, stock: Number(event.target.value) } : v))}
+                      className="min-h-10 min-w-0 rounded-lg border border-verde-noche/20 px-2" />
+                  </label>
+                  <button type="button" className="grid size-10 place-items-center rounded border border-red-200 text-red-700"
+                    aria-label={`Quitar color ${variante.color || i + 1}`}
+                    onClick={() => {
+                      if (variantes.length === 1) setStock(String(variante.stock));
+                      setVariantes((prev) => prev.filter((v) => v.id !== variante.id));
+                    }}>
+                    <AdminIcon name="papelera" />
+                  </button>
+                </div>
+              ))}
+            </>
+          )}
+          <button type="button" disabled={variantes.length >= 30}
+            onClick={() => setVariantes((prev) => [...prev, { id: crypto.randomUUID(), color: '', stock: prev.length ? 0 : Number(stock) }])}
+            className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-verde-noche/20 px-3 text-sm font-semibold disabled:opacity-50">
+            <AdminIcon name="mas" /> Agregar color
+          </button>
+        </fieldset>
 
         <label className="block text-sm font-medium text-verde-noche mb-1">Instagram (opcional)</label>
         <input

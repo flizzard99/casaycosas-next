@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRef, useEffect } from 'react';
-import { useCart } from '@/context/CartContext';
+import { claveCarrito, useCart } from '@/context/CartContext';
 
 const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 
@@ -47,7 +47,7 @@ export default function CartDrawer() {
             const maxStock = item.stock ?? Infinity;
             const atMax = item.qty >= maxStock;
             return (
-              <div key={item.id} className="flex gap-3 items-center">
+              <div key={claveCarrito(item)} className="flex gap-3 items-center">
                 <div className={`relative size-14 shrink-0 overflow-hidden rounded shop-image-surface ${item.image_url ? 'product-watermark' : ''}`}>
                   {item.image_url && (
                     <Image src={item.image_url} alt="" fill className="object-cover" sizes="56px" />
@@ -58,7 +58,7 @@ export default function CartDrawer() {
                   <p className="text-xs shop-accent">{formatoCLP.format(item.price)}</p>
                   <div className="flex items-center gap-2 mt-1">
                     <button
-                      onClick={() => updateQty(item.id, item.qty - 1)}
+                      onClick={() => updateQty(item.id, item.qty - 1, item.varianteId)}
                       aria-label={`Reducir ${item.name}`}
                       className="w-9 h-9 shop-control rounded border text-sm"
                     >
@@ -66,7 +66,7 @@ export default function CartDrawer() {
                     </button>
                     <span className="text-sm w-5 text-center" aria-live="polite">{item.qty}</span>
                     <button
-                      onClick={() => updateQty(item.id, item.qty + 1)}
+                      onClick={() => updateQty(item.id, item.qty + 1, item.varianteId)}
                       disabled={atMax}
                       aria-label={`Aumentar ${item.name}`}
                       className="w-9 h-9 shop-control rounded border text-sm disabled:opacity-30"
@@ -74,7 +74,7 @@ export default function CartDrawer() {
                       +
                     </button>
                     <button
-                      onClick={() => removeItem(item.id)}
+                      onClick={() => removeItem(item.id, item.varianteId)}
                       aria-label={`Quitar ${item.name} del carrito`}
                       className="ml-auto text-xs shop-danger hover:underline"
                     >

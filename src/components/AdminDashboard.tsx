@@ -1,25 +1,28 @@
 'use client';
 
 import AdminIcon from './AdminIcon';
-import { LINEAS, lineaProducto } from '@/lib/lineas';
+import { LINEAS, grupoProducto, lineaProducto } from '@/lib/lineas';
 import { nombreCategoria } from '@/lib/categorias';
+import { precioActual } from '@/lib/precios';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import ProductForm from './ProductForm';
+import DisenoEditor from './DisenoEditor';
+import PrecioProducto from './PrecioProducto';
 import CategoryOrderEditor from './CategoryOrderEditor';
 import FeaturedEditor from './FeaturedEditor';
-import type { Producto, FeaturedConfig } from '@/lib/types';
+import type { Producto, FeaturedConfig, Config } from '@/lib/types';
 import { adminFetch } from '@/lib/adminFetch';
 import { parsearEncuadre, estilosEncuadre } from '@/lib/encuadre';
 import type { Pedido } from '@/lib/db';
 
 const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
-const GRUPOS_PUBLICOS = [...LINEAS.matera.grupos, ...LINEAS.cristiana.grupos];
+const GRUPOS_PUBLICOS = Object.values(LINEAS).flatMap(({ grupos }) => [...grupos]);
 const FEATURED_DEFAULT: FeaturedConfig = { productIds: [], title: 'Productos más vendidos' };
 const PAGE_SIZE = 24;
 
-type Vista = 'productos' | 'categorias' | 'destacados' | 'pedidos';
+type Vista = 'productos' | 'categorias' | 'destacados' | 'pedidos' | 'diseno';
 type FiltroEstado = 'todos' | 'en-stock' | 'agotado' | 'ocultos' | 'remate';
 const ESTADOS_PEDIDO = {
   pendiente: 'Pendientes',
@@ -30,13 +33,14 @@ const ESTADOS_PEDIDO = {
   todos: 'Todos'
 } as const;
 type FiltroPedido = keyof typeof ESTADOS_PEDIDO;
-const VISTAS: Vista[] = ['productos', 'pedidos', 'categorias', 'destacados'];
+const VISTAS: Vista[] = ['productos', 'pedidos', 'categorias', 'destacados', 'diseno'];
 
 type Orden = 'recientes' | 'nombre' | 'precio-asc' | 'precio-desc' | 'stock-desc';
 
 export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
+  const [diseno, setDiseno] = useState<Config['diseno']>({});
   const [featured, setFeatured] = useState<FeaturedConfig>(FEATURED_DEFAULT);
   const [busqueda, setBusqueda] = useState('');
   const [categoriaFiltro, setCategoriaFiltro] = useState('todas');
@@ -78,6 +82,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         setProductos(lista);
         setCategoryOrder(config.categoryOrder || []);
         setFeatured(config.featured || FEATURED_DEFAULT);
+        setDiseno(config.diseno ?? {});
       })
       .catch(() => setErrorCatalogo('No pudimos cargar los productos y la configuración.'))
       .finally(() => setCargando(false));
@@ -119,7 +124,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   }, [vista, filtroPedido, paginaPedidos, clavePedidos]);
 
   const publicables = useMemo(() => productos.filter((producto) => producto.visible && lineaProducto(producto)), [productos]);
-  const categorias = useMemo(() => [...new Set(productos.map((p) => p.category))].sort(), [productos]);
+  const categorias = GRUPOS_PUBLICOS;
 
   const kpis = useMemo(() => {
     const enStock = productos.filter((p) => p.stock > 0).length;
@@ -130,7 +135,9 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const filtrados = useMemo(() => {
     const term = busqueda.trim().toLowerCase();
     let result = productos.filter((p) => {
-      const porCategoria = categoriaFiltro === 'todas' || p.category === categoriaFiltro;
+      const linea = lineaProducto(p);
+      const grupo = linea ? grupoProducto(p, linea) : '';
+      const porCategoria = categoriaFiltro === 'todas' || grupo === categoriaFiltro || (categoriaFiltro === 'fuera' && !linea);
       const porTexto = !term || p.name.toLowerCase().includes(term);
       const porEstado =
         estadoFiltro === 'todos' ||
@@ -144,8 +151,8 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     result = [...result].sort((a, b) => {
       switch (orden) {
         case 'nombre': return a.name.localeCompare(b.name);
-        case 'precio-asc': return a.price - b.price;
-        case 'precio-desc': return b.price - a.price;
+        case 'precio-asc': return precioActual(a) - precioActual(b);
+        case 'precio-desc': return precioActual(b) - precioActual(a);
         case 'stock-desc': return b.stock - a.stock;
         default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
@@ -230,6 +237,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     { id: 'pedidos', label: 'Pedidos' },
     { id: 'categorias', label: 'Categorías' },
     { id: 'destacados', label: 'Destacados' },
+    { id: 'diseno', label: 'Diseño' },
   ];
 
   return (
@@ -303,10 +311,10 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             </button>
           )}
           </div>
-          <nav aria-label="Administración móvil" className="mt-3 grid grid-cols-4 gap-1 lg:hidden">
+          <nav aria-label="Administración móvil" className="mt-3 grid grid-cols-5 gap-1 lg:hidden">
             {navItems.map((item) => (
               <a href={`#${item.id}`} key={item.id} aria-current={vista === item.id ? 'page' : undefined}
-                className={`grid min-h-10 place-items-center gap-1 rounded-lg px-0.5 py-2 text-center text-xs font-semibold sm:text-sm ${vista === item.id ? 'bg-verde-noche text-white' : 'hover:bg-crema/50'}`}>
+                className={`grid min-h-10 min-w-0 place-items-center gap-1 rounded-lg px-0.5 py-2 text-center text-[10px] font-semibold sm:text-sm ${vista === item.id ? 'bg-verde-noche text-white' : 'hover:bg-crema/50'}`}>
                 <AdminIcon name={item.id} />
                 {item.label}
               </a>
@@ -348,8 +356,9 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   className="px-3 py-2 rounded-lg border border-verde-noche/15 text-sm bg-white"
                 >
                   <option value="todas">Todas las categorías</option>
+                  <option value="fuera">Fuera de las secciones</option>
                   {categorias.map((c) => (
-                    <option key={c} value={c}>{nombreCategoria(c)}</option>
+                    <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
                 <select
@@ -399,6 +408,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
                     {productosPagina.map((p) => {
+                      const linea = lineaProducto(p);
                       const srcRaw = (p.images && p.images[0]) || p.image_url;
                       const { url: srcLimpia, encuadre } = srcRaw ? parsearEncuadre(srcRaw) : { url: '', encuadre: null };
                       const stockColor = p.stock > 5 ? 'bg-verde/15 text-verde-oscuro' : p.stock > 0 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600';
@@ -427,23 +437,23 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                             <div className="flex items-start justify-between gap-2 mb-2">
                               <h3 className="text-sm font-medium text-verde-noche line-clamp-2 leading-tight">{p.name}</h3>
                             </div>
-                            <p className="mb-2 text-xs font-medium text-verde-oscuro">{nombreCategoria(p.category)}{p.remate ? ' · En Remate' : !lineaProducto(p) ? ' · Fuera de las colecciones' : ''}</p>
+                            <p className="mb-2 text-xs font-medium text-verde-oscuro">{linea ? `${LINEAS[linea].nombre} · ${grupoProducto(p, linea)}` : `${nombreCategoria(p.category)} · Fuera de las secciones`}</p>
                             <div className="flex items-center justify-between mb-3">
-                              <span className="text-sm font-semibold text-verde">{formatoCLP.format(p.price)}</span>
+                              <PrecioProducto producto={p} className="text-sm font-semibold text-verde-oscuro" />
                               <span className={`rounded-full px-2 py-1 text-xs font-semibold ${stockColor}`}>
-                                Stock: {p.stock}
+                                Stock: {p.stock}{p.variantes.length > 0 && ` · ${p.variantes.length} colores`}
                               </span>
                             </div>
                             <div className="flex items-center gap-1">
                               <button
                                 onClick={() => ajustarStock(p.id, -1)}
-                                disabled={p.stock <= 0 || !!ocupado}
+                                disabled={p.stock <= 0 || !!ocupado || p.variantes.length > 0}
                                 aria-label={`Reducir stock de ${p.name}`}
                                 className="grid min-h-10 flex-1 place-items-center rounded-lg border border-verde-noche/15 hover:bg-crema disabled:opacity-30"
                               ><AdminIcon name="menos" className="size-4" /></button>
                               <button
                                 onClick={() => ajustarStock(p.id, 1)}
-                                disabled={!!ocupado}
+                                disabled={!!ocupado || p.variantes.length > 0}
                                 aria-label={`Aumentar stock de ${p.name}`}
                                 className="grid min-h-10 flex-1 place-items-center rounded-lg border border-verde-noche/15 hover:bg-crema disabled:opacity-30"
                               ><AdminIcon name="mas" className="size-4" /></button>
@@ -599,6 +609,11 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           )}
 
           {/* Categorías */}
+          {vista === 'diseno' && !cargando && (
+            <DisenoEditor inicial={diseno} onGuardado={(linea, actualizado) =>
+              setDiseno((prev) => ({ ...prev, [linea]: actualizado }))} />
+          )}
+
           {vista === 'categorias' && !cargando && (
             <div className="max-w-md">
               <CategoryOrderEditor categorias={GRUPOS_PUBLICOS} ordenInicial={categoryOrder} onGuardado={setCategoryOrder} />
@@ -617,7 +632,6 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       {(creandoNuevo || editando) && (
         <ProductForm
           producto={editando}
-          categorias={categorias.length ? categorias : ['general']}
           onCancelar={() => { setCreandoNuevo(false); setEditando(null); }}
           onGuardado={() => { setCreandoNuevo(false); setEditando(null); recargarCatalogo(); }}
         />

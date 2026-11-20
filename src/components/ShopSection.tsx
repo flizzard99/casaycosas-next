@@ -12,6 +12,7 @@ export default async function ShopSection({ linea }: { linea: Linea }) {
   const coleccion = LINEAS[linea];
   const [listado, configuracion] = await Promise.allSettled([getProductosPublicos(), getConfig()]);
   const config = configuracion.status === 'fulfilled' ? configuracion.value : undefined;
+  const diseno = config?.diseno[linea];
   const productos = listado.status === 'fulfilled'
     ? listado.value.filter((producto) => lineaProducto(producto) === linea)
     : [];
@@ -22,16 +23,19 @@ export default async function ShopSection({ linea }: { linea: Linea }) {
     <div className="shop" data-linea={linea}>
       <Header linea={linea} />
       <main id="contenido" tabIndex={-1}>
-        <section className="shop-section-hero">
+        <section className={`shop-section-hero ${diseno?.fondo ? 'shop-campaign' : ''}`}>
+          {diseno?.fondo && (
+            <Image src={diseno.fondo} alt="" fill sizes="100vw" className="shop-campaign-image" />
+          )}
           <div className="store-shell shop-section-layout">
             <div className="shop-section-copy">
-              {linea !== 'remate' && <p className="shop-eyebrow">{coleccion.nombre}</p>}
-              <h1>{coleccion.titulo}</h1>
-              <p className="shop-section-description">{coleccion.descripcion}</p>
+              {(linea !== 'remate' || diseno?.titulo) && <p className="shop-eyebrow">{coleccion.nombre}</p>}
+              <h1>{diseno?.titulo || coleccion.titulo}</h1>
+              <p className="shop-section-description">{diseno?.descripcion || coleccion.descripcion}</p>
               <Link href="#productos" className="shop-button">Ver productos <span aria-hidden="true">↓</span></Link>
             </div>
             <div className="shop-section-photo">
-              <Image src={coleccion.imagen} alt={coleccion.alt} fill
+              <Image src={diseno?.imagen || coleccion.imagen} alt={diseno?.imagen ? `Imagen de ${coleccion.nombre}` : coleccion.alt} fill
                 sizes="(min-width: 1280px) 520px, (min-width: 768px) 44vw, 88vw" priority />
               {linea !== 'remate' && <span className="shop-mascot-mark">
                 <Image src="/oveja-logo.png" alt="" width={52} height={54} unoptimized />

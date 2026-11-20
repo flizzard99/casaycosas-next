@@ -50,6 +50,7 @@ export default function ThemeToggle() {
     <button type="button" className="shop-icon-button shop-theme-toggle" onClick={cambiarTema}
       role="switch" aria-label="Modo oscuro" aria-checked={oscuro}
       title={`Cambiar a modo ${destino.toLowerCase()}`}>
+      <span className="shop-theme-track" aria-hidden="true"><span className="shop-theme-thumb">
       <svg aria-hidden="true" focusable="false" width="21" height="21" viewBox="0 0 24 24"
         fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         {oscuro ? (
@@ -58,6 +59,7 @@ export default function ThemeToggle() {
           <path d="M20.6 15A9 9 0 1 1 9 3.4 7.5 7.5 0 0 0 20.6 15Z" />
         )}
       </svg>
+      </span></span>
       <span aria-hidden="true" className="shop-theme-label">{destino}</span>
     </button>
   );

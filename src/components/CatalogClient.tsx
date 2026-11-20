@@ -2,6 +2,7 @@
 
 import { grupoProducto, LINEAS, normalizarBusqueda, type Linea } from '@/lib/lineas';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { precioActual } from '@/lib/precios';
 import ProductCard from './ProductCard';
 import type { Producto } from '@/lib/types';
 
@@ -38,9 +39,9 @@ export default function CatalogClient({ productos, linea, ordenGrupos }: { produ
     texto: normalizarBusqueda(`${producto.name} ${producto.category} ${producto.description || ''}`)
   })), [productos, linea]);
   const categorias = useMemo(() => {
-    const grupos = new Set<string>(LINEAS[linea].grupos.filter((grupo) => indice.some((entrada) => entrada.grupo === grupo)));
+    const grupos = new Set<string>(LINEAS[linea].grupos);
     return [...ordenGrupos.filter((grupo) => grupos.delete(grupo)), ...grupos];
-  }, [indice, linea, ordenGrupos]);
+  }, [linea, ordenGrupos]);
   const [filtros, setFiltros] = useState(INICIALES);
   const campoBusqueda = useRef<HTMLInputElement>(null);
 
@@ -91,8 +92,8 @@ export default function CatalogClient({ productos, linea, ordenGrupos }: { produ
         palabras.every((palabra) => texto.includes(palabra)))
       .map(({ producto }) => producto);
 
-    if (filtros.orden === 'menor-precio') return coincidencias.sort((a, b) => a.price - b.price);
-    if (filtros.orden === 'mayor-precio') return coincidencias.sort((a, b) => b.price - a.price);
+    if (filtros.orden === 'menor-precio') return coincidencias.sort((a, b) => precioActual(a) - precioActual(b));
+    if (filtros.orden === 'mayor-precio') return coincidencias.sort((a, b) => precioActual(b) - precioActual(a));
     if (filtros.orden === 'nombre') return coincidencias.sort((a, b) => nombres.compare(a.name, b.name));
     return coincidencias;
   }, [indice, filtros.busqueda, filtros.categoria, filtros.disponibles, filtros.orden]);

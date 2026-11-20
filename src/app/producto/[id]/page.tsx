@@ -1,3 +1,4 @@
+import { precioActual } from '@/lib/precios';
 import { LINEAS, lineaProducto } from '@/lib/lineas';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
@@ -59,7 +60,7 @@ export default async function ProductoPage({ params }: { params: Promise<{ id: s
     image: producto.images?.length ? producto.images : producto.image_url ? [producto.image_url] : [],
     offers: {
       '@type': 'Offer',
-      price: producto.price,
+      price: precioActual(producto),
       priceCurrency: 'CLP',
       availability: producto.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
       url: `${siteUrl}/producto/${producto.id}`,

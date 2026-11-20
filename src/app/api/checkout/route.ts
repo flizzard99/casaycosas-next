@@ -1,3 +1,5 @@
+import { esVarianteId } from '@/lib/validarInventario';
+import { revalidatePath } from 'next/cache';
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminRateLimit } from '@/lib/adminRateLimit';
 import { crearPedido, obtenerEnlaceDePago } from '@/lib/db';
@@ -37,8 +39,9 @@ export async function POST(req: NextRequest) {
   const items = body.items;
   if (!Array.isArray(items) || !items.length || items.length > 50 ||
       items.some((item) => !Number.isInteger(item?.id) || item.id < 1 || item.id > 2147483647 ||
-        !Number.isInteger(item?.qty) || item.qty < 1 || item.qty > 999) ||
-      new Set(items.map((item) => item.id)).size !== items.length ||
+        !Number.isInteger(item?.qty) || item.qty < 1 || item.qty > 999 ||
+        (item.varianteId !== undefined && !esVarianteId(item.varianteId))) ||
+      new Set(items.map((item) => `${item.id}:${item.varianteId ?? ''}`)).size !== items.length ||
       !Number.isInteger(body.total) || body.total < 1 || body.total > 2147483647) {
     return NextResponse.json({ error: 'Revisa los productos del carrito.' }, { status: 400 });
   }
@@ -48,12 +51,16 @@ export async function POST(req: NextRequest) {
     const pedido = await crearPedido(items, nombre, telefono, email, {
       referencia, despacho: { region, comuna, direccion }, totalEsperado: body.total
     });
+    for (const id of new Set(pedido.items.map((item) => item.producto_id))) revalidatePath(`/producto/${id}`);
+    revalidatePath('/matera');
+    revalidatePath('/cristiana');
+    revalidatePath('/remate');
     const seguimiento = rutaSeguimiento(pedido.id, referencia);
     const url = await obtenerEnlaceDePago(pedido, referencia, () => crearPreferencia(pedido, referencia, origen));
     return NextResponse.json({ url, seguimiento }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     const detalle = error instanceof Error ? error.message : '';
-    if (/^(Stock insuficiente|Producto \d+ no encontrado|El precio de los productos cambió|La sesión de pago corresponde|Total de compra inválido)/.test(detalle)) {
+    if (/^(Stock insuficiente|Producto \d+ no encontrado|El precio de los productos cambió|La sesión de pago corresponde|Total de compra inválido|Selecciona un color)/.test(detalle)) {
       return NextResponse.json({ error: detalle }, { status: 409 });
     }
     console.error('[checkout]', error);

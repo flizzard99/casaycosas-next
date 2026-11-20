@@ -50,7 +50,8 @@ export async function PUT(req: NextRequest) {
     const current = await getConfig();
     const config = {
       categoryOrder: Array.isArray(body.categoryOrder) ? body.categoryOrder as string[] : current.categoryOrder,
-      featured: (body.featured as FeaturedConfig) || current.featured
+      featured: (body.featured as FeaturedConfig) || current.featured,
+      diseno: current.diseno
     };
     await saveConfig(config);
     revalidatePath('/', 'layout');

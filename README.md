@@ -172,3 +172,10 @@ Para incorporar un producto, en el panel asígnale una categoría de la colecci�
 ### Remate
 
 En **Administración → Productos**, usa **Mover a Remate** para asignar un producto a `/remate`. Un producto oculto conserva ese estado. Puedes ajustar su precio con **Editar** y usar **Quitar de Remate** para devolverlo a la clasificación normal. El filtro **En remate** muestra los productos asignados.
+
+
+### Diseños, ofertas y colores
+
+- En **Administración → Diseño**, elige Matera, Cristiana o Remate. Sube una imagen de sección o un fondo de campaña. El título y el texto son opcionales. **Guardar diseño** publica el cambio. Para volver al fondo original, usa **Restaurar diseño original** y guarda otra vez.
+- En **Productos → Editar**, selecciona una categoría agrupada por sección. Completa **Precio oferta** para mostrar el precio normal tachado. Déjalo vacío cuando termine la oferta.
+- Usa **Agregar color** para definir las variantes y su stock. El stock total se calcula con sus existencias. Los colores agotados se muestran deshabilitados y los pedidos conservan el color elegido.

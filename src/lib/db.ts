@@ -1,6 +1,7 @@
 import { Pool } from 'pg';
-import { lineaProducto } from './lineas';
-import type { Producto, ProductoInput, Config, FeaturedConfig } from './types';
+import { categoriaDefinida, lineaProducto, type Linea } from './lineas';
+import { precioActual } from './precios';
+import type { Config, DisenoSeccion, FeaturedConfig, Producto, ProductoInput, Variante } from './types';
 
 export function parseIdOrBadRequest(id: string): number | null {
   const parsed = parseInt(id, 10);
@@ -68,6 +69,8 @@ async function initializeSchema() {
         ADD COLUMN IF NOT EXISTS images TEXT[] DEFAULT '{}',
         ADD COLUMN IF NOT EXISTS visible BOOLEAN DEFAULT TRUE,
         ADD COLUMN IF NOT EXISTS remate BOOLEAN NOT NULL DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS precio_oferta INTEGER,
+        ADD COLUMN IF NOT EXISTS variantes JSONB NOT NULL DEFAULT '[]'::jsonb,
         ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()
     `);
     await client.query(
@@ -126,7 +129,10 @@ export type Pedido = {
 export type DespachoPedido = { region: string; comuna: string; direccion: string };
 type Compra = { referencia: string; despacho: DespachoPedido; totalEsperado: number };
 
+export type ItemCompra = { id: number; qty: number; varianteId?: string };
+
 export type PedidoItem = {
+  variante_id?: string | null;
   producto_id: number;
   nombre: string;
   qty: number;
@@ -181,6 +187,7 @@ async function initializePedidosSchema() {
         qty INTEGER DEFAULT 1,
         precio INTEGER DEFAULT 0
       );
+      ALTER TABLE pedido_items ADD COLUMN IF NOT EXISTS variante_id UUID;
       ALTER TABLE pedidos ENABLE ROW LEVEL SECURITY;
       ALTER TABLE pedido_items ENABLE ROW LEVEL SECURITY;
       CREATE UNIQUE INDEX IF NOT EXISTS pedidos_pago_referencia_uidx ON pedidos(pago_referencia) WHERE pago_referencia IS NOT NULL;
@@ -225,24 +232,33 @@ async function expirarPedidosViejos(db: Pick<Pool, 'query'>): Promise<void> {
         (CASE WHEN pago_referencia IS NULL THEN $1::integer ELSE $2::integer END * INTERVAL '1 minute')
       RETURNING id
     ), unidades AS (
-      SELECT producto_id, SUM(qty)::integer AS qty
+      SELECT producto_id, variante_id, SUM(qty)::integer AS qty
       FROM pedido_items JOIN vencidos ON pedido_items.pedido_id = vencidos.id
-      GROUP BY producto_id
+      GROUP BY producto_id, variante_id
+    ), productos_vencidos AS (
+      SELECT producto_id, SUM(qty)::integer AS qty FROM unidades GROUP BY producto_id
     )
-    UPDATE productos SET stock = COALESCE(stock, 0) + unidades.qty
-    FROM unidades WHERE productos.id = unidades.producto_id
+    UPDATE productos p SET
+      stock = COALESCE(p.stock, 0) + productos_vencidos.qty,
+      variantes = COALESCE((
+        SELECT jsonb_agg(v.datos || jsonb_build_object('stock', (v.datos->>'stock')::integer + COALESCE(u.qty, 0))
+          ORDER BY v.orden)
+        FROM jsonb_array_elements(p.variantes) WITH ORDINALITY AS v(datos, orden)
+        LEFT JOIN unidades u ON u.producto_id = p.id AND u.variante_id::text = v.datos->>'id'
+      ), '[]'::jsonb)
+    FROM productos_vencidos WHERE p.id = productos_vencidos.producto_id
   `, [PEDIDO_EXPIRACION_HORAS * 60, COMPRA_EXPIRACION_MINUTOS]);
 }
 
 async function leerItems(db: Pick<Pool, 'query'>, id: number): Promise<PedidoItem[]> {
   const result = await db.query(
-    'SELECT producto_id, nombre, qty, precio FROM pedido_items WHERE pedido_id = $1 ORDER BY id',
+    'SELECT producto_id, nombre, qty, precio, variante_id FROM pedido_items WHERE pedido_id = $1 ORDER BY id',
     [id]
   );
   return result.rows;
 }
 
-export async function crearPedido(items: { id: number; qty: number }[], clienteNombre: string, clienteWhatsapp: string, clienteEmail: string, compra: Compra): Promise<Pedido> {
+export async function crearPedido(items: ItemCompra[], clienteNombre: string, clienteWhatsapp: string, clienteEmail: string, compra: Compra): Promise<Pedido> {
   await ensureSchema();
   await ensurePedidosSchema();
   const pool = getPool();
@@ -256,7 +272,7 @@ export async function crearPedido(items: { id: number; qty: number }[], clienteN
       const row = existente.rows[0];
       const detalle = await leerItems(client, row.id);
       if (row.total !== compra.totalEsperado || detalle.length !== items.length ||
-          !items.every((item) => detalle.some((linea) => linea.producto_id === item.id && linea.qty === item.qty)) ||
+          !items.every((item) => detalle.some((linea) => linea.producto_id === item.id && linea.qty === item.qty && (linea.variante_id ?? undefined) === item.varianteId)) ||
           row.cliente_nombre !== clienteNombre || row.cliente_whatsapp !== clienteWhatsapp || row.cliente_email !== clienteEmail ||
           row.despacho?.region !== compra.despacho.region || row.despacho?.comuna !== compra.despacho.comuna ||
           row.despacho?.direccion !== compra.despacho.direccion) {
@@ -267,19 +283,27 @@ export async function crearPedido(items: { id: number; qty: number }[], clienteN
     }
 
     let total = 0;
-    const itemsDetalle: { producto_id: number; nombre: string; qty: number; precio: number }[] = [];
+    const itemsDetalle: PedidoItem[] = [];
 
     for (const item of [...items].sort((a, b) => a.id - b.id)) {
-      const res = await client.query('SELECT id, name, category, price, stock, remate FROM productos WHERE id = $1 AND visible IS TRUE FOR UPDATE', [item.id]);
+      const res = await client.query('SELECT id, name, category, price, precio_oferta, stock, remate, variantes FROM productos WHERE id = $1 AND visible IS TRUE FOR UPDATE', [item.id]);
       const p = res.rows[0];
       if (!p || !lineaProducto(p)) throw new Error(`Producto ${item.id} no encontrado`);
-      if (!Number.isInteger(p.price) || p.price <= 0) throw new Error('Total de compra inválido');
-      if ((p.stock || 0) < item.qty) {
-        throw new Error(`Stock insuficiente para "${p.name}" (disponible: ${p.stock || 0}, solicitado: ${item.qty})`);
+      const precio = precioActual({ price: p.price, precioOferta: p.precio_oferta });
+      if (!Number.isInteger(precio) || precio <= 0) throw new Error('Total de compra inválido');
+      const variantes: Variante[] = p.variantes;
+      const variante = variantes.find((v) => v.id === item.varianteId);
+      if ((variantes.length > 0 || item.varianteId) && !variante) {
+        throw new Error(`Selecciona un color disponible para "${p.name}".`);
       }
-      total += (p.price || 0) * item.qty;
-      itemsDetalle.push({ producto_id: p.id, nombre: p.name, qty: item.qty, precio: p.price || 0 });
-      await client.query('UPDATE productos SET stock = stock - $1 WHERE id = $2', [item.qty, p.id]);
+      const stock = variante?.stock ?? p.stock;
+      const nombre = variante ? `${p.name} (${variante.color})` : p.name;
+      if (stock < item.qty) throw new Error(`Stock insuficiente para "${nombre}" (disponible: ${stock})`);
+      total += precio * item.qty;
+      itemsDetalle.push({ producto_id: p.id, nombre, qty: item.qty, precio, variante_id: variante?.id ?? null });
+      const actualizadas = variantes.map((v) => v.id === variante?.id ? { ...v, stock: v.stock - item.qty } : v);
+      await client.query('UPDATE productos SET stock = stock - $1, variantes = $3::jsonb WHERE id = $2',
+        [item.qty, p.id, JSON.stringify(actualizadas)]);
     }
 
     if (total <= 0 || total > 2147483647) throw new Error('Total de compra inválido');
@@ -294,8 +318,8 @@ export async function crearPedido(items: { id: number; qty: number }[], clienteN
 
     for (const item of itemsDetalle) {
       await client.query(
-        `INSERT INTO pedido_items (pedido_id, producto_id, nombre, qty, precio) VALUES ($1, $2, $3, $4, $5)`,
-        [pedidoId, item.producto_id, item.nombre, item.qty, item.precio]
+        `INSERT INTO pedido_items (pedido_id, producto_id, nombre, qty, precio, variante_id) VALUES ($1, $2, $3, $4, $5, $6)`,
+        [pedidoId, item.producto_id, item.nombre, item.qty, item.precio, item.variante_id]
       );
     }
 
@@ -320,7 +344,7 @@ export async function getPedidosAdmin(estado: EstadoPedido | 'revision' | 'todos
       SELECT p.*, COALESCE(detalle.items, '[]'::json) AS items
       FROM (SELECT p.* FROM pedidos p WHERE ${filtro} ORDER BY p.created_at DESC, p.id DESC LIMIT 24 OFFSET $2) p
       LEFT JOIN LATERAL (
-        SELECT json_agg(json_build_object('producto_id', producto_id, 'nombre', nombre, 'qty', qty, 'precio', precio) ORDER BY id) AS items
+        SELECT json_agg(json_build_object('producto_id', producto_id, 'nombre', nombre, 'qty', qty, 'precio', precio, 'variante_id', variante_id) ORDER BY id) AS items
         FROM pedido_items WHERE pedido_id = p.id
       ) detalle ON true
       ORDER BY p.created_at DESC, p.id DESC
@@ -341,7 +365,7 @@ export async function confirmarPedido(id: number): Promise<Pedido | null> {
   );
   if (!res.rows.length) return null;
   const itemsRes = await pool.query(
-    `SELECT producto_id, nombre, qty, precio FROM pedido_items WHERE pedido_id = $1`,
+    `SELECT producto_id, nombre, qty, precio, variante_id FROM pedido_items WHERE pedido_id = $1`,
     [id]
   );
   return formatPedido(res.rows[0], itemsRes.rows as PedidoItem[]);
@@ -379,7 +403,7 @@ export async function cancelarPedido(id: number): Promise<Pedido | null> {
     await client.query('COMMIT');
     const finales = await pool.query(`SELECT * FROM pedidos WHERE id = $1`, [id]);
     const itemsFinales = await pool.query(
-      `SELECT producto_id, nombre, qty, precio FROM pedido_items WHERE pedido_id = $1`,
+      `SELECT producto_id, nombre, qty, precio, variante_id FROM pedido_items WHERE pedido_id = $1`,
       [id]
     );
     return formatPedido(finales.rows[0], itemsFinales.rows as PedidoItem[]);
@@ -418,6 +442,8 @@ function formatProducto(row: Record<string, unknown>): Producto {
     remate: row.remate === true,
     visible: row.visible !== false,
     price: (row.price as number) || 0,
+    precioOferta: (row.precio_oferta as number | null) ?? null,
+    variantes: (row.variantes as Variante[]) ?? [],
     stock: (row.stock as number) || 0,
     images,
     created_at: row.created_at as string,
@@ -430,7 +456,7 @@ export async function getProductosPublicos(): Promise<Producto[]> {
   await ensureSchema();
   const pool = getPool();
   const result = await pool.query(
-    `SELECT id, name, description, category, image_url, instagram_url, price, stock, visible, remate, created_at, images[1:1] AS images
+    `SELECT id, name, description, category, image_url, instagram_url, price, stock, visible, remate, precio_oferta, variantes, created_at, images[1:1] AS images
      FROM productos WHERE visible = TRUE ORDER BY created_at DESC`
   );
   return result.rows.filter(lineaProducto).map(formatProducto);
@@ -448,54 +474,77 @@ export async function getProductoById(id: number): Promise<Producto | null> {
   await ensureSchema();
   const pool = getPool();
   const result = await pool.query(
-    `SELECT id, name, description, category, image_url, instagram_url, price, stock, visible, remate, created_at, images[1:10] AS images
+    `SELECT id, name, description, category, image_url, instagram_url, price, stock, visible, remate, precio_oferta, variantes, created_at, images[1:10] AS images
      FROM productos WHERE id = $1`,
     [id]
   );
   return result.rows.length ? formatProducto(result.rows[0]) : null;
 }
 
+export class ConflictoInventario extends Error {}
+
 export async function createProducto(data: ProductoInput): Promise<Producto> {
   await ensureSchema();
-  const pool = getPool();
-  const images = data.images && data.images.length ? data.images : data.image_url ? [data.image_url] : [];
-  const result = await pool.query(
-    `INSERT INTO productos (name, description, category, image_url, instagram_url, visible, price, stock, images)
-     VALUES ($1, $2, $3, $4, $5, TRUE, $6, $7, $8) RETURNING *`,
-    [
-      data.name,
-      data.description || '',
-      data.category,
-      data.image_url || (images[0] ?? ''),
-      data.instagram_url || '',
-      data.price || 0,
-      data.stock || 0,
-      images
-    ]
+  const images = data.images?.length ? data.images : data.image_url ? [data.image_url] : [];
+  const variantes = data.variantes ?? [];
+  const stock = variantes.length ? variantes.reduce((total, v) => total + v.stock, 0) : data.stock ?? 0;
+  const result = await getPool().query(
+    `INSERT INTO productos (name, description, category, image_url, instagram_url, visible, price, stock, images, precio_oferta, variantes, remate)
+     VALUES ($1, $2, $3, $4, $5, TRUE, $6, $7, $8, $9, $10::jsonb, $11) RETURNING *`,
+    [data.name, data.description || '', data.category, data.image_url || images[0] || '', data.instagram_url || '',
+      data.price ?? 0, stock, images, data.precioOferta ?? null, JSON.stringify(variantes),
+      categoriaDefinida(data.category)?.linea === 'remate']
   );
   return formatProducto(result.rows[0]);
 }
 
 export async function updateProducto(id: number, data: ProductoInput): Promise<Producto | null> {
   await ensureSchema();
+  await ensurePedidosSchema();
   const pool = getPool();
-  const images = data.images && data.images.length ? data.images : data.image_url ? [data.image_url] : [];
-  const result = await pool.query(
-    `UPDATE productos SET name = $1, description = $2, category = $3, image_url = $4, instagram_url = $5, price = $7, stock = $8, images = $9
-     WHERE id = $6 RETURNING *`,
-    [
-      data.name,
-      data.description || '',
-      data.category,
-      data.image_url || images[0] || '',
-      data.instagram_url || '',
-      id,
-      data.price || 0,
-      data.stock || 0,
-      images
-    ]
-  );
-  return result.rows.length ? formatProducto(result.rows[0]) : null;
+  if (data.variantes) await expirarPedidosViejos(pool);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows: [anterior] } = await client.query('SELECT * FROM productos WHERE id = $1 FOR UPDATE', [id]);
+    if (!anterior) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+    if (data.version && anterior.updated_at?.toISOString() !== data.version) {
+      throw new ConflictoInventario('El producto cambió desde que lo abriste. Recarga el panel antes de editar.');
+    }
+    const variantes: Variante[] = data.variantes ?? anterior.variantes;
+    const cambiaTipoStock = Boolean(variantes.length) !== Boolean(anterior.variantes.length);
+    if (cambiaTipoStock || anterior.variantes.some((v: Variante) => !variantes.some((n) => n.id === v.id))) {
+      const pendientes = await client.query(
+        `SELECT DISTINCT i.variante_id FROM pedido_items i JOIN pedidos p ON p.id = i.pedido_id
+         WHERE i.producto_id = $1 AND p.estado = 'pendiente'`, [id]
+      );
+      if (pendientes.rows.some((item) => cambiaTipoStock || !variantes.some((v) => v.id === item.variante_id))) {
+        throw new ConflictoInventario('Hay colores o unidades en pedidos pendientes. Espera a que se procesen antes de quitarlos.');
+      }
+    }
+
+    const images = data.images?.length ? data.images : data.image_url ? [data.image_url] : [];
+    const categoria = categoriaDefinida(data.category);
+    const stock = variantes.length ? variantes.reduce((total, v) => total + v.stock, 0) : data.stock ?? anterior.stock;
+    const result = await client.query(
+      `UPDATE productos SET name = $1, description = $2, category = $3, image_url = $4, instagram_url = $5,
+       price = $7, stock = $8, images = $9, precio_oferta = $10, variantes = $11::jsonb, remate = $12 WHERE id = $6 RETURNING *`,
+      [data.name, data.description || '', data.category, data.image_url || images[0] || '', data.instagram_url || '',
+        id, data.price ?? anterior.price, stock, images,
+        data.precioOferta === undefined ? anterior.precio_oferta : data.precioOferta, JSON.stringify(variantes),
+        data.category !== anterior.category && categoria ? categoria.linea === 'remate' : anterior.remate]
+    );
+    await client.query('COMMIT');
+    return formatProducto(result.rows[0]);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export async function deleteProducto(id: number): Promise<boolean> {
@@ -529,7 +578,7 @@ export async function ajustarStock(id: number, delta: number): Promise<Producto 
   await ensureSchema();
   const pool = getPool();
   const result = await pool.query(
-    `UPDATE productos SET stock = GREATEST(0, stock + $1) WHERE id = $2 RETURNING *`,
+    `UPDATE productos SET stock = GREATEST(0, stock + $1) WHERE id = $2 AND jsonb_array_length(variantes) = 0 RETURNING *`,
     [Math.floor(delta), id]
   );
   return result.rows.length ? formatProducto(result.rows[0]) : null;
@@ -558,20 +607,31 @@ export async function eliminarImagen(id: number, index: number): Promise<Product
 export async function getConfig(): Promise<Config> {
   await ensureSchema();
   const pool = getPool();
-  const [resCat, resFeat] = await Promise.all([
+  const [resCat, resFeat, resDiseno] = await Promise.all([
     pool.query(`SELECT value FROM config WHERE key = 'category_order'`),
-    pool.query(`SELECT value FROM config WHERE key = 'featured'`)
+    pool.query(`SELECT value FROM config WHERE key = 'featured'`),
+    pool.query(`SELECT value FROM config WHERE key = 'diseno'`)
   ]);
   const featured: FeaturedConfig = resFeat.rows.length
     ? resFeat.rows[0].value
     : { productIds: [], title: 'Productos más vendidos' };
   return {
     categoryOrder: resCat.rows.length ? resCat.rows[0].value : [],
+    diseno: resDiseno.rows[0]?.value ?? {},
     featured: {
       productIds: Array.isArray(featured.productIds) ? featured.productIds.slice(0, 4) : [],
       title: featured.title || 'Productos más vendidos'
     }
   };
+}
+
+export async function saveDisenoSeccion(linea: Linea, diseno: DisenoSeccion) {
+  await ensureSchema();
+  await getPool().query(
+    `INSERT INTO config (key, value) VALUES ('diseno', jsonb_build_object($1::text, $2::jsonb))
+     ON CONFLICT (key) DO UPDATE SET value = config.value || EXCLUDED.value`,
+    [linea, JSON.stringify(diseno)]
+  );
 }
 
 export async function saveConfig(config: Config): Promise<void> {
@@ -606,7 +666,7 @@ export async function getFeaturedProducts(productIds: number[]): Promise<Product
   await ensureSchema();
   const pool = getPool();
   const result = await pool.query(
-    `SELECT id, name, description, category, image_url, instagram_url, price, stock, visible, remate, created_at, images[1:1] AS images
+    `SELECT id, name, description, category, image_url, instagram_url, price, stock, visible, remate, precio_oferta, variantes, created_at, images[1:1] AS images
      FROM productos WHERE id = ANY($1) AND visible = TRUE`,
     [ids]
   );

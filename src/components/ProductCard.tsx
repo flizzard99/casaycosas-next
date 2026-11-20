@@ -9,7 +9,8 @@ import { useCart } from '@/context/CartContext';
 import type { Producto } from '@/lib/types';
 import { parsearEncuadre, estilosEncuadre } from '@/lib/encuadre';
 
-const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
+import { precioActual } from '@/lib/precios';
+import PrecioProducto from './PrecioProducto';
 
 export default function ProductCard({ producto }: { producto: Producto }) {
   const { addItem } = useCart();
@@ -59,8 +60,8 @@ export default function ProductCard({ producto }: { producto: Producto }) {
           <div className="shop-muted text-xs font-medium">{linea ? grupoProducto(producto, linea) : nombreCategoria(producto.category)}</div>
           <h3 className="mt-1 text-sm font-semibold leading-snug hover:underline sm:text-base">{producto.name}</h3>
         </Link>
-        <p className="mt-2 flex-1 text-base font-semibold shop-accent">{formatoCLP.format(producto.price)}</p>
-        {!sinStock && (
+        <PrecioProducto producto={producto} className="mt-2 flex-1 text-base font-semibold shop-accent" />
+        {!sinStock && !producto.variantes.length && (
           <div className="flex items-center justify-center gap-2 mt-3">
               <button
                 onClick={() => setQty((q) => Math.max(1, q - 1))}
@@ -81,10 +82,13 @@ export default function ProductCard({ producto }: { producto: Producto }) {
               </button>
             </div>
           )}
+          {producto.variantes.length && !sinStock ? (
+            <Link href={`/producto/${producto.id}`} prefetch={false} className="shop-button mt-3 px-2 py-2 text-xs">Elegir color</Link>
+          ) : (
           <button
             disabled={sinStock}
             onClick={() => {
-              addItem({ id: producto.id, name: producto.name, price: producto.price, image_url: imagenLimpia, stock: producto.stock }, qty);
+              addItem({ id: producto.id, name: producto.name, price: precioActual(producto), image_url: imagenLimpia, stock: producto.stock }, qty);
               setQty(1);
               setAgregado(true);
               setTimeout(() => setAgregado(false), 1500);
@@ -93,6 +97,7 @@ export default function ProductCard({ producto }: { producto: Producto }) {
           >
             {sinStock ? 'Sin stock' : agregado ? '✓ Agregado' : 'Agregar al carrito'}
           </button>
+          )}
       </div>
     </article>
   );
