@@ -1,6 +1,6 @@
 # Casa y Cosas (Next.js)
 
-Reescritura completa del sitio en **Next.js 14 (App Router) + TypeScript + Tailwind CSS**,
+Reescritura completa del sitio en **Next.js 16 (App Router) + TypeScript + Tailwind CSS**,
 manteniendo la misma base de datos Postgres/Supabase que ya usa el sitio actual
 (no se pierde ningún producto ni configuración).
 
@@ -73,10 +73,10 @@ cp .env.example .env.local
 
 ## 2. Instalación y desarrollo local
 
-Requiere Node.js 22 o superior.
+Requiere Node.js 24 LTS. Vercel usa la misma versión indicada en `package.json`.
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 

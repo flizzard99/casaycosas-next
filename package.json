@@ -6,8 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "typecheck": "next typegen && tsc --noEmit",
     "migrate:images": "tsx scripts/migrate-base64-images.ts",
     "migrate:images:dry-run": "tsx scripts/migrate-base64-images.ts --dry-run",
     "reset:stock": "tsx scripts/reset-stock.ts --run",
@@ -16,7 +16,7 @@
     "migrate:to-r2:dry-run": "tsx scripts/migrate-to-r2.ts"
   },
   "engines": {
-    "node": ">=22"
+    "node": "24.x"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1087.0",
@@ -24,27 +24,26 @@
     "@supabase/supabase-js": "^2.110.1",
     "@upstash/redis": "^1.38.0",
     "@vercel/analytics": "^2.0.1",
-    "next": "14.2.5",
+    "next": "16.4.6",
     "pg": "^8.13.0",
-    "qrcode.react": "^4.2.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "react-easy-crop": "^6.2.2",
     "resend": "^6.17.2",
     "sharp": "^0.35.3"
   },
   "devDependencies": {
-    "@types/node": "^20.14.0",
+    "@types/node": "^24.19.2",
     "@types/pg": "^8.11.6",
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
     "autoprefixer": "^10.4.19",
-    "eslint": "^8.57.1",
-    "eslint-config-next": "^14.2.5",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "16.4.6",
     "postcss": "^8.4.38",
     "repomix": "^1.16.1",
     "tailwindcss": "^3.4.4",
     "tsx": "^4.23.0",
-    "typescript": "^5.5.2"
+    "typescript": "^5.9.3"
   }
 }

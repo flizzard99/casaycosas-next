@@ -2,7 +2,6 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { Redis } from '@upstash/redis';
 import {
   checkPassword,
@@ -94,13 +93,14 @@ export async function POST(req: NextRequest) {
     path: '/',
     maxAge: 60 * 60 * 12
   };
-  cookies().set(SESSION_COOKIE_NAME, token, cookieOpts);
-  cookies().set(CSRF_COOKIE_NAME, csrf, {
+  const response = NextResponse.json({ ok: true });
+  response.cookies.set(SESSION_COOKIE_NAME, token, cookieOpts);
+  response.cookies.set(CSRF_COOKIE_NAME, csrf, {
     httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict' as const,
     path: '/',
     maxAge: 60 * 60 * 12
   });
-  return NextResponse.json({ ok: true });
+  return response;
 }

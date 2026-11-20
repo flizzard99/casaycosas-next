@@ -2,15 +2,14 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { getProductosPublicos, getProductosAdmin, createProducto } from '@/lib/db';
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 import { verifyCsrf } from '@/lib/csrf';
 import { checkAdminRateLimit } from '@/lib/adminRateLimit';
 
-function isAdminRequest() {
-  const token = cookies().get(SESSION_COOKIE_NAME)?.value;
+function isAdminRequest(req: NextRequest) {
+  const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
   return verifySessionToken(token);
 }
 
@@ -23,9 +22,9 @@ function validarProducto(body: Record<string, unknown>): string[] {
   return errores;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const admin = isAdminRequest();
+    const admin = isAdminRequest(req);
     const productos = admin ? await getProductosAdmin() : await getProductosPublicos();
     return NextResponse.json(productos, {
       headers: { 'Cache-Control': 'no-store' }
@@ -38,7 +37,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   if (!checkAdminRateLimit(req)) return NextResponse.json({ error: 'Demasiadas solicitudes' }, { status: 429 });
-  if (!isAdminRequest() || !verifyCsrf(req)) {
+  if (!isAdminRequest(req) || !verifyCsrf(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
   try {

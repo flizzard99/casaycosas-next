@@ -1,10 +1,10 @@
 # AGENTS — Casa y Cosas (Next.js)
 
 ## Qué es este proyecto
-Tienda online para **Casa y Cosas** en Panguipulli, Chile. Vende artículos del hogar, matero, artesanías, perfumes. Rewrite completo de un sitio HTML/JS viejo a Next.js 14.
+Tienda online para **Casa y Cosas** en Panguipulli, Chile. Vende artículos del hogar, matero, artesanías, perfumes. Rewrite completo de un sitio HTML/JS viejo a Next.js 16.
 
 ## Stack
-- **Framework:** Next.js 14 (App Router) + TypeScript + Tailwind CSS
+- **Framework:** Next.js 16 (App Router) + TypeScript + Tailwind CSS
 - **DB:** Supabase Postgres (tablas: `productos`, `config`, `pedidos`, `pedido_items`)
 - **Imágenes:** Cloudflare R2 bucket `casaycosas-images` — subida directa vía presigned URLs (hasta 25 MB) o data URL → conversión sharp server-side (HEIC, hasta 4 MB). Dominio: `images.casaycosas.qzz.io`. Egress: $0 siempre.
 - **Deploy:** Vercel (`casaycosas-next.vercel.app`) — auto-deploy desde `main`
@@ -80,8 +80,8 @@ Ver `.env.example` y `README.md` para tabla completa. Las más importantes:
 ## Comandos útiles
 ```bash
 npm run dev          # Desarrollo local
-npx next build       # Build de producción
-npx next lint        # Lint
+npm run build       # Build de producción
+npm run lint        # Lint
 npm run migrate:images:dry-run  # Preview migración base64→Storage
 npm run migrate:images          # Ejecutar migración
 npm run reset:stock:dry-run     # Preview reset stock ≥1 → 10
@@ -103,7 +103,7 @@ npm run migrate:to-r2           # Ejecutar migración a R2
 - Posible cambio de dominio en Vercel
 
 ## Notas para el agente
-- Siempre correr `npx next lint` y `npx next build` antes de commitear
+- Siempre correr `npm run lint` y `npm run build` antes de commitear
 - No agregar comentarios al código a menos que el usuario lo pida
 - Seguir el estilo de código existente (Tailwind, componentes client/server)
 - Los archivos en `/home/flizzard/Desktop/Pagina/` son del sitio viejo y archivos auxiliares (logos, texturas, etc.)

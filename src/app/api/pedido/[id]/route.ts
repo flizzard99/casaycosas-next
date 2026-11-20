@@ -4,9 +4,9 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { getPedidoByIdPublic, parseIdOrBadRequest } from '@/lib/db';
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const id = parseIdOrBadRequest(params.id);
+    const id = parseIdOrBadRequest((await params).id);
     if (id === null) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
     const pedido = await getPedidoByIdPublic(id, req.nextUrl.searchParams.get('ref') ?? undefined);
     if (!pedido) return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 });

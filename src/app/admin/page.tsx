@@ -9,14 +9,11 @@ const AdminDashboard = dynamic(() => import('@/components/AdminDashboard'), { ss
 export default function AdminPage() {
   const [autenticado, setAutenticado] = useState<boolean | null>(null);
 
-  async function verificarSesion() {
-    try {
-      const res = await fetch('/api/auth/me');
-      const data = await res.json();
-      setAutenticado(!!data.authenticated);
-    } catch {
-      setAutenticado(false);
-    }
+  function verificarSesion() {
+    fetch('/api/auth/me')
+      .then((response) => response.json())
+      .then(({ authenticated }) => setAutenticado(!!authenticated))
+      .catch(() => setAutenticado(false));
   }
 
   useEffect(() => {

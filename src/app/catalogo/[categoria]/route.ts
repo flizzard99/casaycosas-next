@@ -1,8 +1,8 @@
 import { permanentRedirect } from 'next/navigation';
 import { LINEAS, lineaProducto } from '@/lib/lineas';
 
-export function GET(_request: Request, { params }: { params: { categoria: string } }) {
-  let categoria = params.categoria;
+export async function GET(_request: Request, { params }: { params: Promise<{ categoria: string }> }) {
+  let { categoria } = await params;
   try {
     categoria = decodeURIComponent(categoria);
   } catch {

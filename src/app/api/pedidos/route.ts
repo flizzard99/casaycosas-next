@@ -2,12 +2,11 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { getPedidosAdmin } from '@/lib/db';
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
-  const token = cookies().get(SESSION_COOKIE_NAME)?.value;
+  const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
   if (!verifySessionToken(token)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }

@@ -37,7 +37,6 @@ export default function PedidoEstadoClient({ pedidoInicial, referencia }: Props)
   useEffect(() => {
     if (pedido.estado !== 'pendiente' && (pedido.estado !== 'confirmado' || pedido.despachado_at)) return;
     const interval = setInterval(fetchEstado, POLL_MS);
-    if (pedido.estado === 'pendiente') setNow(Date.now());
     const tick = pedido.estado === 'pendiente' ? setInterval(() => setNow(Date.now()), 1000) : undefined;
     return () => { clearInterval(interval); clearInterval(tick); };
   }, [pedido.estado, pedido.despachado_at, fetchEstado]);

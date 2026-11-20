@@ -2,7 +2,7 @@
 
 import AdminIcon from './AdminIcon';
 import { nombreCategoria } from '@/lib/categorias';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { Producto, FeaturedConfig } from '@/lib/types';
 import { adminFetch } from '@/lib/adminFetch';
 
@@ -15,17 +15,12 @@ type Props = {
 const MAX = 4;
 
 export default function FeaturedEditor({ productos, featureConfigInicial, onGuardado }: Props) {
-  const [seleccionados, setSeleccionados] = useState<number[]>(featureConfigInicial.productIds);
+  const [seleccionados, setSeleccionados] = useState(() => featureConfigInicial.productIds.filter((id) => productos.some((producto) => producto.id === id)));
   const [titulo, setTitulo] = useState(featureConfigInicial.title);
   const [busqueda, setBusqueda] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
   const [ok, setOk] = useState(false);
-
-  useEffect(() => {
-    setSeleccionados(featureConfigInicial.productIds.filter((id) => productos.some((producto) => producto.id === id)));
-    setTitulo(featureConfigInicial.title);
-  }, [featureConfigInicial, productos]);
 
   const filtrados = useMemo(() => {
     const term = busqueda.trim().toLowerCase();

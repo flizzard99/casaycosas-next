@@ -16,7 +16,7 @@ const campos = [
 
 export default function CheckoutClient() {
   const { items, total, hydrated, removeItem } = useCart();
-  const intento = useRef<{ clave: string; referencia: string }>();
+  const intento = useRef<{ clave: string; referencia: string } | null>(null);
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState('');
   const [seguimiento, setSeguimiento] = useState('');

@@ -12,12 +12,13 @@ export const metadata = {
 };
 
 export default async function PedidoPage({ params, searchParams }: {
-  params: { id: string };
-  searchParams: { ref?: string };
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ ref?: string | string[] }>;
 }) {
-  const id = parseIdOrBadRequest(params.id);
+  const id = parseIdOrBadRequest((await params).id);
   if (id === null) return NotFound();
-  const referencia = typeof searchParams.ref === 'string' ? searchParams.ref : undefined;
+  const { ref } = await searchParams;
+  const referencia = typeof ref === 'string' ? ref : undefined;
   const pedido = await getPedidoByIdPublic(id, referencia);
   if (!pedido) return NotFound();
   return <PedidoEstadoClient pedidoInicial={pedido} referencia={referencia} />;

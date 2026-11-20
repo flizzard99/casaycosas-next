@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { SESSION_COOKIE_NAME, verifySessionToken } from '@/lib/auth';
 import { verifyCsrf } from '@/lib/csrf';
 import { checkAdminRateLimit } from '@/lib/adminRateLimit';
@@ -7,12 +6,12 @@ import { despacharPedido, parseIdOrBadRequest } from '@/lib/db';
 
 export const runtime = 'nodejs';
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!checkAdminRateLimit(req)) return NextResponse.json({ error: 'Demasiadas solicitudes' }, { status: 429 });
-  if (!verifySessionToken(cookies().get(SESSION_COOKIE_NAME)?.value) || !verifyCsrf(req)) {
+  if (!verifySessionToken(req.cookies.get(SESSION_COOKIE_NAME)?.value) || !verifyCsrf(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
-  const id = parseIdOrBadRequest(params.id);
+  const id = parseIdOrBadRequest((await params).id);
   const body = await req.json().catch(() => null);
   if (!id || typeof body?.codigo !== 'string' || body.codigo.trim().length > 80) {
     return NextResponse.json({ error: 'Revisa el código de seguimiento.' }, { status: 400 });

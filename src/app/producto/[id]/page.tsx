@@ -13,9 +13,9 @@ const getProducto = cache((id: number) => getProductoById(id));
 export const revalidate = 60;
 export const dynamicParams = true;
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   try {
-    const producto = await getProducto(Number(params.id));
+    const producto = await getProducto(Number((await params).id));
     const linea = producto?.visible && lineaProducto(producto);
     if (!producto || !linea) return { title: 'Producto no encontrado', robots: { index: false, follow: false } };
     return {
@@ -34,8 +34,8 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   }
 }
 
-export default async function ProductoPage({ params }: { params: { id: string } }) {
-  const producto = await getProducto(Number(params.id));
+export default async function ProductoPage({ params }: { params: Promise<{ id: string }> }) {
+  const producto = await getProducto(Number((await params).id));
   const linea = producto?.visible && lineaProducto(producto);
   if (!producto || !linea) notFound();
 

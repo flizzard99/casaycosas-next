@@ -2,7 +2,6 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { subirImagen } from '@/lib/imageStorage';
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 import { verifyCsrf } from '@/lib/csrf';
@@ -11,7 +10,7 @@ import { checkAdminRateLimit } from '@/lib/adminRateLimit';
 
 export async function POST(req: NextRequest) {
   if (!checkAdminRateLimit(req)) return NextResponse.json({ error: 'Demasiadas solicitudes' }, { status: 429 });
-  const token = cookies().get(SESSION_COOKIE_NAME)?.value;
+  const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
   if (!verifySessionToken(token) || !verifyCsrf(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }

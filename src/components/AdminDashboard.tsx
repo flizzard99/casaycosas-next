@@ -38,7 +38,6 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
   const [featured, setFeatured] = useState<FeaturedConfig>(FEATURED_DEFAULT);
-  const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [categoriaFiltro, setCategoriaFiltro] = useState('todas');
   const [estadoFiltro, setEstadoFiltro] = useState<FiltroEstado>('todos');
@@ -50,10 +49,13 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [pagina, setPagina] = useState(1);
   const [filtroPedido, setFiltroPedido] = useState<FiltroPedido>('todos');
   const [paginaPedidos, setPaginaPedidos] = useState(1);
-  const [totalPedidos, setTotalPedidos] = useState(0);
-  const [cargandoPedidos, setCargandoPedidos] = useState(false);
   const [recargarPedidos, setRecargarPedidos] = useState(0);
-  const [errorPedidos, setErrorPedidos] = useState('');
+  const [resultadoPedidos, setResultadoPedidos] = useState<{ clave: string; pedidos: Pedido[]; total: number; error?: string }>();
+  const clavePedidos = `${filtroPedido}:${paginaPedidos}:${recargarPedidos}`;
+  const cargandoPedidos = resultadoPedidos?.clave !== clavePedidos;
+  const pedidos = cargandoPedidos ? [] : resultadoPedidos.pedidos;
+  const totalPedidos = cargandoPedidos ? 0 : resultadoPedidos.total;
+  const errorPedidos = cargandoPedidos ? '' : resultadoPedidos.error;
   const [errorCatalogo, setErrorCatalogo] = useState('');
   const [aviso, setAviso] = useState<{ texto: string; error?: boolean }>();
   const [ocupado, setOcupado] = useState<string>();
@@ -68,21 +70,23 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     return () => window.removeEventListener('hashchange', sincronizarVista);
   }, []);
 
-  async function cargarTodo() {
+  function cargarTodo() {
+    Promise.all([fetch('/api/productos'), fetch('/api/config')])
+      .then(async ([resProductos, resConfig]) => {
+        if (!resProductos.ok || !resConfig.ok) throw new Error('Error al cargar datos');
+        const [lista, config] = await Promise.all([resProductos.json(), resConfig.json()]);
+        setProductos(lista);
+        setCategoryOrder(config.categoryOrder || []);
+        setFeatured(config.featured || FEATURED_DEFAULT);
+      })
+      .catch(() => setErrorCatalogo('No pudimos cargar los productos y la configuración.'))
+      .finally(() => setCargando(false));
+  }
+
+  function recargarCatalogo() {
     setCargando(true);
     setErrorCatalogo('');
-    try {
-      const [resProductos, resConfig] = await Promise.all([fetch('/api/productos'), fetch('/api/config')]);
-      if (!resProductos.ok || !resConfig.ok) throw new Error('Error al cargar datos');
-      setProductos(await resProductos.json());
-      const config = await resConfig.json();
-      setCategoryOrder(config.categoryOrder || []);
-      setFeatured(config.featured || FEATURED_DEFAULT);
-    } catch {
-      setErrorCatalogo('No pudimos cargar los productos y la configuración.');
-    } finally {
-      setCargando(false);
-    }
+    cargarTodo();
   }
 
   useEffect(() => {
@@ -92,8 +96,6 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   useEffect(() => {
     if (vista !== 'pedidos') return;
     const controller = new AbortController();
-    setCargandoPedidos(true);
-    setErrorPedidos('');
     async function cargarPedidos() {
       try {
         const res = await adminFetch(`/api/pedidos?estado=${filtroPedido}&pagina=${paginaPedidos}`, {
@@ -107,17 +109,14 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           setPaginaPedidos(ultimaPagina);
           return;
         }
-        setPedidos(data.pedidos);
-        setTotalPedidos(data.total);
+        setResultadoPedidos({ clave: clavePedidos, pedidos: data.pedidos, total: data.total });
       } catch {
-        if (!controller.signal.aborted) setErrorPedidos('No pudimos cargar los pedidos.');
-      } finally {
-        if (!controller.signal.aborted) setCargandoPedidos(false);
+        if (!controller.signal.aborted) setResultadoPedidos({ clave: clavePedidos, pedidos: [], total: 0, error: 'No pudimos cargar los pedidos.' });
       }
     }
     cargarPedidos();
     return () => controller.abort();
-  }, [vista, filtroPedido, paginaPedidos, recargarPedidos]);
+  }, [vista, filtroPedido, paginaPedidos, clavePedidos]);
 
   const publicables = useMemo(() => productos.filter((producto) => producto.visible && lineaProducto(producto)), [productos]);
   const categorias = useMemo(() => [...new Set(productos.map((p) => p.category))].sort(), [productos]);
@@ -157,8 +156,6 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const totalPaginas = Math.ceil(filtrados.length / PAGE_SIZE);
   const paginaActual = Math.min(pagina, totalPaginas || 1);
   const productosPagina = filtrados.slice((paginaActual - 1) * PAGE_SIZE, paginaActual * PAGE_SIZE);
-
-  useEffect(() => { setPagina(1); }, [busqueda, categoriaFiltro, estadoFiltro, orden]);
 
   async function ejecutarAccion(clave: string, url: string, opciones: RequestInit, mensaje: string, actualizar: (dato: Producto) => void) {
     if (ocupado) return;
@@ -214,7 +211,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     return ejecutarAccion(`pedido-${id}`, `/api/pedidos/${id}/${accion}`, { method: 'PATCH' },
       accion === 'confirmar' ? 'Pedido confirmado.' : 'Pedido cancelado.', () => {
         setRecargarPedidos((valor) => valor + 1);
-        if (accion === 'cancelar') cargarTodo();
+        if (accion === 'cancelar') recargarCatalogo();
       });
   }
 
@@ -321,7 +318,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           {aviso && <p role={aviso.error ? 'alert' : 'status'} className={`mb-4 rounded-lg border p-3 text-sm ${aviso.error ? 'border-red-200 bg-red-50 text-red-800' : 'border-verde/20 bg-sage/20'}`}>{aviso.texto}</p>}
           {errorCatalogo && vista !== 'pedidos' && (
             <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-              <p>{errorCatalogo}</p><button onClick={cargarTodo} className="font-semibold underline">Reintentar</button>
+              <p>{errorCatalogo}</p><button onClick={recargarCatalogo} className="font-semibold underline">Reintentar</button>
             </div>
           )}
           {/* Productos */}
@@ -339,7 +336,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 mb-5">
                 <input
                   value={busqueda}
-                  onChange={(e) => setBusqueda(e.target.value)}
+                  onChange={(e) => { setBusqueda(e.target.value); setPagina(1); }}
                   placeholder="Buscar producto…"
                   aria-label="Buscar producto"
                   type="search"
@@ -347,7 +344,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 />
                 <select
                   value={categoriaFiltro}
-                  onChange={(e) => setCategoriaFiltro(e.target.value)}
+                  onChange={(e) => { setCategoriaFiltro(e.target.value); setPagina(1); }}
                   className="px-3 py-2 rounded-lg border border-verde-noche/15 text-sm bg-white"
                 >
                   <option value="todas">Todas las categorías</option>
@@ -358,7 +355,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 <select
                   aria-label="Estado del producto"
                   value={estadoFiltro}
-                  onChange={(e) => setEstadoFiltro(e.target.value as FiltroEstado)}
+                  onChange={(e) => { setEstadoFiltro(e.target.value as FiltroEstado); setPagina(1); }}
                   className="px-3 py-2 rounded-lg border border-verde-noche/15 text-sm bg-white"
                 >
                   <option value="todos">Todos los estados</option>
@@ -369,7 +366,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 </select>
                 <select
                   value={orden}
-                  onChange={(e) => setOrden(e.target.value as Orden)}
+                  onChange={(e) => { setOrden(e.target.value as Orden); setPagina(1); }}
                   className="px-3 py-2 rounded-lg border border-verde-noche/15 text-sm bg-white"
                 >
                   <option value="recientes">Más recientes</option>
@@ -602,7 +599,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           )}
 
           {/* Categorías */}
-          {vista === 'categorias' && (
+          {vista === 'categorias' && !cargando && (
             <div className="max-w-md">
               <CategoryOrderEditor categorias={GRUPOS_PUBLICOS} ordenInicial={categoryOrder} onGuardado={setCategoryOrder} />
             </div>
@@ -622,7 +619,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           producto={editando}
           categorias={categorias.length ? categorias : ['general']}
           onCancelar={() => { setCreandoNuevo(false); setEditando(null); }}
-          onGuardado={() => { setCreandoNuevo(false); setEditando(null); cargarTodo(); }}
+          onGuardado={() => { setCreandoNuevo(false); setEditando(null); recargarCatalogo(); }}
         />
       )}
     </div>

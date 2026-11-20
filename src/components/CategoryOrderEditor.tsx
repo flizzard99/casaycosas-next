@@ -2,7 +2,7 @@
 
 import AdminIcon from './AdminIcon';
 import { nombreCategoria } from '@/lib/categorias';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { adminFetch } from '@/lib/adminFetch';
 
 export default function CategoryOrderEditor({
@@ -18,10 +18,6 @@ export default function CategoryOrderEditor({
   const [orden, setOrden] = useState<string[]>(inicial);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    setOrden([...ordenInicial.filter((c) => categorias.includes(c)), ...categorias.filter((c) => !ordenInicial.includes(c))]);
-  }, [ordenInicial, categorias]);
 
   function mover(index: number, direccion: -1 | 1) {
     const destino = index + direccion;
