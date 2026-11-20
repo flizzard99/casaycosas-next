@@ -195,9 +195,7 @@ html[data-tienda-tema='oscuro'] .shop-danger { color: #ffa7ad; }
 }
 .shop-icon-button { min-width: 2.65rem; border: 1px solid var(--shop-line); }
 .shop-icon-button:hover, .shop-nav a:hover, .shop-nav .shop-nav-active { background: var(--shop-subtle); }
-.shop-theme-toggle { min-height: 2.75rem; min-width: 2.75rem; color: var(--shop-ink); }
-.shop-theme-label { display: none; }
-@media (min-width: 23rem) { .shop-theme-label { display: inline; min-width: 3.25rem; text-align: center; } }
+.shop-theme-toggle { min-height: 2.75rem; padding-inline: .35rem; border: 0; }
 .shop-footer { background: var(--shop-footer); color: var(--shop-on-footer); }
 .shop-social { border-top: 1px solid var(--shop-line); background: var(--shop-subtle); }
 

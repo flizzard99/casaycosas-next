@@ -49,7 +49,7 @@ async function procesarImagen(mime: string, buffer: Buffer): Promise<Procesada> 
 }
 
 function publicUrl(key: string): string {
-  return `${R2_PUBLIC_URL}/${key}`;
+  return `${R2_PUBLIC_URL.replace(/\/+$/, '')}/${key}`;
 }
 
 export async function subirImagen(dataUrl: string): Promise<string> {
@@ -66,15 +66,18 @@ export async function subirImagen(dataUrl: string): Promise<string> {
     throw new Error('La imagen supera 4 MB para formato HEIC.');
   }
 
-  const { buffer: finalBuffer, mime: finalMime, ext } = await procesarImagen(mime, buffer);
+  return guardarImagen(await procesarImagen(mime, buffer));
+}
+
+export async function guardarImagen({ buffer, mime, ext }: Procesada): Promise<string> {
   const key = `product-images/${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
 
   await r2Client.send(
     new PutObjectCommand({
       Bucket: BUCKET_NAME,
       Key: key,
-      Body: finalBuffer,
-      ContentType: finalMime,
+      Body: buffer,
+      ContentType: mime,
     })
   );
 

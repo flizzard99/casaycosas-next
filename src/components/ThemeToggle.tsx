@@ -44,23 +44,21 @@ function cambiarTema() {
 
 export default function ThemeToggle() {
   const oscuro = useSyncExternalStore(observar, esOscuro, () => false);
-  const destino = oscuro ? 'Claro' : 'Oscuro';
-
   return (
     <button type="button" className="shop-icon-button shop-theme-toggle" onClick={cambiarTema}
-      role="switch" aria-label="Modo oscuro" aria-checked={oscuro}
-      title={`Cambiar a modo ${destino.toLowerCase()}`}>
-      <span className="shop-theme-track" aria-hidden="true"><span className="shop-theme-thumb">
-      <svg aria-hidden="true" focusable="false" width="21" height="21" viewBox="0 0 24 24"
-        fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-        {oscuro ? (
-          <path d="M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5" />
-        ) : (
-          <path d="M20.6 15A9 9 0 1 1 9 3.4 7.5 7.5 0 0 0 20.6 15Z" />
-        )}
-      </svg>
-      </span></span>
-      <span aria-hidden="true" className="shop-theme-label">{destino}</span>
+      role="switch" aria-label="Modo oscuro" aria-checked={oscuro}>
+      <span className="shop-theme-track" aria-hidden="true">
+        <span className="shop-theme-thumb">
+          <svg focusable="false" width="21" height="21" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+            {oscuro ? (
+              <path d="M20.6 15A9 9 0 1 1 9 3.4 7.5 7.5 0 0 0 20.6 15Z" />
+            ) : (
+              <path d="M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5" />
+            )}
+          </svg>
+        </span>
+      </span>
     </button>
   );
 }

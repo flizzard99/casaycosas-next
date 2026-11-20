@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { LINEAS, type Linea } from '@/lib/lineas';
 import { adminFetch } from '@/lib/adminFetch';
+import { prepararArchivoDiseno } from '@/lib/imagenDiseno';
 import { MAX_UPLOAD_BYTES } from '@/lib/uploadLimits';
 import type { Config, DisenoSeccion } from '@/lib/types';
 import AdminIcon from './AdminIcon';
@@ -39,18 +40,22 @@ export default function DisenoEditor({ inicial, onGuardado }: {
     }
     setOcupado(true);
     try {
-      const firma = await adminFetch('/api/upload/sign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contentType: archivo.type, size: archivo.size })
-      });
-      const data = await firma.json();
-      if (!firma.ok) throw new Error(data.error || 'No se pudo preparar la subida.');
-      const subida = await fetch(data.signedUrl, {
-        method: 'PUT', body: archivo, headers: { 'Content-Type': archivo.type }
-      });
-      if (!subida.ok) throw new Error('No se pudo subir la imagen.');
-      editar(campo, data.publicUrl);
+      const imagen = await prepararArchivoDiseno(archivo);
+      let subida: Response;
+      try {
+        subida = await adminFetch('/api/config/diseno/imagen', {
+          method: 'POST',
+          headers: { 'Content-Type': imagen.type },
+          body: imagen
+        });
+      } catch {
+        throw new Error('Se interrumpió la conexión al subir la imagen. Vuelve a intentarlo.');
+      }
+      const data = await subida.json().catch(() => null);
+      if (!subida.ok || typeof data?.url !== 'string') {
+        throw new Error(data?.error || 'No se pudo subir la imagen. Prueba con un archivo más liviano.');
+      }
+      editar(campo, data.url);
       setAviso('Imagen subida. Guarda el diseño para publicarla.');
     } catch (error) {
       setError(error instanceof Error ? error.message : 'No se pudo subir la imagen.');
