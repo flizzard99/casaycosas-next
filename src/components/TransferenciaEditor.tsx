@@ -4,8 +4,10 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { adminFetch } from '@/lib/adminFetch';
 import { CAMPOS_TRANSFERENCIA, type DatosTransferencia } from '@/lib/checkout';
 import AdminIcon from './AdminIcon';
+import CampoRut from './CampoRut';
 
 const cuentaVacia: DatosTransferencia = { titular: '', rut: '', banco: '', tipoCuenta: '', numeroCuenta: '', correo: '' };
+const claseCampo = 'min-h-10 min-w-0 rounded-lg border border-verde-noche/20 px-2 font-normal';
 
 export default function TransferenciaEditor() {
   const [datos, setDatos] = useState<DatosTransferencia>();
@@ -26,6 +28,11 @@ export default function TransferenciaEditor() {
       .finally(() => { if (!controller.signal.aborted) setCargando(false); });
     return () => controller.abort();
   }, []);
+
+  function editar(clave: keyof DatosTransferencia, valor: string) {
+    setDatos((prev) => prev && { ...prev, [clave]: valor });
+    setAviso('');
+  }
 
   async function guardar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -56,13 +63,13 @@ export default function TransferenciaEditor() {
             {CAMPOS_TRANSFERENCIA.map(({ clave, etiqueta, maxLength }) => (
               <label key={clave} className="grid min-w-0 gap-1 text-sm font-medium">
                 {etiqueta}{clave === 'correo' && ' (opcional)'}
-                <input required={clave !== 'correo'} type={clave === 'correo' ? 'email' : 'text'}
-                  inputMode={clave === 'numeroCuenta' ? 'numeric' : undefined} maxLength={maxLength}
-                  className="min-h-10 min-w-0 rounded-lg border border-verde-noche/20 px-2 font-normal"
-                  value={datos[clave] ?? ''} onChange={(event) => {
-                    setDatos({ ...datos, [clave]: event.target.value });
-                    setAviso('');
-                  }} />
+                {clave === 'rut' ? (
+                  <CampoRut required className={claseCampo} value={datos.rut} onValueChange={(valor) => editar(clave, valor)} />
+                ) : (
+                  <input required={clave !== 'correo'} type={clave === 'correo' ? 'email' : 'text'}
+                    inputMode={clave === 'numeroCuenta' ? 'numeric' : undefined} maxLength={maxLength}
+                    className={claseCampo} value={datos[clave] ?? ''} onChange={(event) => editar(clave, event.target.value)} />
+                )}
               </label>
             ))}
             <button type="submit" className="inline-flex min-h-10 items-center justify-center gap-2 justify-self-start rounded-lg bg-verde-oscuro px-3 text-sm font-semibold text-white disabled:opacity-50">

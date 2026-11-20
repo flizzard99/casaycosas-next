@@ -45,7 +45,7 @@ export default async function ShopSection({ linea }: { linea: Linea }) {
         </section>
         <section id="productos" className="shop-products scroll-mt-28">
           <div className="store-shell pt-10 sm:pt-14">
-            <h2 className="shop-display text-3xl sm:text-4xl">{linea === 'remate' ? 'Productos en remate' : 'Productos de la colección'}</h2>
+            <h2 className="shop-display text-3xl sm:text-4xl">Productos de la sección</h2>
           </div>
           {listado.status === 'fulfilled' ? (
             <CatalogClient productos={productos} linea={linea} ordenGrupos={config?.categoryOrder ?? []} />

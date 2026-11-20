@@ -31,7 +31,7 @@ export default async function HomePage() {
                       priority />
                   </div>
                   <div className="shop-collection-content">
-                    <h2>{coleccion.nombre}</h2>
+                    <h2>Sección {coleccion.nombre}</h2>
                     <p>{coleccion.descripcion}</p>
                     <span className="shop-collection-link">Explorar {coleccion.nombre} <span aria-hidden="true">→</span></span>
                   </div>
@@ -43,11 +43,11 @@ export default async function HomePage() {
             {config?.diseno.remate?.imagen && (
               <Image src={config.diseno.remate.imagen} alt="" width={90} height={64} className="h-16 w-24 rounded object-cover" />
             )}
-            <span>
-              <strong>Remate</strong>
-              <span className="shop-muted block">Últimas unidades y productos seleccionados.</span>
-            </span>
-            <span className="shop-clearance-link">Ver Remate <span aria-hidden="true">→</span></span>
+            <div>
+              <h2>{LINEAS.remate.titulo}</h2>
+              <p className="shop-muted">{LINEAS.remate.descripcion}</p>
+            </div>
+            <span className="shop-clearance-link">Explorar Casa y Cosas <span aria-hidden="true">→</span></span>
           </Link>
         </div>
         <SocialSection />

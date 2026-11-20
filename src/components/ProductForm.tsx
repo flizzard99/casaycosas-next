@@ -316,7 +316,7 @@ export default function ProductForm({ producto, onGuardado, onCancelar }: Props)
           </select>
         </label>
         {categoriaDefinida(category)?.linea === 'remate' && category !== producto?.category && (
-          <p className="mb-3 text-xs text-verde-noche/75">Esta categoría asigna el producto a Remate al guardar.</p>
+          <p className="mb-3 text-xs text-verde-noche/75">Esta categoría asigna el producto a {LINEAS.remate.nombre} al guardar.</p>
         )}
 
         <div className="mb-3 grid grid-cols-2 gap-3">

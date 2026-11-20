@@ -155,7 +155,7 @@ export default function CatalogClient({ productos, linea, ordenGrupos }: { produ
         </div>
       ) : (
         <div className="shop-panel rounded-2xl border p-6">
-          <h2 className="font-semibold">{hayFiltros ? 'No hay resultados con estos filtros' : linea === 'remate' ? 'Por ahora no hay productos en remate' : 'Aún no hay productos disponibles'}</h2>
+          <h2 className="font-semibold">{hayFiltros ? 'No hay resultados con estos filtros' : 'Aún no hay productos disponibles'}</h2>
         </div>
       )}
 

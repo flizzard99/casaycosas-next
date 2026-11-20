@@ -5,7 +5,7 @@ import { LINEAS } from '@/lib/lineas';
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: LINEAS.remate.nombre,
+  title: LINEAS.remate.titulo,
   description: LINEAS.remate.descripcion,
   alternates: { canonical: LINEAS.remate.href }
 };

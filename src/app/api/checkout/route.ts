@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url, seguimiento }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     const detalle = error instanceof Error ? error.message : '';
-    if (/^(Stock insuficiente|Producto \d+ no encontrado|El precio de los productos cambió|La sesión de pago corresponde|Total de compra inválido|Selecciona una variante)/.test(detalle)) {
+    if (/^(Stock insuficiente|Producto \d+ no encontrado|El precio de los productos cambió|La sesión de pago corresponde|Total de compra inválido|Selecciona una variante|El pedido fue eliminado)/.test(detalle)) {
       return NextResponse.json({ error: detalle }, { status: 409 });
     }
     console.error('[checkout]', error);

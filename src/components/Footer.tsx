@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { tienda } from '@/lib/config';
+import { LINEAS } from '@/lib/lineas';
 
 export default function Footer() {
   const telefono = tienda.whatsappNumber.replace(/\D/g, '');
@@ -15,9 +16,9 @@ export default function Footer() {
           </a>
         </div>
         <nav aria-label="Enlaces del pie de página" className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
-          <Link href="/matera" className="hover:underline">Matera</Link>
-          <Link href="/cristiana" className="hover:underline">Cristiana</Link>
-          <Link href="/remate" className="hover:underline">Remate</Link>
+          {Object.values(LINEAS).map(({ href, nombre }) => (
+            <Link key={href} href={href} className="hover:underline">{nombre}</Link>
+          ))}
           <Link href="/#contacto" className="hover:underline">Redes sociales</Link>
           <a href={tienda.whatsappUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">WhatsApp</a>
         </nav>

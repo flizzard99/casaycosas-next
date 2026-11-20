@@ -220,7 +220,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ remate: !producto.remate })
-    }, producto.remate ? 'Producto retirado de Remate.' : 'Producto asignado a Remate.', actualizarProducto);
+    }, producto.remate ? `Producto retirado de ${LINEAS.remate.nombre}.` : `Producto asignado a ${LINEAS.remate.nombre}.`, actualizarProducto);
   }
 
   function guardarDestacados(linea: Linea, config: FeaturedConfig) {
@@ -239,6 +239,17 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       accion === 'confirmar' ? 'Pedido confirmado.' : 'Pedido cancelado.', () => {
         setRecargarPedidos((valor) => valor + 1);
         if (accion === 'cancelar') recargarCatalogo();
+      });
+  }
+
+  function borrarPedido(pedido: Pedido) {
+    const consecuencia = pedido.estado === 'pendiente'
+      ? ' Se liberará el stock reservado.' : '';
+    if (!window.confirm(`¿Estás seguro de borrar el pedido #${pedido.id}? Se retirará del panel y el enlace del cliente dejará de funcionar.${consecuencia} Los reembolsos se gestionan por separado.`)) return;
+    return ejecutarAccion(`pedido-${pedido.id}`, `/api/pedidos/${pedido.id}`, { method: 'DELETE' },
+      'Pedido eliminado.', () => {
+        setRecargarPedidos((valor) => valor + 1);
+        if (pedido.estado === 'pendiente') recargarCatalogo();
       });
   }
 
@@ -390,7 +401,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   <option value="en-stock">En stock</option>
                   <option value="agotado">Agotados</option>
                   <option value="ocultos">Ocultos</option>
-                  <option value="remate">En remate</option>
+                  <option value="remate">En {LINEAS.remate.nombre}</option>
                 </select>
                 <select
                   value={orden}
@@ -493,10 +504,10 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                               </button>
                             </div>
                             {!remateAutomatico && <button type="button" onClick={() => alternarRemate(p)} disabled={!!ocupado}
-                              aria-label={`${p.remate ? 'Quitar de Remate' : 'Mover a Remate'}: ${p.name}`}
+                              aria-label={`${p.remate ? 'Quitar de' : 'Mover a'} ${LINEAS.remate.nombre}: ${p.name}`}
                               className="mt-2 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-2 text-xs font-semibold text-amber-950 hover:bg-amber-100 disabled:opacity-50">
                               <AdminIcon name="categorias" className="size-4" />
-                              {p.remate ? 'Quitar de Remate' : 'Mover a Remate'}
+                              {p.remate ? 'Quitar de' : 'Mover a'} {LINEAS.remate.nombre}
                             </button>}
                           </div>
                         </div>
@@ -618,6 +629,11 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                               </button>
                             </form>
                           )}
+                          <button type="button" disabled={!!ocupado} onClick={() => borrarPedido(ped)}
+                            aria-label={`Borrar pedido #${ped.id}`}
+                            className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-red-200 px-3 text-sm font-semibold text-red-800 hover:bg-red-50 disabled:opacity-50">
+                            <AdminIcon name="papelera" /> Borrar pedido
+                          </button>
                         </article>
                       ))}
                     </div>

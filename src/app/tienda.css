@@ -355,7 +355,7 @@ html[data-tienda-tema='oscuro'] .shop[data-linea='remate'] {
 }
 
 .shop-clearance-entry:hover { border-color: var(--shop-accent); }
-.shop-clearance-entry strong { font: 1.45rem var(--font-anton), sans-serif; }
+.shop-clearance-entry h2 { font: 1.45rem var(--font-anton), sans-serif; }
 .shop-clearance-entry .shop-muted { margin-top: .2rem; font-size: .88rem; }
 .shop-clearance-link { color: var(--shop-accent); font-weight: 700; text-decoration: underline; text-underline-offset: .22em; }
 

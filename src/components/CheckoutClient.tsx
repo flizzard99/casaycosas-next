@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { claveCarrito, useCart } from '@/context/CartContext';
 import { REGIONES_CHILE } from '@/lib/geografiaChile';
 import { ENVIO_CHILE, normalizarRut, type MetodoPago } from '@/lib/checkout';
+import CampoRut from './CampoRut';
 
 const clp = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' });
 const campos = [
@@ -22,6 +23,7 @@ export default function CheckoutClient({ tarjeta, transferencia }: { tarjeta: bo
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState('');
   const [metodoPago, setMetodoPago] = useState<MetodoPago>(tarjeta ? 'tarjeta' : 'transferencia');
+  const [rut, setRut] = useState('');
   const [region, setRegion] = useState('');
   const [comuna, setComuna] = useState('');
   const comunas = REGIONES_CHILE.find(({ nombre }) => nombre === region)?.comunas ?? [];
@@ -76,9 +78,11 @@ export default function CheckoutClient({ tarjeta, transferencia }: { tarjeta: bo
         {campos.map(({ name, label, autoComplete, maxLength, type }) => (
           <label className="min-w-0" key={name}>
             <span className="mb-1 block text-sm font-medium">{label}</span>
-            <input name={name} type={type || 'text'} autoComplete={autoComplete} maxLength={maxLength} required
-              placeholder={name === 'rut' ? '12.345.678-5' : undefined}
-              className={claseCampo} />
+            {name === 'rut' ? (
+              <CampoRut name="rut" value={rut} onValueChange={setRut} required className={claseCampo} />
+            ) : (
+              <input name={name} type={type || 'text'} autoComplete={autoComplete} maxLength={maxLength} required className={claseCampo} />
+            )}
           </label>
         ))}
         <label className="min-w-0">
