@@ -44,6 +44,8 @@ const categorias = {
 
 const papeleria = /\b(cuaderno|cuadernos|libreta|libretas|lapiz|lapices|boligrafo|marcador|marcadores|destacador|destacadores|separador|separadores|senaladores|notas|notitas|goma|clip|clips|tijera|pizarra|planificador|corcheteras|sticker|estuche|kit oficina|lapicero|cinta adhesiva)\b/;
 
+const yerbaMate = /^(yerbas?|buenas y santas|cbse|mananita|mateando|verdeflor|dona javiera|playadito|pipore|cruz de malta|rosamonte|rei verde|sara|kurupi|la merced|baldo|esmeralda|canarias|taragui)\b|\bmate cocido\b/;
+
 export function categoriaDefinida(categoria: string) {
   const buscada = normalizarBusqueda(categoria);
   for (const linea of ['matera', 'cristiana', 'remate'] as const) {
@@ -58,11 +60,11 @@ export function lineaProducto(producto: ProductoDeLinea): Linea | null {
   const definida = categoriaDefinida(producto.category);
   if (definida && definida.linea !== 'remate') return definida.linea;
   const categoria = normalizarBusqueda(producto.category);
+  const nombre = normalizarBusqueda(producto.name);
+  if ((categoria === 'articulos oficina' || categoria === 'articulos de oficina') && /\bmate cocido\b/.test(nombre)) return 'matera';
   if (categorias.matera.includes(categoria)) return 'matera';
   if (categorias.cristiana.includes(categoria)) return 'cristiana';
   if (categoria !== 'hogar') return null;
-
-  const nombre = normalizarBusqueda(producto.name);
   if (/\b(yerba|yerbero|matero|bombilla|decant)\b/.test(nombre)) return 'matera';
   if (/\b(biblia|biblico|himnario|pan de vida|restauracion)\b/.test(nombre) || papeleria.test(nombre)) return 'cristiana';
   return null;
@@ -80,7 +82,7 @@ export function grupoProducto(producto: ProductoDeLinea, linea: Linea) {
   }
   if (linea === 'matera') {
     if (/\bdecants?\b/.test(nombre)) return 'Decant';
-    if (/^yerbas?\b/.test(nombre) || categoria === 'yerbas') return 'Yerbas Mate';
+    if (yerbaMate.test(nombre) || categoria === 'yerbas') return 'Yerbas Mate';
     if (/^(mate|matero)\b/.test(nombre)) return 'Mates';
     return 'Accesorios';
   }

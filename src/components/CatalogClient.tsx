@@ -103,48 +103,46 @@ export default function CatalogClient({ productos, linea, ordenGrupos }: { produ
 
   return (
     <section aria-label="Productos del catálogo" className="store-shell pb-14 pt-7 md:pb-20">
-      {!!productos.length && (
-        <div className="shop-panel rounded-2xl border p-4 sm:p-5">
-          {categorias.length > 0 && <div className="mb-4 flex flex-wrap gap-2" aria-label="Tipos de producto" role="group">
-            {['', ...categorias].map((grupo) => (
-              <button type="button" key={grupo} aria-pressed={filtros.categoria === grupo}
-                className="shop-chip" onClick={() => actualizar({ categoria: grupo })}>
-                {grupo || 'Todos'}
-              </button>
-            ))}
-          </div>}
-          <div className="grid gap-3 sm:grid-cols-[2fr_1fr]">
-            <label className="grid gap-1.5 text-sm font-semibold">
-              Buscar productos
-              <input ref={campoBusqueda} type="search" value={filtros.busqueda} maxLength={120}
-                onChange={(event) => actualizar({ busqueda: event.target.value })}
-                placeholder="Nombre o descripción"
-                className="shop-control min-h-11 min-w-0 rounded-lg border px-3 text-base font-normal" />
-            </label>
-            <label className="grid min-w-0 gap-1.5 text-sm font-semibold">
-              Ordenar por
-              <select value={filtros.orden} onChange={(event) => actualizar({ orden: event.target.value as Filtros['orden'] })}
-                className="shop-control min-h-11 min-w-0 rounded-lg border px-3 text-base font-normal">
-                {ORDENES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
-              </select>
-            </label>
-          </div>
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-            <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
-              <input type="checkbox" checked={filtros.disponibles}
-                onChange={(event) => actualizar({ disponibles: event.target.checked })}
-                className="shop-checkbox size-4" />
-              Solo en stock
-            </label>
-            {hayFiltros && (
-              <button type="button" onClick={() => { actualizar(INICIALES); campoBusqueda.current?.focus(); }}
-                className="min-h-11 text-sm font-semibold underline underline-offset-4">
-                Limpiar filtros
-              </button>
-            )}
-          </div>
+      <div className="shop-panel rounded-2xl border p-4 sm:p-5">
+        {categorias.length > 0 && <div className="mb-4 flex flex-wrap gap-2" aria-label="Tipos de producto" role="group">
+          {['', ...categorias].map((grupo) => (
+            <button type="button" key={grupo} aria-pressed={filtros.categoria === grupo}
+              className="shop-chip" onClick={() => actualizar({ categoria: grupo })}>
+              {grupo || 'Todos'}
+            </button>
+          ))}
+        </div>}
+        <div className="grid gap-3 sm:grid-cols-[2fr_1fr]">
+          <label className="grid gap-1.5 text-sm font-semibold">
+            Buscar productos
+            <input ref={campoBusqueda} type="search" value={filtros.busqueda} maxLength={120}
+              onChange={(event) => actualizar({ busqueda: event.target.value })}
+              placeholder="Nombre o descripción"
+              className="shop-control min-h-11 min-w-0 rounded-lg border px-3 text-base font-normal" />
+          </label>
+          <label className="grid min-w-0 gap-1.5 text-sm font-semibold">
+            Ordenar por
+            <select value={filtros.orden} onChange={(event) => actualizar({ orden: event.target.value as Filtros['orden'] })}
+              className="shop-control min-h-11 min-w-0 rounded-lg border px-3 text-base font-normal">
+              {ORDENES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          </label>
         </div>
-      )}
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+          <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
+            <input type="checkbox" checked={filtros.disponibles}
+              onChange={(event) => actualizar({ disponibles: event.target.checked })}
+              className="shop-checkbox size-4" />
+            Solo en stock
+          </label>
+          {hayFiltros && (
+            <button type="button" onClick={() => { actualizar(INICIALES); campoBusqueda.current?.focus(); }}
+              className="min-h-11 text-sm font-semibold underline underline-offset-4">
+              Limpiar filtros
+            </button>
+          )}
+        </div>
+      </div>
 
       <p role="status" className="my-5 shop-muted text-sm font-medium">
         {resultados.length} {resultados.length === 1 ? 'producto' : 'productos'}
