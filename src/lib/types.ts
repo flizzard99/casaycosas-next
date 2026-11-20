@@ -1,4 +1,6 @@
-export type Variante = { id: string; color: string; stock: number };
+import type { Linea } from './lineas';
+
+export type Variante = { id: string; color?: string; talla?: string; stock: number };
 
 export type Producto = {
   id: number;
@@ -42,5 +44,6 @@ export type DisenoSeccion = { imagen?: string; fondo?: string; titulo?: string; 
 export type Config = {
   categoryOrder: string[];
   featured: FeaturedConfig;
-  diseno: Partial<Record<'matera' | 'cristiana' | 'remate', DisenoSeccion>>;
+  featuredByLine: Partial<Record<Linea, FeaturedConfig>>;
+  diseno: Partial<Record<Linea, DisenoSeccion>>;
 };

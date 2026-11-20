@@ -1,5 +1,7 @@
 import { Pool } from 'pg';
-import { categoriaDefinida, lineaProducto, type Linea } from './lineas';
+import { categoriaDefinida, type Linea } from './lineas';
+import { MAX_DESTACADOS, TITULO_DESTACADOS } from './destacados';
+import { nombreConVariante } from './variantes';
 import { precioActual } from './precios';
 import type { Config, DisenoSeccion, FeaturedConfig, Producto, ProductoInput, Variante } from './types';
 
@@ -286,18 +288,18 @@ export async function crearPedido(items: ItemCompra[], clienteNombre: string, cl
     const itemsDetalle: PedidoItem[] = [];
 
     for (const item of [...items].sort((a, b) => a.id - b.id)) {
-      const res = await client.query('SELECT id, name, category, price, precio_oferta, stock, remate, variantes FROM productos WHERE id = $1 AND visible IS TRUE FOR UPDATE', [item.id]);
+      const res = await client.query('SELECT id, name, price, precio_oferta, stock, variantes FROM productos WHERE id = $1 AND visible IS TRUE FOR UPDATE', [item.id]);
       const p = res.rows[0];
-      if (!p || !lineaProducto(p)) throw new Error(`Producto ${item.id} no encontrado`);
+      if (!p) throw new Error(`Producto ${item.id} no encontrado`);
       const precio = precioActual({ price: p.price, precioOferta: p.precio_oferta });
       if (!Number.isInteger(precio) || precio <= 0) throw new Error('Total de compra inválido');
       const variantes: Variante[] = p.variantes;
       const variante = variantes.find((v) => v.id === item.varianteId);
       if ((variantes.length > 0 || item.varianteId) && !variante) {
-        throw new Error(`Selecciona un color disponible para "${p.name}".`);
+        throw new Error(`Selecciona una variante disponible para "${p.name}".`);
       }
       const stock = variante?.stock ?? p.stock;
-      const nombre = variante ? `${p.name} (${variante.color})` : p.name;
+      const nombre = nombreConVariante(p.name, variante);
       if (stock < item.qty) throw new Error(`Stock insuficiente para "${nombre}" (disponible: ${stock})`);
       total += precio * item.qty;
       itemsDetalle.push({ producto_id: p.id, nombre, qty: item.qty, precio, variante_id: variante?.id ?? null });
@@ -459,7 +461,7 @@ export async function getProductosPublicos(): Promise<Producto[]> {
     `SELECT id, name, description, category, image_url, instagram_url, price, stock, visible, remate, precio_oferta, variantes, created_at, images[1:1] AS images
      FROM productos WHERE visible = TRUE ORDER BY created_at DESC`
   );
-  return result.rows.filter(lineaProducto).map(formatProducto);
+  return result.rows.map(formatProducto);
 }
 
 /** Lista completa para el panel admin (incluye ocultos y todas las imágenes) */
@@ -522,7 +524,7 @@ export async function updateProducto(id: number, data: ProductoInput): Promise<P
          WHERE i.producto_id = $1 AND p.estado = 'pendiente'`, [id]
       );
       if (pendientes.rows.some((item) => cambiaTipoStock || !variantes.some((v) => v.id === item.variante_id))) {
-        throw new ConflictoInventario('Hay colores o unidades en pedidos pendientes. Espera a que se procesen antes de quitarlos.');
+        throw new ConflictoInventario('Hay variantes o unidades en pedidos pendientes. Espera a que se procesen antes de quitarlas.');
       }
     }
 
@@ -606,22 +608,17 @@ export async function eliminarImagen(id: number, index: number): Promise<Product
 
 export async function getConfig(): Promise<Config> {
   await ensureSchema();
-  const pool = getPool();
-  const [resCat, resFeat, resDiseno] = await Promise.all([
-    pool.query(`SELECT value FROM config WHERE key = 'category_order'`),
-    pool.query(`SELECT value FROM config WHERE key = 'featured'`),
-    pool.query(`SELECT value FROM config WHERE key = 'diseno'`)
-  ]);
-  const featured: FeaturedConfig = resFeat.rows.length
-    ? resFeat.rows[0].value
-    : { productIds: [], title: 'Productos más vendidos' };
+  const { rows } = await getPool().query("SELECT key, value FROM config WHERE key IN ('category_order', 'featured', 'featured_by_line', 'diseno')");
+  const config = Object.fromEntries(rows.map(({ key, value }) => [key, value]));
+  const featured = config.featured;
   return {
-    categoryOrder: resCat.rows.length ? resCat.rows[0].value : [],
-    diseno: resDiseno.rows[0]?.value ?? {},
+    categoryOrder: config.category_order ?? [],
+    diseno: config.diseno ?? {},
     featured: {
-      productIds: Array.isArray(featured.productIds) ? featured.productIds.slice(0, 4) : [],
-      title: featured.title || 'Productos más vendidos'
-    }
+      productIds: Array.isArray(featured?.productIds) ? [...new Set<number>(featured.productIds)].slice(0, MAX_DESTACADOS) : [],
+      title: typeof featured?.title === 'string' && featured.title.trim() ? featured.title : TITULO_DESTACADOS
+    },
+    featuredByLine: config.featured_by_line ?? {}
   };
 }
 
@@ -634,22 +631,26 @@ export async function saveDisenoSeccion(linea: Linea, diseno: DisenoSeccion) {
   );
 }
 
-export async function saveConfig(config: Config): Promise<void> {
+export async function saveConfig(cambios: { categoryOrder?: string[]; destacados?: { linea: Linea; config: FeaturedConfig } }): Promise<void> {
   await ensureSchema();
   const pool = getPool();
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    await client.query(
-      `INSERT INTO config (key, value) VALUES ('category_order', $1::jsonb)
-       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
-      [JSON.stringify(config.categoryOrder)]
-    );
-    await client.query(
-      `INSERT INTO config (key, value) VALUES ('featured', $1::jsonb)
-       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
-      [JSON.stringify(config.featured)]
-    );
+    if (cambios.categoryOrder) {
+      await client.query(
+        `INSERT INTO config (key, value) VALUES ('category_order', $1::jsonb)
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+        [JSON.stringify(cambios.categoryOrder)]
+      );
+    }
+    if (cambios.destacados) {
+      await client.query(
+        `INSERT INTO config (key, value) VALUES ('featured_by_line', jsonb_build_object($1::text, $2::jsonb))
+         ON CONFLICT (key) DO UPDATE SET value = config.value || EXCLUDED.value`,
+        [cambios.destacados.linea, JSON.stringify(cambios.destacados.config)]
+      );
+    }
     await client.query('COMMIT');
   } catch (e) {
     await client.query('ROLLBACK');

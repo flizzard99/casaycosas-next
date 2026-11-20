@@ -7,6 +7,8 @@ export const esVarianteId = (id: unknown): id is string =>
 const entero = (valor: unknown, maximo: number): valor is number =>
   typeof valor === 'number' && Number.isInteger(valor) && valor >= 0 && valor <= maximo;
 
+const textoOpcional = (valor: unknown) => valor === undefined || (typeof valor === 'string' && valor.trim().length <= 40);
+
 export function validarInventario(data: Record<string, unknown>) {
   const precio = data.price ?? 0;
   const oferta = data.precioOferta;
@@ -18,15 +20,20 @@ export function validarInventario(data: Record<string, unknown>) {
   if (data.variantes !== undefined) {
     const variantes = data.variantes;
     if (!Array.isArray(variantes) || variantes.length > 30 ||
-      variantes.some((v) => !esVarianteId(v?.id) || typeof v?.color !== 'string' ||
-        !v.color.trim() || v.color.length > 40 || !entero(v?.stock, 1000000))) {
-      return 'Revisa los colores y sus cantidades (máximo 30 colores).';
+      variantes.some((v) => !esVarianteId(v?.id) || !textoOpcional(v.color) || !textoOpcional(v.talla) ||
+        !(v.color?.trim() || v.talla?.trim()) || !entero(v.stock, 1000000))) {
+      return 'Ingresa un color o una talla y el stock de cada variante (máximo 30 variantes).';
     }
+    const opciones = variantes.map((v: Variante) => JSON.stringify([
+      normalizarBusqueda(v.color ?? ''), normalizarBusqueda(v.talla ?? '')
+    ]));
     if (new Set(variantes.map((v) => v.id)).size !== variantes.length ||
-        new Set(variantes.map((v) => normalizarBusqueda(v.color))).size !== variantes.length) {
-      return 'Cada color debe tener un nombre distinto.';
+        new Set(opciones).size !== variantes.length) {
+      return 'Cada variante debe tener un color, una talla o una combinación distinta.';
     }
-    data.variantes = variantes.map(({ id, color, stock }: Variante) => ({ id, color: color.trim(), stock }));
+    data.variantes = variantes.map(({ id, color, talla, stock }: Variante) => ({
+      id, color: color?.trim() || undefined, talla: talla?.trim() || undefined, stock
+    }));
   }
   return null;
 }

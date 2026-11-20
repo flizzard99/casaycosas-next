@@ -1,7 +1,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { LINEAS, lineaProducto, type Linea } from '@/lib/lineas';
-import { getConfig, getFeaturedProducts, getProductosPublicos } from '@/lib/db';
+import { getConfig, getProductosPublicos } from '@/lib/db';
+import { destacadosDeLinea } from '@/lib/destacados';
 import Header from './Header';
 import CatalogClient from './CatalogClient';
 import FeaturedGrid from './FeaturedGrid';
@@ -16,8 +17,7 @@ export default async function ShopSection({ linea }: { linea: Linea }) {
   const productos = listado.status === 'fulfilled'
     ? listado.value.filter((producto) => lineaProducto(producto) === linea)
     : [];
-  const destacados = config && await getFeaturedProducts(config.featured.productIds).catch(() => []);
-  const destacadosDeLinea = destacados?.filter((producto) => lineaProducto(producto) === linea) ?? [];
+  const destacados = config && destacadosDeLinea(config, linea, productos);
 
   return (
     <div className="shop" data-linea={linea}>
@@ -53,7 +53,7 @@ export default async function ShopSection({ linea }: { linea: Linea }) {
             <p role="status" className="store-shell py-8">El catálogo está temporalmente fuera de servicio. Vuelve a intentarlo en unos minutos.</p>
           )}
         </section>
-        <FeaturedGrid productos={destacadosDeLinea} titulo={config?.featured.title || 'Productos destacados'} />
+        {destacados && <FeaturedGrid productos={destacados.productos} titulo={destacados.title} />}
       </main>
       <Footer />
       <CartDrawer />

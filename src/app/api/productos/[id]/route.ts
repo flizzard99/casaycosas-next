@@ -1,7 +1,6 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-import { lineaProducto } from '@/lib/lineas';
 import { validarInventario } from '@/lib/validarInventario';
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
@@ -28,7 +27,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const id = parseIdOrBadRequest((await params).id);
     if (id === null) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
     const producto = await getProductoById(id);
-    if (!producto || ((!producto.visible || !lineaProducto(producto)) && !isAdminRequest(req))) {
+    if (!producto || (!producto.visible && !isAdminRequest(req))) {
       return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
     }
     return NextResponse.json(producto, { headers: { 'Cache-Control': 'private, no-store' } });

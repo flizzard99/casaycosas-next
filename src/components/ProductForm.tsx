@@ -5,7 +5,8 @@ import { LINEAS, categoriaDefinida, grupoProducto, lineaProducto } from '@/lib/l
 import { nombreCategoria } from '@/lib/categorias';
 import { useState, useRef, useCallback } from 'react';
 import { fileToDataUrl } from '@/lib/fileToDataUrl';
-import type { Producto } from '@/lib/types';
+import type { Producto, Variante } from '@/lib/types';
+import { etiquetaVariante } from '@/lib/variantes';
 import { adminFetch } from '@/lib/adminFetch';
 import { MAX_PRODUCT_IMAGES, MAX_UPLOAD_BYTES, MAX_UPLOAD_DIRECT_BYTES } from '@/lib/uploadLimits';
 import { parsearEncuadre, estilosEncuadre, quitarEncuadre } from '@/lib/encuadre';
@@ -225,6 +226,10 @@ export default function ProductForm({ producto, onGuardado, onCancelar }: Props)
     setDragOverIndex(null);
   }
 
+  function editarVariante(id: string, cambios: Partial<Omit<Variante, 'id'>>) {
+    setVariantes((prev) => prev.map((variante) => variante.id === id ? { ...variante, ...cambios } : variante));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
@@ -339,20 +344,26 @@ export default function ProductForm({ producto, onGuardado, onCancelar }: Props)
           ) : (
             <>
               <p className="mb-2 text-sm">Stock total: {variantes.reduce((total, v) => total + v.stock, 0)}</p>
+              <p className="mb-3 text-xs text-verde-noche/75">Completa el color, la talla o ambos. Cada variante tiene su propio stock.</p>
               {variantes.map((variante, i) => (
-                <div key={variante.id} className="mb-2 grid grid-cols-[minmax(0,1fr)_4.6rem_auto] items-end gap-2">
+                <div key={variante.id} className="mb-2 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_3.5rem] items-end gap-2 rounded border border-verde-noche/10 p-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5rem_auto]">
                   <label className="grid gap-1 text-sm">Color {i + 1}
-                    <input required maxLength={40} value={variante.color}
-                      onChange={(event) => setVariantes((prev) => prev.map((v) => v.id === variante.id ? { ...v, color: event.target.value } : v))}
+                    <input maxLength={40} value={variante.color ?? ''} placeholder="Ej. Negro"
+                      onChange={(event) => editarVariante(variante.id, { color: event.target.value })}
+                      className="min-h-10 min-w-0 rounded-lg border border-verde-noche/20 px-2" />
+                  </label>
+                  <label className="grid gap-1 text-sm">Talla {i + 1}
+                    <input maxLength={40} value={variante.talla ?? ''} placeholder="Ej. M"
+                      onChange={(event) => editarVariante(variante.id, { talla: event.target.value })}
                       className="min-h-10 min-w-0 rounded-lg border border-verde-noche/20 px-2" />
                   </label>
                   <label className="grid gap-1 text-sm">Stock
                     <input type="number" required min="0" max="1000000" step="1" value={variante.stock}
-                      onChange={(event) => setVariantes((prev) => prev.map((v) => v.id === variante.id ? { ...v, stock: Number(event.target.value) } : v))}
+                      onChange={(event) => editarVariante(variante.id, { stock: Number(event.target.value) })}
                       className="min-h-10 min-w-0 rounded-lg border border-verde-noche/20 px-2" />
                   </label>
-                  <button type="button" className="grid size-10 place-items-center rounded border border-red-200 text-red-700"
-                    aria-label={`Quitar color ${variante.color || i + 1}`}
+                  <button type="button" className="col-start-3 grid size-10 place-items-center justify-self-end rounded border border-red-200 text-red-700 sm:col-start-auto"
+                    aria-label={`Quitar variante ${etiquetaVariante(variante) || i + 1}`}
                     onClick={() => {
                       if (variantes.length === 1) setStock(String(variante.stock));
                       setVariantes((prev) => prev.filter((v) => v.id !== variante.id));
@@ -364,9 +375,9 @@ export default function ProductForm({ producto, onGuardado, onCancelar }: Props)
             </>
           )}
           <button type="button" disabled={variantes.length >= 30}
-            onClick={() => setVariantes((prev) => [...prev, { id: crypto.randomUUID(), color: '', stock: prev.length ? 0 : Number(stock) }])}
+            onClick={() => setVariantes((prev) => [...prev, { id: crypto.randomUUID(), stock: prev.length ? 0 : Number(stock) }])}
             className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-verde-noche/20 px-3 text-sm font-semibold disabled:opacity-50">
-            <AdminIcon name="mas" /> Agregar color
+            <AdminIcon name="mas" /> Agregar variante
           </button>
         </fieldset>
 

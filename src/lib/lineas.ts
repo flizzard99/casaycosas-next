@@ -26,7 +26,7 @@ export const LINEAS = {
     descripcion: 'Últimas unidades y productos seleccionados del inventario, hasta agotar stock.',
     imagen: '/oveja-portada.webp',
     alt: '',
-    grupos: ['Artículos Oficina', 'Artesanías', 'Belleza', 'Hogar', 'Juguetería', 'Perfumería'],
+    grupos: ['Artículos Oficina', 'Artesanías', 'Belleza', 'Hogar', 'Juguetería', 'Perfumería', 'Otros'],
   },
 } as const;
 
@@ -39,7 +39,7 @@ export function normalizarBusqueda(texto: string) {
 
 const categorias = {
   matera: ['mate', 'matera', 'yerbas', 'bombillas', 'accesorios materos'],
-  cristiana: ['libreria cristiana', 'cristiana', 'biblias', 'papeleria', 'articulos oficina', 'articulos de oficina']
+  cristiana: ['libreria cristiana', 'cristiana', 'biblias', 'papeleria']
 };
 
 const papeleria = /\b(cuaderno|cuadernos|libreta|libretas|lapiz|lapices|boligrafo|marcador|marcadores|destacador|destacadores|separador|separadores|senaladores|notas|notitas|goma|clip|clips|tijera|pizarra|planificador|corcheteras|sticker|estuche|kit oficina|lapicero|cinta adhesiva)\b/;
@@ -55,19 +55,19 @@ export function categoriaDefinida(categoria: string) {
   return null;
 }
 
-export function lineaProducto(producto: ProductoDeLinea): Linea | null {
+export function lineaProducto(producto: ProductoDeLinea): Linea {
   if (producto.remate) return 'remate';
   const definida = categoriaDefinida(producto.category);
   if (definida && definida.linea !== 'remate') return definida.linea;
   const categoria = normalizarBusqueda(producto.category);
   const nombre = normalizarBusqueda(producto.name);
-  if ((categoria === 'articulos oficina' || categoria === 'articulos de oficina') && /\bmate cocido\b/.test(nombre)) return 'matera';
   if (categorias.matera.includes(categoria)) return 'matera';
   if (categorias.cristiana.includes(categoria)) return 'cristiana';
-  if (categoria !== 'hogar') return null;
-  if (/\b(yerba|yerbero|matero|bombilla|decant)\b/.test(nombre)) return 'matera';
-  if (/\b(biblia|biblico|himnario|pan de vida|restauracion)\b/.test(nombre) || papeleria.test(nombre)) return 'cristiana';
-  return null;
+  if (['hogar', 'articulos oficina', 'articulos de oficina'].includes(categoria)) {
+    if (yerbaMate.test(nombre) || /\b(yerbero|matero|bombilla|decant)\b/.test(nombre)) return 'matera';
+    if (/\b(biblia|biblico|himnario|pan de vida|restauracion)\b/.test(nombre) || papeleria.test(nombre)) return 'cristiana';
+  }
+  return 'remate';
 }
 
 export function grupoProducto(producto: ProductoDeLinea, linea: Linea) {
@@ -78,7 +78,7 @@ export function grupoProducto(producto: ProductoDeLinea, linea: Linea) {
   if (linea === 'remate') {
     if (categoria === 'perfumes') return 'Perfumería';
     if (categoria === 'articulos de oficina') return 'Artículos Oficina';
-    return 'Hogar';
+    return 'Otros';
   }
   if (linea === 'matera') {
     if (/\bdecants?\b/.test(nombre)) return 'Decant';

@@ -8,6 +8,7 @@ import ProductCarousel from './ProductCarousel';
 import ProductCard from './ProductCard';
 import type { Producto } from '@/lib/types';
 import { tienda } from '@/lib/config';
+import { etiquetaVariante, nombreConVariante, tipoVariantes } from '@/lib/variantes';
 
 import { precioActual } from '@/lib/precios';
 import PrecioProducto from './PrecioProducto';
@@ -17,13 +18,15 @@ export default function ProductDetailClient({ linea, producto, relacionados = []
   const sinStock = producto.stock <= 0;
   const imagenes = producto.images?.length ? producto.images : producto.image_url ? [producto.image_url] : [];
 
-  const colorId = useId();
+  const selectorId = useId();
   const [varianteId, setVarianteId] = useState('');
   const variante = producto.variantes.find((v) => v.id === varianteId);
-  const requiereColor = producto.variantes.length > 0;
+  const requiereVariante = producto.variantes.length > 0;
+  const tipo = tipoVariantes(producto.variantes);
+  const indicacion = tipo === 'Talla' ? 'Selecciona una talla' : tipo === 'Color' ? 'Selecciona un color' : 'Selecciona una opción';
   const [qty, setQty] = useState(1);
   const [agregado, setAgregado] = useState(false);
-  const maxQty = variante?.stock ?? (requiereColor ? 0 : producto.stock);
+  const maxQty = variante?.stock ?? (requiereVariante ? 0 : producto.stock);
 
   return (
     <div className="store-shell py-7 sm:py-10">
@@ -53,17 +56,17 @@ export default function ProductDetailClient({ linea, producto, relacionados = []
             <p className="shop-muted text-sm leading-relaxed mt-5">{producto.description}</p>
           )}
 
-          {requiereColor && (
+          {requiereVariante && (
             <div className="mt-6 grid max-w-sm gap-2 text-sm font-semibold">
-              <label htmlFor={colorId}>Color</label>
-              <select id={colorId} className="shop-control min-h-11 rounded-lg border px-3" value={varianteId}
+              <label htmlFor={selectorId}>{tipo}</label>
+              <select id={selectorId} className="shop-control min-h-11 rounded-lg border px-3" value={varianteId}
                 onChange={(event) => { setVarianteId(event.target.value); setQty(1); setAgregado(false); }}>
-                <option value="">Selecciona un color</option>
+                <option value="">{indicacion}</option>
                 {producto.variantes.map((v) => (
-                  <option key={v.id} value={v.id} disabled={v.stock <= 0}>{v.color}{v.stock <= 0 ? ' · Agotado' : ''}</option>
+                  <option key={v.id} value={v.id} disabled={v.stock <= 0}>{etiquetaVariante(v)}{v.stock <= 0 ? ' · Agotado' : ''}</option>
                 ))}
               </select>
-              {variante && <span role="status" className="shop-muted text-xs">Stock de {variante.color}: {variante.stock}</span>}
+              {variante && <span role="status" className="shop-muted text-xs">Stock de {etiquetaVariante(variante)}: {variante.stock}</span>}
             </div>
           )}
 
@@ -98,7 +101,7 @@ export default function ProductDetailClient({ linea, producto, relacionados = []
               onClick={() => {
                 addItem({
                   id: producto.id,
-                  name: variante ? `${producto.name} (${variante.color})` : producto.name,
+                  name: nombreConVariante(producto.name, variante),
                   varianteId: variante?.id,
                   price: precioActual(producto),
                   image_url: imagenes[0] || '',
@@ -110,7 +113,7 @@ export default function ProductDetailClient({ linea, producto, relacionados = []
               }}
               className="shop-button flex-1"
             >
-              {sinStock ? 'Sin stock' : requiereColor && !variante ? 'Selecciona un color' : agregado ? '✓ Agregado al carrito' : 'Agregar al carrito'}
+              {sinStock ? 'Sin stock' : requiereVariante && !variante ? indicacion : agregado ? '✓ Agregado al carrito' : 'Agregar al carrito'}
             </button>
           </div>
 

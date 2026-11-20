@@ -1,7 +1,7 @@
 'use client';
 
-import { nombreCategoria } from '@/lib/categorias';
 import { grupoProducto, lineaProducto } from '@/lib/lineas';
+import { tipoVariantes } from '@/lib/variantes';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -59,7 +59,7 @@ export default function ProductCard({ producto }: { producto: Producto }) {
       </Link>
       <div className="p-4 flex flex-col flex-1">
         <Link href={`/producto/${producto.id}`} prefetch={false}>
-          <div className="shop-muted text-xs font-medium">{linea ? grupoProducto(producto, linea) : nombreCategoria(producto.category)}</div>
+          <div className="shop-muted text-xs font-medium">{grupoProducto(producto, linea)}</div>
           <h3 className="mt-1 text-sm font-semibold leading-snug hover:underline sm:text-base">{producto.name}</h3>
         </Link>
         <div className="mt-2 flex flex-1 flex-wrap content-start items-baseline gap-x-2 gap-y-1">
@@ -88,7 +88,7 @@ export default function ProductCard({ producto }: { producto: Producto }) {
             </div>
           )}
           {producto.variantes.length && !sinStock ? (
-            <Link href={`/producto/${producto.id}`} prefetch={false} className="shop-button mt-3 px-2 py-2 text-xs">Elegir color</Link>
+            <Link href={`/producto/${producto.id}`} prefetch={false} className="shop-button mt-3 px-2 py-2 text-xs">Elegir {tipoVariantes(producto.variantes).toLowerCase()}</Link>
           ) : (
           <button
             disabled={sinStock}

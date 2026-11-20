@@ -9,5 +9,5 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cat
     // El parámetro puede contener un signo de porcentaje literal.
   }
   const linea = lineaProducto({ category: categoria, name: '' });
-  permanentRedirect(linea ? LINEAS[linea].href : '/');
+  permanentRedirect(LINEAS[linea].href);
 }

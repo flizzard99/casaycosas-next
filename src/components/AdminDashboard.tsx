@@ -1,8 +1,8 @@
 'use client';
 
 import AdminIcon from './AdminIcon';
-import { LINEAS, grupoProducto, lineaProducto } from '@/lib/lineas';
-import { nombreCategoria } from '@/lib/categorias';
+import { LINEAS, grupoProducto, lineaProducto, type Linea } from '@/lib/lineas';
+import { destacadosDeLinea, TITULO_DESTACADOS } from '@/lib/destacados';
 import { precioActual } from '@/lib/precios';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -19,7 +19,9 @@ import type { Pedido } from '@/lib/db';
 
 const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 const GRUPOS_PUBLICOS = Object.values(LINEAS).flatMap(({ grupos }) => [...grupos]);
-const FEATURED_DEFAULT: FeaturedConfig = { productIds: [], title: 'Productos más vendidos' };
+const FEATURED_DEFAULT: Pick<Config, 'featured' | 'featuredByLine'> = {
+  featured: { productIds: [], title: TITULO_DESTACADOS }, featuredByLine: {}
+};
 const PAGE_SIZE = 24;
 
 type Vista = 'productos' | 'categorias' | 'destacados' | 'pedidos' | 'diseno';
@@ -41,7 +43,8 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [categoryOrder, setCategoryOrder] = useState<string[]>([]);
   const [diseno, setDiseno] = useState<Config['diseno']>({});
-  const [featured, setFeatured] = useState<FeaturedConfig>(FEATURED_DEFAULT);
+  const [featured, setFeatured] = useState(FEATURED_DEFAULT);
+  const [lineaDestacados, setLineaDestacados] = useState<Linea>('matera');
   const [busqueda, setBusqueda] = useState('');
   const [categoriaFiltro, setCategoriaFiltro] = useState('todas');
   const [estadoFiltro, setEstadoFiltro] = useState<FiltroEstado>('todos');
@@ -81,7 +84,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         const [lista, config] = await Promise.all([resProductos.json(), resConfig.json()]);
         setProductos(lista);
         setCategoryOrder(config.categoryOrder || []);
-        setFeatured(config.featured || FEATURED_DEFAULT);
+        setFeatured({ featured: config.featured ?? FEATURED_DEFAULT.featured, featuredByLine: config.featuredByLine ?? {} });
         setDiseno(config.diseno ?? {});
       })
       .catch(() => setErrorCatalogo('No pudimos cargar los productos y la configuración.'))
@@ -123,7 +126,8 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     return () => controller.abort();
   }, [vista, filtroPedido, paginaPedidos, clavePedidos]);
 
-  const publicables = useMemo(() => productos.filter((producto) => producto.visible && lineaProducto(producto)), [productos]);
+  const publicables = useMemo(() => productos.filter((producto) => producto.visible && lineaProducto(producto) === lineaDestacados), [productos, lineaDestacados]);
+  const destacados = destacadosDeLinea(featured, lineaDestacados, publicables);
   const categorias = GRUPOS_PUBLICOS;
 
   const kpis = useMemo(() => {
@@ -136,15 +140,15 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     const term = busqueda.trim().toLowerCase();
     let result = productos.filter((p) => {
       const linea = lineaProducto(p);
-      const grupo = linea ? grupoProducto(p, linea) : '';
-      const porCategoria = categoriaFiltro === 'todas' || grupo === categoriaFiltro || (categoriaFiltro === 'fuera' && !linea);
+      const grupo = grupoProducto(p, linea);
+      const porCategoria = categoriaFiltro === 'todas' || grupo === categoriaFiltro;
       const porTexto = !term || p.name.toLowerCase().includes(term);
       const porEstado =
         estadoFiltro === 'todos' ||
         (estadoFiltro === 'en-stock' && p.stock > 0) ||
         (estadoFiltro === 'agotado' && p.stock <= 0) ||
         (estadoFiltro === 'ocultos' && !p.visible) ||
-        (estadoFiltro === 'remate' && p.remate);
+        (estadoFiltro === 'remate' && linea === 'remate');
       return porCategoria && porTexto && porEstado;
     });
 
@@ -207,6 +211,10 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     }, producto.remate ? 'Producto retirado de Remate.' : 'Producto asignado a Remate.', actualizarProducto);
   }
 
+  function guardarDestacados(linea: Linea, config: FeaturedConfig) {
+    setFeatured((prev) => ({ ...prev, featuredByLine: { ...prev.featuredByLine, [linea]: config } }));
+  }
+
   function eliminarProducto(id: number) {
     if (!confirm('¿Eliminar este producto? Esta acción no se puede deshacer.')) return;
     return ejecutarAccion(`producto-${id}`, `/api/productos/${id}`, { method: 'DELETE' },
@@ -236,7 +244,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     { id: 'productos', label: 'Productos' },
     { id: 'pedidos', label: 'Pedidos' },
     { id: 'categorias', label: 'Categorías' },
-    { id: 'destacados', label: 'Destacados' },
+    { id: 'destacados', label: 'Más vendidos' },
     { id: 'diseno', label: 'Diseño' },
   ];
 
@@ -356,7 +364,6 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   className="px-3 py-2 rounded-lg border border-verde-noche/15 text-sm bg-white"
                 >
                   <option value="todas">Todas las categorías</option>
-                  <option value="fuera">Fuera de las secciones</option>
                   {categorias.map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
@@ -409,6 +416,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
                     {productosPagina.map((p) => {
                       const linea = lineaProducto(p);
+                      const remateAutomatico = linea === 'remate' && lineaProducto({ ...p, remate: false }) === 'remate';
                       const srcRaw = (p.images && p.images[0]) || p.image_url;
                       const { url: srcLimpia, encuadre } = srcRaw ? parsearEncuadre(srcRaw) : { url: '', encuadre: null };
                       const stockColor = p.stock > 5 ? 'bg-verde/15 text-verde-oscuro' : p.stock > 0 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600';
@@ -437,11 +445,11 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                             <div className="flex items-start justify-between gap-2 mb-2">
                               <h3 className="text-sm font-medium text-verde-noche line-clamp-2 leading-tight">{p.name}</h3>
                             </div>
-                            <p className="mb-2 text-xs font-medium text-verde-oscuro">{linea ? `${LINEAS[linea].nombre} · ${grupoProducto(p, linea)}` : `${nombreCategoria(p.category)} · Fuera de las secciones`}</p>
+                            <p className="mb-2 text-xs font-medium text-verde-oscuro">{LINEAS[linea].nombre} · {grupoProducto(p, linea)}</p>
                             <div className="flex items-center justify-between mb-3">
                               <PrecioProducto producto={p} className="text-sm font-semibold text-verde-oscuro" />
                               <span className={`rounded-full px-2 py-1 text-xs font-semibold ${stockColor}`}>
-                                Stock: {p.stock}{p.variantes.length > 0 && ` · ${p.variantes.length} colores`}
+                                Stock: {p.stock}{p.variantes.length > 0 && ` · ${p.variantes.length} ${p.variantes.length === 1 ? 'variante' : 'variantes'}`}
                               </span>
                             </div>
                             <div className="flex items-center gap-1">
@@ -472,12 +480,12 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                                 Eliminar
                               </button>
                             </div>
-                            <button type="button" onClick={() => alternarRemate(p)} disabled={!!ocupado}
+                            {!remateAutomatico && <button type="button" onClick={() => alternarRemate(p)} disabled={!!ocupado}
                               aria-label={`${p.remate ? 'Quitar de Remate' : 'Mover a Remate'}: ${p.name}`}
                               className="mt-2 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-2 text-xs font-semibold text-amber-950 hover:bg-amber-100 disabled:opacity-50">
                               <AdminIcon name="categorias" className="size-4" />
                               {p.remate ? 'Quitar de Remate' : 'Mover a Remate'}
-                            </button>
+                            </button>}
                           </div>
                         </div>
                       );
@@ -621,9 +629,17 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           )}
 
           {/* Destacados */}
-          {vista === 'destacados' && !cargando && productos.length > 0 && (
-            <div className="max-w-md">
-              <FeaturedEditor productos={publicables} featureConfigInicial={featured} onGuardado={setFeatured} />
+          {vista === 'destacados' && !cargando && !errorCatalogo && (
+            <div className="max-w-xl space-y-3">
+              <label className="grid max-w-xs gap-1 text-sm font-semibold">Sección de la tienda
+                <select value={lineaDestacados} onChange={(event) => setLineaDestacados(event.target.value as Linea)}
+                  className="min-h-11 rounded-lg border border-verde-noche/15 bg-white px-3">
+                  {Object.entries(LINEAS).map(([linea, seccion]) => <option key={linea} value={linea}>{seccion.nombre}</option>)}
+                </select>
+              </label>
+              <FeaturedEditor key={lineaDestacados} linea={lineaDestacados} productos={publicables}
+                featureConfigInicial={{ productIds: destacados.productos.map((producto) => producto.id), title: destacados.title }}
+                onGuardado={(config) => guardarDestacados(lineaDestacados, config)} />
             </div>
           )}
         </main>

@@ -20,7 +20,6 @@ export default function Footer() {
           <Link href="/remate" className="hover:underline">Remate</Link>
           <Link href="/#contacto" className="hover:underline">Redes sociales</Link>
           <a href={tienda.whatsappUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">WhatsApp</a>
-          <Link href="/admin" className="hover:underline">Administración</Link>
         </nav>
       </div>
     </footer>
