@@ -45,12 +45,12 @@ function cambiarTema() {
 export default function ThemeToggle() {
   const oscuro = useSyncExternalStore(observar, esOscuro, () => false);
   return (
-    <button type="button" className="shop-icon-button shop-theme-toggle" onClick={cambiarTema}
+    <button type="button" className="shop-theme-toggle" onClick={cambiarTema}
       role="switch" aria-label="Modo oscuro" aria-checked={oscuro}>
       <span className="shop-theme-track" aria-hidden="true">
         <span className="shop-theme-thumb">
-          <svg focusable="false" width="21" height="21" viewBox="0 0 24 24"
-            fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <svg focusable="false" width="16" height="16" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             {oscuro ? (
               <path d="M20.6 15A9 9 0 1 1 9 3.4 7.5 7.5 0 0 0 20.6 15Z" />
             ) : (

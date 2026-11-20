@@ -5,6 +5,7 @@ import { checkAdminRateLimit } from '@/lib/adminRateLimit';
 import { crearPedido, obtenerEnlaceDePago } from '@/lib/db';
 import { crearPreferencia, esReferenciaDeCompra, origenCheckout, rutaSeguimiento } from '@/lib/mercadoPago';
 import { revalidarCatalogo } from '@/lib/revalidarCatalogo';
+import { validarDestinoChile } from '@/lib/geografiaChile';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -29,13 +30,15 @@ export async function POST(req: NextRequest) {
   const nombre = texto(body?.nombre, 100);
   const email = texto(body?.email, 200);
   const telefono = texto(body?.telefono, 20);
-  const region = texto(body?.region, 100);
-  const comuna = texto(body?.comuna, 100);
+  const destino = validarDestinoChile(texto(body?.region, 100), texto(body?.comuna, 100));
   const direccion = texto(body?.direccion, 250);
 
   if (!esReferenciaDeCompra(body?.referencia) || !nombre || !/^\S+@[^\s@]+\.[^\s@]+$/.test(email) ||
-      !/^\+?[0-9 ()-]{8,19}$/.test(telefono) || !region || !comuna || !direccion) {
+      !/^\+?[0-9 ()-]{8,19}$/.test(telefono) || !direccion) {
     return NextResponse.json({ error: 'Revisa los datos de contacto y despacho.' }, { status: 400 });
+  }
+  if (!destino) {
+    return NextResponse.json({ error: 'Selecciona una comuna que pertenezca a la región de despacho.' }, { status: 400 });
   }
   const items = body.items;
   if (!Array.isArray(items) || !items.length || items.length > 50 ||
@@ -50,7 +53,7 @@ export async function POST(req: NextRequest) {
   const referencia = body.referencia;
   try {
     const pedido = await crearPedido(items, nombre, telefono, email, {
-      referencia, despacho: { region, comuna, direccion }, totalEsperado: body.total
+      referencia, despacho: { ...destino, direccion }, totalEsperado: body.total
     });
     for (const id of new Set(pedido.items.map((item) => item.producto_id))) revalidatePath(`/producto/${id}`);
     revalidarCatalogo();

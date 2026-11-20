@@ -3,16 +3,15 @@
 import { useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { claveCarrito, useCart } from '@/context/CartContext';
+import { REGIONES_CHILE } from '@/lib/geografiaChile';
 
 const clp = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' });
 const campos = [
   { name: 'nombre', label: 'Nombre y apellido', autoComplete: 'name', maxLength: 100 },
   { name: 'email', label: 'Correo electrónico', autoComplete: 'email', maxLength: 200, type: 'email' },
-  { name: 'telefono', label: 'Teléfono de contacto', autoComplete: 'tel', maxLength: 20, type: 'tel' },
-  { name: 'region', label: 'Región', autoComplete: 'address-level1', maxLength: 100 },
-  { name: 'comuna', label: 'Comuna', autoComplete: 'address-level2', maxLength: 100 },
-  { name: 'direccion', label: 'Dirección, número y departamento si corresponde', autoComplete: 'street-address', maxLength: 250 }
+  { name: 'telefono', label: 'Teléfono de contacto', autoComplete: 'tel', maxLength: 20, type: 'tel' }
 ];
+const claseCampo = 'shop-control min-h-11 w-full min-w-0 rounded-lg border px-3 text-base';
 
 export default function CheckoutClient() {
   const { items, total, hydrated, removeItem } = useCart();
@@ -20,6 +19,9 @@ export default function CheckoutClient() {
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState('');
   const [seguimiento, setSeguimiento] = useState('');
+  const [region, setRegion] = useState('');
+  const [comuna, setComuna] = useState('');
+  const comunas = REGIONES_CHILE.find(({ nombre }) => nombre === region)?.comunas ?? [];
 
   async function continuar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -64,15 +66,37 @@ export default function CheckoutClient() {
 
   return (
     <form onSubmit={continuar} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-      <fieldset disabled={procesando || !!seguimiento} className="grid gap-4 shop-panel rounded-xl border p-5 sm:grid-cols-2">
+      <fieldset disabled={procesando || !!seguimiento} className="grid min-w-0 gap-4 shop-panel rounded-xl border p-5 sm:grid-cols-2">
         <legend className="px-2 font-semibold">Datos de despacho</legend>
         {campos.map(({ name, label, autoComplete, maxLength, type }) => (
-          <label className={name === 'direccion' ? 'sm:col-span-2' : ''} key={name}>
+          <label className={name === 'nombre' ? 'sm:col-span-2' : 'min-w-0'} key={name}>
             <span className="mb-1 block text-sm font-medium">{label}</span>
             <input name={name} type={type || 'text'} autoComplete={autoComplete} maxLength={maxLength} required
-              className="min-h-11 w-full shop-control rounded-lg border px-3 text-base" />
+              className={claseCampo} />
           </label>
         ))}
+        <label className="min-w-0">
+          <span className="mb-1 block text-sm font-medium">Región</span>
+          <select name="region" required autoComplete="address-level1" className={`${claseCampo} truncate`}
+            value={region} onChange={(event) => { setRegion(event.target.value); setComuna(''); }}>
+            <option value="" disabled>Selecciona una región</option>
+            {REGIONES_CHILE.map(({ nombre, nombreCorto }) => (
+              <option key={nombre} value={nombre}>{nombreCorto ?? nombre}</option>
+            ))}
+          </select>
+        </label>
+        <label className="min-w-0">
+          <span className="mb-1 block text-sm font-medium">Comuna</span>
+          <select name="comuna" required autoComplete="address-level2" disabled={!region}
+            value={comuna} onChange={(event) => setComuna(event.target.value)} className={`${claseCampo} disabled:opacity-60`}>
+            <option value="" disabled>{region ? 'Selecciona una comuna' : 'Selecciona primero una región'}</option>
+            {comunas.map((nombre) => <option key={nombre} value={nombre}>{nombre}</option>)}
+          </select>
+        </label>
+        <label className="sm:col-span-2">
+          <span className="mb-1 block text-sm font-medium">Dirección, número y departamento si corresponde</span>
+          <input name="direccion" autoComplete="street-address" maxLength={250} required className={claseCampo} />
+        </label>
       </fieldset>
 
       <section aria-labelledby="resumen-compra" className="shop-panel rounded-xl border p-5">
@@ -97,7 +121,7 @@ export default function CheckoutClient() {
         <p className="my-4 shop-image-surface rounded-lg p-3 text-sm leading-relaxed">
           <strong>Envío por pagar.</strong> El costo del despacho se paga al transportista cuando recibas tu pedido. No está incluido en este total.
         </p>
-        {error && <p className="mb-3 text-sm text-red-700" role="alert">{error}</p>}
+        {error && <p className="mb-3 text-sm shop-danger" role="alert">{error}</p>}
         {seguimiento ? (
           <Link href={seguimiento} className="inline-flex min-h-11 items-center font-semibold underline">Ver estado del pedido</Link>
         ) : (
