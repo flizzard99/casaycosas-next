@@ -2,8 +2,10 @@ import { esVarianteId } from '@/lib/validarInventario';
 import { revalidatePath } from 'next/cache';
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminRateLimit } from '@/lib/adminRateLimit';
-import { crearPedido, obtenerEnlaceDePago } from '@/lib/db';
-import { crearPreferencia, esReferenciaDeCompra, origenCheckout, rutaSeguimiento } from '@/lib/mercadoPago';
+import { crearPedido, getDatosTransferencia, obtenerEnlaceDePago } from '@/lib/db';
+import { crearPreferencia, esReferenciaDeCompra, origenCheckout } from '@/lib/mercadoPago';
+import { normalizarRut, rutaSeguimiento } from '@/lib/checkout';
+import { origenTienda } from '@/lib/origenTienda';
 import { revalidarCatalogo } from '@/lib/revalidarCatalogo';
 import { validarDestinoChile } from '@/lib/geografiaChile';
 
@@ -16,22 +18,29 @@ function texto(valor: unknown, maximo: number) {
 
 export async function POST(req: NextRequest) {
   const origenSolicitud = req.headers.get('origin');
-  if (origenSolicitud && origenSolicitud !== req.nextUrl.origin && origenSolicitud !== origenCheckout()) {
+  if (origenSolicitud && origenSolicitud !== req.nextUrl.origin && origenSolicitud !== origenTienda()) {
     return NextResponse.json({ error: 'Solicitud no válida.' }, { status: 403 });
   }
   if (!req.headers.get('content-type')?.startsWith('application/json')) {
     return NextResponse.json({ error: 'Formato de solicitud inválido.' }, { status: 415 });
   }
   if (!checkAdminRateLimit(req, 15)) return NextResponse.json({ error: 'Demasiados intentos. Vuelve a intentar en un minuto.' }, { status: 429 });
-  const origen = origenCheckout();
-  if (!origen) return NextResponse.json({ error: 'El pago en línea todavía no está disponible.' }, { status: 503 });
-
   const body = await req.json().catch(() => null);
+  const metodo = body?.metodoPago;
+  if (metodo !== 'tarjeta' && metodo !== 'transferencia') {
+    return NextResponse.json({ error: 'Selecciona cómo quieres pagar.' }, { status: 400 });
+  }
+  const origen = metodo === 'tarjeta' ? origenCheckout() : null;
+  if (metodo === 'tarjeta' && !origen) {
+    return NextResponse.json({ error: 'El pago con tarjeta todavía no está disponible.' }, { status: 503 });
+  }
   const nombre = texto(body?.nombre, 100);
   const email = texto(body?.email, 200);
   const telefono = texto(body?.telefono, 20);
   const destino = validarDestinoChile(texto(body?.region, 100), texto(body?.comuna, 100));
   const direccion = texto(body?.direccion, 250);
+  const rut = normalizarRut(body?.rut);
+  const nota = texto(body?.nota, 500);
 
   if (!esReferenciaDeCompra(body?.referencia) || !nombre || !/^\S+@[^\s@]+\.[^\s@]+$/.test(email) ||
       !/^\+?[0-9 ()-]{8,19}$/.test(telefono) || !direccion) {
@@ -39,6 +48,10 @@ export async function POST(req: NextRequest) {
   }
   if (!destino) {
     return NextResponse.json({ error: 'Selecciona una comuna que pertenezca a la región de despacho.' }, { status: 400 });
+  }
+  if (!rut) return NextResponse.json({ error: 'Ingresa un RUT chileno válido.' }, { status: 400 });
+  if (body?.nota !== undefined && (typeof body.nota !== 'string' || body.nota.trim().length > 500)) {
+    return NextResponse.json({ error: 'La nota admite hasta 500 caracteres.' }, { status: 400 });
   }
   const items = body.items;
   if (!Array.isArray(items) || !items.length || items.length > 50 ||
@@ -52,13 +65,18 @@ export async function POST(req: NextRequest) {
 
   const referencia = body.referencia;
   try {
+    const transferencia = metodo === 'transferencia' ? await getDatosTransferencia() : null;
+    if (metodo === 'transferencia' && !transferencia) {
+      return NextResponse.json({ error: 'El pago por transferencia todavía no está disponible.' }, { status: 503 });
+    }
+    const datosPago = transferencia ? { metodo: 'transferencia' as const, transferencia } : { metodo: 'tarjeta' as const, transferencia: null };
     const pedido = await crearPedido(items, nombre, telefono, email, {
-      referencia, despacho: { ...destino, direccion }, totalEsperado: body.total
+      ...datosPago, referencia, rut, despacho: { ...destino, direccion, ...(nota && { nota }) }, totalEsperado: body.total
     });
     for (const id of new Set(pedido.items.map((item) => item.producto_id))) revalidatePath(`/producto/${id}`);
     revalidarCatalogo();
     const seguimiento = rutaSeguimiento(pedido.id, referencia);
-    const url = await obtenerEnlaceDePago(pedido, referencia, () => crearPreferencia(pedido, referencia, origen));
+    const url = origen ? await obtenerEnlaceDePago(pedido, referencia, () => crearPreferencia(pedido, referencia, origen)) : null;
     return NextResponse.json({ url, seguimiento }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     const detalle = error instanceof Error ? error.message : '';
@@ -66,6 +84,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: detalle }, { status: 409 });
     }
     console.error('[checkout]', error);
-    return NextResponse.json({ error: 'No pudimos abrir el pago. Puedes volver a intentarlo.' }, { status: 502 });
+    return NextResponse.json({ error: 'No pudimos continuar con el pedido. Puedes volver a intentarlo.' }, { status: 502 });
   }
 }

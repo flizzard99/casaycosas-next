@@ -4,31 +4,40 @@ import { useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { claveCarrito, useCart } from '@/context/CartContext';
 import { REGIONES_CHILE } from '@/lib/geografiaChile';
+import { ENVIO_CHILE, normalizarRut, type MetodoPago } from '@/lib/checkout';
 
 const clp = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' });
 const campos = [
-  { name: 'nombre', label: 'Nombre y apellido', autoComplete: 'name', maxLength: 100 },
+  { name: 'nombre', label: 'Nombre y Apellido', autoComplete: 'name', maxLength: 100 },
+  { name: 'rut', label: 'RUT', autoComplete: 'off', maxLength: 16 },
   { name: 'email', label: 'Correo electrónico', autoComplete: 'email', maxLength: 200, type: 'email' },
   { name: 'telefono', label: 'Teléfono de contacto', autoComplete: 'tel', maxLength: 20, type: 'tel' }
 ];
 const claseCampo = 'shop-control min-h-11 w-full min-w-0 rounded-lg border px-3 text-base';
 
-export default function CheckoutClient() {
-  const { items, total, hydrated, removeItem } = useCart();
+export default function CheckoutClient({ tarjeta, transferencia }: { tarjeta: boolean; transferencia: boolean }) {
+  const { items, total: subtotal, hydrated, removeItem } = useCart();
+  const total = subtotal + ENVIO_CHILE.precio;
   const intento = useRef<{ clave: string; referencia: string } | null>(null);
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState('');
-  const [seguimiento, setSeguimiento] = useState('');
+  const [metodoPago, setMetodoPago] = useState<MetodoPago>(tarjeta ? 'tarjeta' : 'transferencia');
   const [region, setRegion] = useState('');
   const [comuna, setComuna] = useState('');
   const comunas = REGIONES_CHILE.find(({ nombre }) => nombre === region)?.comunas ?? [];
 
   async function continuar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (procesando || !items.length || total < 1 || seguimiento) return;
+    if (procesando || !items.length || subtotal < 1) return;
     const datos = Object.fromEntries(new FormData(event.currentTarget));
+    const rut = normalizarRut(datos.rut);
+    if (!rut) {
+      setError('Ingresa un RUT chileno válido.');
+      event.currentTarget.querySelector<HTMLInputElement>('input[name=rut]')?.focus();
+      return;
+    }
     const productos = items.map(({ id, qty, varianteId }) => ({ id, qty, varianteId }));
-    const clave = JSON.stringify({ datos, productos, total });
+    const clave = JSON.stringify({ datos: { ...datos, rut }, metodoPago, productos, total });
     const referencia = intento.current?.clave === clave ? intento.current.referencia : crypto.randomUUID();
     intento.current = { clave, referencia };
     setProcesando(true);
@@ -37,15 +46,11 @@ export default function CheckoutClient() {
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...datos, referencia, total, items: productos })
+        body: JSON.stringify({ ...datos, rut, metodoPago, referencia, total, items: productos })
       });
       const resultado = await response.json();
       if (!response.ok) {
         setError(resultado.error || 'No se pudo iniciar el pago.');
-        return;
-      }
-      if (!resultado.url) {
-        setSeguimiento(resultado.seguimiento);
         return;
       }
       try {
@@ -53,7 +58,7 @@ export default function CheckoutClient() {
       } catch {
         // El flujo de pago funciona si el navegador bloquea el almacenamiento.
       }
-      window.location.assign(resultado.url);
+      window.location.assign(resultado.url || resultado.seguimiento);
     } catch {
       setError('No pudimos conectar con la tienda. Intenta nuevamente.');
     } finally {
@@ -66,12 +71,13 @@ export default function CheckoutClient() {
 
   return (
     <form onSubmit={continuar} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-      <fieldset disabled={procesando || !!seguimiento} className="grid min-w-0 gap-4 shop-panel rounded-xl border p-5 sm:grid-cols-2">
+      <fieldset disabled={procesando} className="grid min-w-0 gap-4 shop-panel rounded-xl border p-5 sm:grid-cols-2">
         <legend className="px-2 font-semibold">Datos de despacho</legend>
         {campos.map(({ name, label, autoComplete, maxLength, type }) => (
-          <label className={name === 'nombre' ? 'sm:col-span-2' : 'min-w-0'} key={name}>
+          <label className="min-w-0" key={name}>
             <span className="mb-1 block text-sm font-medium">{label}</span>
             <input name={name} type={type || 'text'} autoComplete={autoComplete} maxLength={maxLength} required
+              placeholder={name === 'rut' ? '12.345.678-5' : undefined}
               className={claseCampo} />
           </label>
         ))}
@@ -94,8 +100,13 @@ export default function CheckoutClient() {
           </select>
         </label>
         <label className="sm:col-span-2">
-          <span className="mb-1 block text-sm font-medium">Dirección, número y departamento si corresponde</span>
-          <input name="direccion" autoComplete="street-address" maxLength={250} required className={claseCampo} />
+          <span className="mb-1 block text-sm font-medium">Dirección</span>
+          <input name="direccion" autoComplete="street-address" maxLength={250} required className={claseCampo}
+            placeholder="Calle, número y departamento si corresponde" />
+        </label>
+        <label className="sm:col-span-2">
+          <span className="mb-1 block text-sm font-medium">Agregar nota <span className="shop-muted font-normal">(opcional)</span></span>
+          <textarea name="nota" maxLength={500} rows={2} className={`${claseCampo} resize-y py-2`} />
         </label>
       </fieldset>
 
@@ -106,7 +117,7 @@ export default function CheckoutClient() {
             <li key={claveCarrito(item)} className="flex justify-between gap-3">
               <div>
                 <span>{item.qty} × {item.name}</span>
-                <button type="button" onClick={() => removeItem(item.id, item.varianteId)} disabled={procesando || !!seguimiento}
+                <button type="button" onClick={() => removeItem(item.id, item.varianteId)} disabled={procesando}
                   aria-label={`Quitar ${item.name} del carrito`} className="shop-muted mt-1 block min-h-8 text-xs underline disabled:opacity-50">
                   Quitar
                 </button>
@@ -115,20 +126,31 @@ export default function CheckoutClient() {
             </li>
           ))}
         </ul>
-        <div className="flex justify-between gap-3 shop-divider border-t pt-3 font-semibold">
-          <span>Total en Mercado Pago</span><span>{clp.format(total)}</span>
-        </div>
-        <p className="my-4 shop-image-surface rounded-lg p-3 text-sm leading-relaxed">
-          <strong>Envío por pagar.</strong> El costo del despacho se paga al transportista cuando recibas tu pedido. No está incluido en este total.
-        </p>
+        <dl className="space-y-2 shop-divider border-t pt-3 text-sm">
+          <div className="flex justify-between gap-3"><dt>Subtotal</dt><dd>{clp.format(subtotal)}</dd></div>
+          <div className="flex justify-between gap-3"><dt>Envío · {ENVIO_CHILE.servicio}</dt><dd>{clp.format(ENVIO_CHILE.precio)}</dd></div>
+          <div className="flex justify-between gap-3 text-base font-semibold"><dt>Total a pagar</dt><dd>{clp.format(total)}</dd></div>
+        </dl>
+        <p className="mt-2 text-xs shop-muted">Tarifa fija a todo Chile. El envío se paga junto con el pedido.</p>
+        <fieldset disabled={procesando} className="my-4 space-y-2">
+          <legend className="mb-2 text-sm font-semibold">Medio de pago</legend>
+          {([
+            { metodo: 'tarjeta', titulo: 'Tarjeta', ayuda: 'Paga en Mercado Pago.', disponible: tarjeta },
+            { metodo: 'transferencia', titulo: 'Transferencia', ayuda: 'Verás los datos bancarios al finalizar.', disponible: transferencia }
+          ] as const).map(({ metodo, titulo, ayuda, disponible }) => (
+            <label key={metodo} className="shop-control flex items-center gap-3 rounded-lg border px-3 py-2 has-[:checked]:border-[var(--shop-accent)] has-[:checked]:bg-[var(--shop-subtle)] has-[:disabled]:opacity-60">
+              <input type="radio" name="metodoPago" value={metodo} checked={metodoPago === metodo} disabled={!disponible}
+                onChange={() => { setMetodoPago(metodo); setError(''); }} className="shop-checkbox size-4 shrink-0" />
+              <span className="grid gap-0.5"><span className="text-sm font-semibold">{titulo}</span>
+                <span className="shop-muted text-xs">{disponible ? ayuda : 'Temporalmente no disponible.'}</span></span>
+            </label>
+          ))}
+        </fieldset>
         {error && <p className="mb-3 text-sm shop-danger" role="alert">{error}</p>}
-        {seguimiento ? (
-          <Link href={seguimiento} className="inline-flex min-h-11 items-center font-semibold underline">Ver estado del pedido</Link>
-        ) : (
-          <button type="submit" disabled={procesando || total < 1} className="shop-button min-h-12 w-full">
-            {procesando ? 'Abriendo Mercado Pago…' : 'Continuar a Mercado Pago'}
-          </button>
-        )}
+        <button type="submit" disabled={procesando || subtotal < 1} className="shop-button min-h-12 w-full">
+          {metodoPago === 'tarjeta' ? (procesando ? 'Abriendo Mercado Pago…' : 'Continuar a Mercado Pago') :
+            (procesando ? 'Registrando pedido…' : 'Finalizar pedido por transferencia')}
+        </button>
       </section>
     </form>
   );

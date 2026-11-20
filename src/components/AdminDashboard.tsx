@@ -12,10 +12,12 @@ import DisenoEditor from './DisenoEditor';
 import PrecioProducto from './PrecioProducto';
 import CategoryOrderEditor from './CategoryOrderEditor';
 import FeaturedEditor from './FeaturedEditor';
+import TransferenciaEditor from './TransferenciaEditor';
 import type { Producto, FeaturedConfig, Config } from '@/lib/types';
 import { adminFetch } from '@/lib/adminFetch';
 import { parsearEncuadre, estilosEncuadre } from '@/lib/encuadre';
 import type { Pedido } from '@/lib/db';
+import { ENVIO_CHILE } from '@/lib/checkout';
 
 const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 const GRUPOS_PUBLICOS = Object.values(LINEAS).flatMap(({ grupos }) => [...grupos]);
@@ -37,6 +39,15 @@ const ESTADOS_PEDIDO = {
 type FiltroPedido = keyof typeof ESTADOS_PEDIDO;
 const VISTAS: Vista[] = ['productos', 'pedidos', 'categorias', 'destacados', 'diseno'];
 
+function etiquetaPago(pedido: Pedido) {
+  if (pedido.pago_estado === 'revision') return 'Requiere revisión';
+  if (!pedido.metodo_pago) return 'Pedido coordinado por redes';
+  const metodo = pedido.metodo_pago === 'transferencia' ? 'Transferencia' : 'Mercado Pago';
+  if (pedido.pago_estado === 'aprobado') return pedido.metodo_pago === 'transferencia'
+    ? 'Transferencia recibida' : `Mercado Pago aprobado${pedido.pago_id ? ` · ${pedido.pago_id}` : ''}`;
+  return pedido.estado === 'pendiente' ? `${metodo} · Pendiente de pago` : metodo;
+}
+
 type Orden = 'recientes' | 'nombre' | 'precio-asc' | 'precio-desc' | 'stock-desc';
 
 export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
@@ -55,6 +66,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [vista, setVista] = useState<Vista>('productos');
   const [pagina, setPagina] = useState(1);
   const [filtroPedido, setFiltroPedido] = useState<FiltroPedido>('todos');
+  const [mostrarCuenta, setMostrarCuenta] = useState(false);
   const [paginaPedidos, setPaginaPedidos] = useState(1);
   const [recargarPedidos, setRecargarPedidos] = useState(0);
   const [resultadoPedidos, setResultadoPedidos] = useState<{ clave: string; pedidos: Pedido[]; total: number; error?: string }>();
@@ -532,6 +544,10 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
           {vista === 'pedidos' && (
             <section aria-label="Pedidos de la tienda">
+              <details className="mb-4 rounded-xl border border-verde-noche/15 bg-white p-4" onToggle={(event) => setMostrarCuenta(event.currentTarget.open)}>
+                <summary className="cursor-pointer text-sm font-semibold">Cuenta para transferencias</summary>
+                {mostrarCuenta && <TransferenciaEditor />}
+              </details>
               <div className="mb-4 flex flex-wrap items-end gap-3">
                 <label className="text-sm font-medium">
                   Estado del pedido
@@ -560,12 +576,14 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                           </div>
                           <dl className="space-y-1 break-words text-sm">
                             <div><dt className="inline font-semibold">Cliente: </dt><dd className="inline">{ped.cliente_nombre || 'Sin nombre'}</dd></div>
+                            {ped.cliente_rut && <div><dt className="inline font-semibold">RUT: </dt><dd className="inline">{ped.cliente_rut}</dd></div>}
                             {ped.cliente_email && <div><dt className="inline font-semibold">Correo: </dt><dd className="inline">{ped.cliente_email}</dd></div>}
                             {ped.cliente_whatsapp && <div><dt className="inline font-semibold">Teléfono: </dt><dd className="inline">{ped.cliente_whatsapp}</dd></div>}
-                            {ped.despacho && <div><dt className="inline font-semibold">Despacho por pagar: </dt><dd className="inline">{ped.despacho.direccion}, {ped.despacho.comuna}, {ped.despacho.region}</dd></div>}
+                            {ped.despacho && <div><dt className="inline font-semibold">{ped.costo_envio ? `Despacho ${ENVIO_CHILE.servicio}: ` : 'Despacho por pagar: '}</dt><dd className="inline">{ped.despacho.direccion}, {ped.despacho.comuna}, {ped.despacho.region}</dd></div>}
+                            {ped.despacho?.nota && <div><dt className="inline font-semibold">Nota: </dt><dd className="inline whitespace-pre-wrap">{ped.despacho.nota}</dd></div>}
                             {ped.codigo_despacho && <div><dt className="inline font-semibold">Seguimiento: </dt><dd className="inline">{ped.codigo_despacho}</dd></div>}
                             <div><dt className="inline font-semibold">Pago: </dt>
-                              <dd className="inline">{ped.pago_estado === 'aprobado' ? `Mercado Pago aprobado · ${ped.pago_id}` : ped.pago_estado === 'revision' ? 'Requiere revisión' : ped.pago_estado ? 'Esperando Mercado Pago' : 'Pedido coordinado por redes'}</dd>
+                              <dd className="inline">{etiquetaPago(ped)}</dd>
                             </div>
                           </dl>
                           {ped.pago_revision && <p className="mt-3 rounded-lg bg-amber-50 p-2 text-sm text-amber-900">{ped.pago_revision}</p>}
@@ -576,11 +594,12 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                               </li>
                             ))}
                           </ul>
+                          {ped.costo_envio > 0 && <p className="mb-1 text-right text-sm">Envío {formatoCLP.format(ped.costo_envio)}</p>}
                           <p className="mb-3 text-right font-semibold">Total {formatoCLP.format(ped.total)}</p>
-                          {ped.estado === 'pendiente' && !ped.pago_estado && (
+                          {ped.estado === 'pendiente' && (!ped.metodo_pago || ped.metodo_pago === 'transferencia') && (
                             <div className="flex gap-2">
                               <button disabled={!!ocupado} onClick={() => procesarPedido(ped.id, 'confirmar')}
-                                className="min-h-10 flex-1 rounded-lg bg-verde-oscuro px-2 text-sm font-semibold text-white disabled:opacity-50"><span className="inline-flex items-center gap-1"><AdminIcon name="check" /> Confirmar</span></button>
+                                className="min-h-10 flex-1 rounded-lg bg-verde-oscuro px-2 text-sm font-semibold text-white disabled:opacity-50"><span className="inline-flex items-center gap-1"><AdminIcon name="check" /> {ped.metodo_pago === 'transferencia' ? 'Confirmar transferencia recibida' : 'Confirmar'}</span></button>
                               <button disabled={!!ocupado} onClick={() => procesarPedido(ped.id, 'cancelar')}
                                 className="min-h-10 flex-1 rounded-lg border border-red-200 px-2 text-sm font-semibold text-red-700 disabled:opacity-50"><span className="inline-flex items-center gap-1"><AdminIcon name="cerrar" /> Cancelar</span></button>
                             </div>

@@ -1,6 +1,8 @@
 import 'server-only';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { COMPRA_EXPIRACION_MINUTOS, type Pedido } from './db';
+import { ENVIO_CHILE, rutaSeguimiento } from './checkout';
+import { origenTienda } from './origenTienda';
 
 const REFERENCIA = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 
@@ -12,12 +14,7 @@ export function origenCheckout() {
   if (!process.env.MP_ACCESS_TOKEN || !process.env.MP_WEBHOOK_SECRET) return null;
   if (process.env.VERCEL_ENV === 'preview' && process.env.MP_SANDBOX !== 'true') return null;
 
-  try {
-    const url = new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://casaycosas-next.vercel.app');
-    return url.protocol === 'https:' ? url.origin : null;
-  } catch {
-    return null;
-  }
+  return origenTienda();
 }
 
 async function consultarMercadoPago(path: string, init?: RequestInit) {
@@ -34,25 +31,26 @@ async function consultarMercadoPago(path: string, init?: RequestInit) {
   return res.json();
 }
 
-export function rutaSeguimiento(id: number, referencia: string) {
-  return `/pedido/${id}?ref=${encodeURIComponent(referencia)}`;
-}
-
 export async function crearPreferencia(pedido: Pedido, referencia: string, origen: string) {
   const seguimiento = origen + rutaSeguimiento(pedido.id, referencia);
   const expiracion = new Date(new Date(pedido.created_at).getTime() + (COMPRA_EXPIRACION_MINUTOS - 5) * 60000);
   if (expiracion.getTime() <= Date.now()) throw new Error('La sesión de pago ha expirado');
 
+  const items = pedido.items.map((item) => ({
+    id: item.variante_id ? `${item.producto_id}-${item.variante_id}` : String(item.producto_id),
+    title: item.nombre,
+    quantity: item.qty,
+    unit_price: item.precio,
+    currency_id: 'CLP'
+  }));
+  if (pedido.costo_envio) {
+    items.push({ id: 'envio-blue-express', title: `Envío ${ENVIO_CHILE.servicio}`, quantity: 1, unit_price: pedido.costo_envio, currency_id: 'CLP' });
+  }
+
   const resultado = await consultarMercadoPago('/checkout/preferences', {
     method: 'POST',
     body: JSON.stringify({
-      items: pedido.items.map((item) => ({
-        id: item.variante_id ? `${item.producto_id}-${item.variante_id}` : String(item.producto_id),
-        title: item.nombre,
-        quantity: item.qty,
-        unit_price: item.precio,
-        currency_id: 'CLP'
-      })),
+      items,
       external_reference: referencia,
       payer: { email: pedido.cliente_email },
       back_urls: { success: seguimiento, pending: seguimiento, failure: seguimiento },
@@ -62,7 +60,7 @@ export async function crearPreferencia(pedido: Pedido, referencia: string, orige
       expiration_date_from: new Date(pedido.created_at).toISOString(),
       expiration_date_to: expiracion.toISOString(),
       payment_methods: {
-        excluded_payment_types: [{ id: 'ticket' }, { id: 'bank_transfer' }]
+        excluded_payment_types: ['ticket', 'bank_transfer', 'atm', 'account_money', 'digital_currency'].map((id) => ({ id }))
       }
     })
   });

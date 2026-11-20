@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { registrarPagoMercadoPago } from '@/lib/db';
 import { enviarEmailCambioEstado } from '@/lib/email';
-import { origenCheckout, rutaSeguimiento, verificarPagoMercadoPago, verificarWebhookMercadoPago } from '@/lib/mercadoPago';
+import { origenCheckout, verificarPagoMercadoPago, verificarWebhookMercadoPago } from '@/lib/mercadoPago';
+import { rutaSeguimiento } from '@/lib/checkout';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

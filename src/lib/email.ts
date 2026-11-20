@@ -38,7 +38,8 @@ export async function enviarEmailCambioEstado(pedido: Pedido, estadoUrl: string)
   if (!resend) return;
   const titulo = pedido.estado === 'confirmado' ? '¡Pedido confirmado! ✅' : 'Tu pedido fue cancelado ❌';
   const desc = pedido.estado === 'confirmado'
-    ? (pedido.pago_estado === 'aprobado' ? 'Recibimos el pago de los productos. El despacho se paga al recibir.' : 'Tu pedido fue confirmado. Escríbenos para coordinar la entrega.')
+    ? (pedido.costo_envio ? 'Recibimos el pago de tu pedido. El envío ya está incluido.' :
+      pedido.pago_estado === 'aprobado' ? 'Recibimos el pago de los productos. El despacho se paga al recibir.' : 'Tu pedido fue confirmado. Escríbenos para coordinar la entrega.')
     : 'Tu pedido fue cancelado y el stock de los productos fue restaurado. Puedes volver a comprar cuando quieras.';
   const html = `
   <div style="font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;color:#344E41">

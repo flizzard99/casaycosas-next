@@ -7,6 +7,8 @@ import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 import { verifyCsrf } from '@/lib/csrf';
 import { checkAdminRateLimit } from '@/lib/adminRateLimit';
 import { enviarEmailCambioEstado } from '@/lib/email';
+import { rutaSeguimiento } from '@/lib/checkout';
+import { origenTienda } from '@/lib/origenTienda';
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!checkAdminRateLimit(req)) return NextResponse.json({ error: 'Demasiadas solicitudes' }, { status: 429 });
@@ -19,8 +21,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (id === null) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
     const pedido = await confirmarPedido(id);
     if (!pedido) return NextResponse.json({ error: 'Pedido no encontrado o ya procesado' }, { status: 404 });
-    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/$/, '');
-    enviarEmailCambioEstado(pedido, `${siteUrl}/pedido/${pedido.id}`).catch((e) => console.error('[email]confirmar:', e));
+    const origen = origenTienda();
+    if (origen) await enviarEmailCambioEstado(pedido, origen + rutaSeguimiento(pedido.id, pedido.pago_referencia));
     return NextResponse.json(pedido);
   } catch (e: unknown) {
     console.error('[API Error] confirmar:', e);

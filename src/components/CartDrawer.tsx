@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRef, useEffect } from 'react';
 import { claveCarrito, useCart } from '@/context/CartContext';
+import { ENVIO_CHILE } from '@/lib/checkout';
 
 const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 
@@ -88,13 +89,13 @@ export default function CartDrawer() {
         </div>
 
         <div className="px-5 py-4 border-t shop-divider">
-          <div className="flex justify-between text-sm mb-3">
-            <span className="shop-muted">Total</span>
-            <span className="font-semibold">{formatoCLP.format(total)}</span>
-          </div>
-
           {items.length > 0 && (
             <>
+              <dl className="mb-3 space-y-1 text-sm">
+                <div className="flex justify-between gap-3"><dt>Subtotal</dt><dd>{formatoCLP.format(total)}</dd></div>
+                <div className="flex justify-between gap-3"><dt>Envío · {ENVIO_CHILE.servicio}</dt><dd>{formatoCLP.format(ENVIO_CHILE.precio)}</dd></div>
+                <div className="flex justify-between gap-3 font-semibold"><dt>Total</dt><dd>{formatoCLP.format(total + ENVIO_CHILE.precio)}</dd></div>
+              </dl>
               <Link href="/comprar" onClick={close}
                 className="shop-button w-full">
                 Finalizar compra

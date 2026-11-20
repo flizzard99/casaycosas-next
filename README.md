@@ -151,7 +151,7 @@ El script requiere `.env.local` con `DATABASE_URL`, `SUPABASE_URL` y `SUPABASE_S
 
 ## Pago en línea con Mercado Pago Chile
 
-El carrito dirige a «Finalizar compra». WhatsApp queda disponible para consultas. El checkout cobra los productos en CLP. El cliente paga el despacho al transportista al recibir. La tienda debe informar este método antes de cobrar y coordinar los despachos con el transportista.
+El carrito dirige a «Finalizar compra». El pedido incluye los productos en CLP y un envío fijo de $4.000 por Blue Express a todo Chile. WhatsApp queda disponible para consultas.
 
 1. Crea una aplicación de **Checkout Pro** en Mercado Pago Developers con la cuenta de la tienda.
 2. Configura el evento **Pagos** en Webhooks con la URL `https://casaycosas-next.vercel.app/api/pagos/mercadopago`. Si usas otro dominio, actualiza esa URL y `NEXT_PUBLIC_SITE_URL` juntos.
@@ -159,7 +159,9 @@ El carrito dirige a «Finalizar compra». WhatsApp queda disponible para consult
 4. Prueba primero con credenciales y comprador de prueba, `MP_SANDBOX=true`, una base de desarrollo y una URL HTTPS de ese entorno. En producción usa las credenciales de producción y deja `MP_SANDBOX=false`. Vuelve a desplegar después de cambiar variables.
 5. En **Administración → Pedidos**, comprueba el cambio de pendiente a aprobado tras recibir el webhook. Al despachar, registra el código de seguimiento si el transportista lo facilita.
 
-En una compra en línea el stock se reserva durante 45 minutos. El enlace de Mercado Pago vence 5 minutos antes para dejar tiempo a las notificaciones. Si se aprueba un pago fuera de plazo o llega un cobro duplicado, el pedido queda en **Pagos por revisar**. Confirma la operación con Mercado Pago antes de despachar o reembolsar.
+En una compra con tarjeta el stock se reserva durante 45 minutos. El enlace de Mercado Pago vence 5 minutos antes para dejar tiempo a las notificaciones. Si se aprueba un pago fuera de plazo o llega un cobro duplicado, el pedido queda en **Pagos por revisar**. Confirma la operación con Mercado Pago antes de despachar o reembolsar.
+
+Activa la transferencia bancaria en **Administración → Pedidos → Cuenta para transferencias**. El cliente ve el monto y la cuenta en su enlace de pedido. El stock se reserva durante 48 horas. Tras verificar el abono, usa **Confirmar transferencia recibida** para habilitar el despacho.
 
 
 ## Colecciones públicas
