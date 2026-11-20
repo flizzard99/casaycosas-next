@@ -19,6 +19,8 @@ export default function ProductCard({ producto }: { producto: Producto }) {
   const linea = lineaProducto(producto);
   const sinStock = producto.stock <= 0;
   const tieneVarias = (producto.images?.length || 0) > 1;
+  const precio = precioActual(producto);
+  const enOferta = precio < producto.price;
 
   const [qty, setQty] = useState(1);
   const [agregado, setAgregado] = useState(false);
@@ -60,7 +62,10 @@ export default function ProductCard({ producto }: { producto: Producto }) {
           <div className="shop-muted text-xs font-medium">{linea ? grupoProducto(producto, linea) : nombreCategoria(producto.category)}</div>
           <h3 className="mt-1 text-sm font-semibold leading-snug hover:underline sm:text-base">{producto.name}</h3>
         </Link>
-        <PrecioProducto producto={producto} className="mt-2 flex-1 text-base font-semibold shop-accent" />
+        <div className="mt-2 flex flex-1 flex-wrap content-start items-baseline gap-x-2 gap-y-1">
+          <PrecioProducto producto={producto} className="text-base font-semibold shop-accent" />
+          {enOferta && <span className="shop-stock-badge rounded px-1.5 text-xs font-semibold" aria-hidden="true">Oferta</span>}
+        </div>
         {!sinStock && !producto.variantes.length && (
           <div className="flex items-center justify-center gap-2 mt-3">
               <button
@@ -88,7 +93,7 @@ export default function ProductCard({ producto }: { producto: Producto }) {
           <button
             disabled={sinStock}
             onClick={() => {
-              addItem({ id: producto.id, name: producto.name, price: precioActual(producto), image_url: imagenLimpia, stock: producto.stock }, qty);
+              addItem({ id: producto.id, name: producto.name, price: precio, image_url: imagenLimpia, stock: producto.stock }, qty);
               setQty(1);
               setAgregado(true);
               setTimeout(() => setAgregado(false), 1500);

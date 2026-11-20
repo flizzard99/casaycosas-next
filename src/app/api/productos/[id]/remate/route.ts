@@ -7,6 +7,7 @@ import { setRemate, parseIdOrBadRequest } from '@/lib/db';
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 import { verifyCsrf } from '@/lib/csrf';
 import { checkAdminRateLimit } from '@/lib/adminRateLimit';
+import { revalidarCatalogo } from '@/lib/revalidarCatalogo';
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!checkAdminRateLimit(req)) return NextResponse.json({ error: 'Demasiadas solicitudes' }, { status: 429 });
@@ -24,9 +25,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (id === null) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
     const producto = await setRemate(id, remate);
     if (!producto) return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
-    revalidatePath('/', 'layout');
+    revalidarCatalogo();
     revalidatePath('/sitemap.xml');
-    revalidatePath(`/producto/${id}`, 'page');
+    revalidatePath(`/producto/${id}`);
     return NextResponse.json(producto);
   } catch (e: unknown) {
     console.error('[API Error] remate:', e);

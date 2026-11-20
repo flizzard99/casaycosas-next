@@ -25,7 +25,7 @@ export default async function HomePage() {
             {(['matera', 'cristiana'] as const).map((linea) => {
               const coleccion = LINEAS[linea];
               return (
-                <Link key={linea} href={coleccion.href} data-linea={linea} className="shop-collection">
+                <Link key={linea} href={coleccion.href} prefetch={false} data-linea={linea} className="shop-collection">
                   <div className="shop-collection-photo">
                     <Image src={config?.diseno[linea]?.imagen || coleccion.imagen} alt="" fill sizes="(min-width: 1280px) 580px, (min-width: 640px) 47vw, 92vw"
                       priority />
@@ -39,7 +39,7 @@ export default async function HomePage() {
               );
             })}
           </div>
-          <Link href={LINEAS.remate.href} className="shop-clearance-entry">
+          <Link href={LINEAS.remate.href} prefetch={false} className="shop-clearance-entry">
             {config?.diseno.remate?.imagen && (
               <Image src={config.diseno.remate.imagen} alt="" width={90} height={64} className="h-16 w-24 rounded object-cover" />
             )}

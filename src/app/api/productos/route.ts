@@ -8,6 +8,7 @@ import { getProductosPublicos, getProductosAdmin, createProducto } from '@/lib/d
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 import { verifyCsrf } from '@/lib/csrf';
 import { checkAdminRateLimit } from '@/lib/adminRateLimit';
+import { revalidarCatalogo } from '@/lib/revalidarCatalogo';
 
 function isAdminRequest(req: NextRequest) {
   const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
@@ -50,8 +51,7 @@ export async function POST(req: NextRequest) {
     if (errores.length) return NextResponse.json({ error: errores.join('. ') }, { status: 400 });
 
     const producto = await createProducto(body);
-    revalidatePath('/', 'layout');
-    revalidatePath('/catalogo');
+    revalidarCatalogo();
     revalidatePath('/sitemap.xml');
     return NextResponse.json(producto, { status: 201 });
   } catch (e: unknown) {

@@ -9,6 +9,7 @@ import { ConflictoInventario, getProductoById, updateProducto, deleteProducto, p
 import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 import { verifyCsrf } from '@/lib/csrf';
 import { checkAdminRateLimit } from '@/lib/adminRateLimit';
+import { revalidarCatalogo } from '@/lib/revalidarCatalogo';
 
 function isAdminRequest(req: NextRequest) {
   const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
@@ -52,9 +53,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (id === null) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
     const producto = await updateProducto(id, body);
     if (!producto) return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
-    revalidatePath('/', 'layout');
-    revalidatePath('/catalogo');
-    revalidatePath(`/producto/${id}`, 'page');
+    revalidarCatalogo();
+    revalidatePath(`/producto/${id}`);
     return NextResponse.json(producto);
   } catch (e: unknown) {
     if (e instanceof ConflictoInventario) return NextResponse.json({ error: e.message }, { status: 409 });
@@ -71,9 +71,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (id === null) return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
     const ok = await deleteProducto(id);
     if (!ok) return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
-    revalidatePath('/', 'layout');
-    revalidatePath('/catalogo');
-    revalidatePath(`/producto/${id}`, 'page');
+    revalidarCatalogo();
+    revalidatePath(`/producto/${id}`);
     revalidatePath('/sitemap.xml');
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {

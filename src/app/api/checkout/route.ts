@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminRateLimit } from '@/lib/adminRateLimit';
 import { crearPedido, obtenerEnlaceDePago } from '@/lib/db';
 import { crearPreferencia, esReferenciaDeCompra, origenCheckout, rutaSeguimiento } from '@/lib/mercadoPago';
+import { revalidarCatalogo } from '@/lib/revalidarCatalogo';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -52,9 +53,7 @@ export async function POST(req: NextRequest) {
       referencia, despacho: { region, comuna, direccion }, totalEsperado: body.total
     });
     for (const id of new Set(pedido.items.map((item) => item.producto_id))) revalidatePath(`/producto/${id}`);
-    revalidatePath('/matera');
-    revalidatePath('/cristiana');
-    revalidatePath('/remate');
+    revalidarCatalogo();
     const seguimiento = rutaSeguimiento(pedido.id, referencia);
     const url = await obtenerEnlaceDePago(pedido, referencia, () => crearPreferencia(pedido, referencia, origen));
     return NextResponse.json({ url, seguimiento }, { headers: { 'Cache-Control': 'private, no-store' } });

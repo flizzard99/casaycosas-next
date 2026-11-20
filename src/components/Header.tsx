@@ -40,7 +40,7 @@ export default function Header({ linea }: { linea?: Linea }) {
         </Link>
         <nav aria-label="Colecciones" className="shop-nav">
           {Object.values(LINEAS).map((coleccion) => (
-            <Link key={coleccion.href} href={coleccion.href} aria-current={pathname === coleccion.href ? 'page' : undefined}
+            <Link key={coleccion.href} href={coleccion.href} prefetch={false} aria-current={pathname === coleccion.href ? 'page' : undefined}
               className={linea === coleccion.href.slice(1) ? 'shop-nav-active' : undefined}>
               {coleccion.nombre}
             </Link>
