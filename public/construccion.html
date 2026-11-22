@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#192c27">
 <meta name="robots" content="noindex">
 <title>Pronto, página en construcción · Casa y Cosas</title>
-<link rel="icon" href="/oveja-portada.webp">
+<link rel="icon" href="/logo.png">
 <style>
   * { box-sizing: border-box }
   body { margin: 0; background: #192c27; color: #f4ecdc; font-family: Georgia, serif }
@@ -16,22 +16,34 @@
   h1 { font-weight: 400; font-size: clamp(2.8rem, 6.8vw, 5.8rem); letter-spacing: -.055em; line-height: 1.04; margin: .5em 0 .42em; text-wrap: balance }
   h1 small { display: block; color: #d1b990; font: 600 .7rem/2 system-ui, sans-serif; letter-spacing: .2em; text-transform: uppercase; margin-bottom: 1rem }
   .scene { width: 100%; height: auto; display: block; border-bottom: 1px solid #657164 }
-  .grazer { transform: rotate(-41deg); animation: graze 9s ease-in-out infinite }
-  .drinker { transform: rotate(-5deg); animation: sip 7s ease-in-out infinite }
+  :root { color-scheme: light; --paper:#f6f1e7; --ink:#2d4135; --accent:#775c3f; --rule:#bdbba7; --sky-top:#acc3c3; --sky-middle:#f7cb9c; --sky-low:#f9e1b8; --far:#aca68a; --ridge:#929b7c; --field:#758666; --grass:#596e55 }
+  :root[data-tema="oscuro"] { color-scheme: dark; --paper:#131e29; --ink:#f0eee3; --accent:#ccc09e; --rule:#475862; --sky-top:#101c36; --sky-middle:#26395a; --sky-low:#576780; --far:#46576a; --ridge:#35495b; --field:#293d46; --grass:#203238 }
+  body { background:var(--paper); color:var(--ink) }
+  header, .scene { border-color:var(--rule) }
+  header img { width:3.75rem; height:3.75rem; border-radius:50%; background:white; margin:0 }
+  h1 small { color:var(--accent) }
+  #tema { margin-left:auto; min-height:44px; padding:5px 0; border:0; background:none; color:var(--ink); cursor:pointer }
+  #tema:focus-visible { outline:2px solid currentColor; outline-offset:4px; border-radius:20px }
+  .track { display:flex; width:58px; padding:3px; border-radius:30px; border:1px solid var(--rule) }
+  .thumb { display:grid; place-items:center; width:26px; height:26px; background:var(--ink); color:var(--paper); border-radius:50%; transition:transform .25s ease }
+  [data-tema="oscuro"] .thumb { transform:translateX(24px) }
+  .night, [data-tema="oscuro"] .day { display:none }
+  [data-tema="oscuro"] .night { display:inline }
+  .figure { transform-box:fill-box; transform-origin:center bottom }
+  [data-tema="oscuro"] .flock { filter:brightness(.85) saturate(.84) }
+  .grazer { transform:rotate(-14deg); animation:graze 8s ease-in-out infinite }
+  .reader { animation:read 7s ease-in-out infinite }
+  .drinker { animation:sip 9s ease-in-out infinite }
   .vapour { transform-box: fill-box; transform-origin: center; animation: rise 4.8s ease-out infinite }
   .second { animation-delay: -2.4s }
   .blades { transform-box: fill-box; transform-origin: center bottom; animation: breeze 6s ease-in-out infinite alternate }
   @keyframes graze {
-    0%, 100% { transform: rotate(-41deg) }
-    24%, 64% { transform: rotate(-56deg) }
-    35%, 51% { transform: rotate(-52deg) }
-    43% { transform: rotate(-55deg) }
-    83% { transform: rotate(-28deg) }
+    0%, 100% { transform:rotate(-9deg) }
+    38%, 68% { transform:rotate(-16deg) scaleY(.97) }
+    52% { transform:rotate(-14deg) }
   }
-  @keyframes sip {
-    0%, 100% { transform: rotate(1deg) }
-    36%, 70% { transform: rotate(-7deg) }
-  }
+  @keyframes read { 50% { transform:skewX(-.7deg) scaleY(.985) } }
+  @keyframes sip { 45%, 65% { transform:rotate(-1.4deg) scaleY(.986) } }
   @keyframes rise {
     0% { opacity: 0; transform: translateY(3px) }
     35% { opacity: .55 }
@@ -40,74 +52,88 @@
   @keyframes breeze { to { transform: skewX(-6deg) } }
   @media (max-width: 580px) {
     main { width: calc(100% - 2.25rem) }
-    .scene { width: calc(100% + 2.25rem); margin-left: -1.125rem; height: 16rem }
+    .scene { width: calc(100% + 2.25rem); margin-left: -1.125rem; height: min(48vw, 16rem) }
   }
   @media (prefers-reduced-motion: reduce) {
-    .grazer, .drinker, .vapour, .blades { animation: none }
+    .grazer, .reader, .drinker, .vapour, .blades { animation: none }
+    .thumb { transition:none }
   }
 </style>
+<script>
+  const mediaTema = matchMedia('(prefers-color-scheme: dark)');
+  let elegido;
+  try { elegido = localStorage.getItem('cyc-tema') } catch {}
+  function aplicarTema() {
+    const oscuro = elegido === 'oscuro' || (elegido !== 'claro' && mediaTema.matches);
+    document.documentElement.dataset.tema = oscuro ? 'oscuro' : 'claro';
+    document.querySelector('meta[name="theme-color"]').content = oscuro ? '#131e29' : '#f6f1e7';
+    document.getElementById('tema')?.setAttribute('aria-checked', String(oscuro));
+  }
+  aplicarTema();
+  mediaTema.addEventListener('change', aplicarTema);
+</script>
 </head>
 <body>
 <main>
-  <header><img src="/oveja-portada.webp" alt="">Casa y Cosas</header>
+  <header><img src="/logo.png" alt="">Casa y Cosas
+    <button type="button" id="tema" role="switch" aria-label="Modo oscuro" aria-checked="false">
+      <span class="track" aria-hidden="true"><span class="thumb">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+          <g class="day"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></g>
+          <path class="night" d="M21 14A9 9 0 0 1 10 3a8 8 0 0 0 11 11Z"/>
+        </svg>
+      </span></span>
+    </button>
+  </header>
   <h1><small>Pronto,</small>página en construcción</h1>
   <svg class="scene" viewBox="0 0 900 315" preserveAspectRatio="xMidYMid slice" role="img" aria-labelledby="campo">
-    <title id="campo">Al atardecer, una oveja pasta y otra toma mate entre las lomas.</title>
+    <title id="campo">Entre las lomas, una oveja pasta, otra lee un libro y la tercera toma mate.</title>
     <defs>
       <linearGradient id="sky" x2="0" y2="1">
-        <stop stop-color="#293d35"/><stop offset=".72" stop-color="#827e68"/><stop offset="1" stop-color="#9c9378"/>
+        <stop style="stop-color:var(--sky-top)"/><stop offset=".58" style="stop-color:var(--sky-middle)"/><stop offset="1" style="stop-color:var(--sky-low)"/>
       </linearGradient>
-      <linearGradient id="fleece" x1=".3" y1="0" x2=".6" y2="1">
-        <stop stop-color="#f1e7cd"/><stop offset=".55" stop-color="#cbc3a8"/><stop offset="1" stop-color="#8a917b"/>
-      </linearGradient>
-      <pattern id="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(24)">
-        <path d="M1 0v5" stroke="#44564a" opacity=".32" stroke-width=".8"/>
-      </pattern>
-      <g id="body">
-        <path fill="#666e60" d="M14 28l10 49 5 1 1-51m61-1 7 26-4 24h6l8-28 1-23"/>
-        <path fill="#b3ae96" stroke="#515e51" stroke-width="1.3" d="M4 28l3 49 6 1 4-48m84-6 7 26-1 27 6 1 5-30-2-30"/>
-        <path fill="#303e36" d="M7 74h7l-1 5H5zm17 0h6v5h-7zm70 0h6l-1 4h-7zm13 0h7l-1 5h-8z"/>
-        <path fill="url(#fleece)" stroke="#49564a" stroke-width="1.5" d="M-5-6Q-3-22 17-25q16-6 36-2 23-4 43 2 22 2 27 20 4 14-2 24l-6 8q-3 10-13 10-6 6-17 4-19 7-38 2-16 4-26-3Q4 41-1 27-11 17-5-6Z"/>
-        <path fill="url(#hatch)" d="M-3 13q9 16 30 15 27 7 60 1 22-1 36-18-2 17-13 23-12 13-35 9-33 6-58-4Q0 38-3 13Z"/>
-        <path fill="none" stroke="#747e69" stroke-width="1.25" stroke-linecap="round" d="M8-12q4-6 11-7m4-1 6-2m8 0q9-3 16-1m17 0 8 1m10 0q9 0 15 5M9 23q4 6 10 6m9 3 9 2m45 2q8 0 14-4m7-4q5-2 8-7"/>
-      </g>
-      <g id="neck">
-        <path fill="url(#fleece)" d="M9-18Q-1-24-17-18l-25 15 7 26q22 2 43-8 10-12 1-33Z"/>
-        <path fill="#a8a38d" stroke="#515c50" stroke-width="1.4" d="M-34-11q-13-3-19 9l-8 23q-4 8 4 12 6 3 12-2l18-18 3-13z"/>
-        <path fill="#4a5046" d="M-61 22q3-2 7 1l-1 4-6 1z"/>
-        <path fill="#d1c7ab" stroke="#5f695b" stroke-width="1.2" d="M-37-7q9-6 25-3-6 11-18 12z"/>
-        <path fill="#66705e" d="M-32-5l15-3-12 5z"/>
-        <path fill="#e4dbc1" d="M-53-5q1-10 12-12 11-4 17 5l-8 5q-10-3-21 2z"/>
-        <path fill="none" stroke="#454e44" stroke-width="1.8" d="M-50 3q3-2 6 0m-14 27 7-1"/>
-      </g>
+      <radialGradient id="aureola"><stop stop-color="#fff0ae" stop-opacity=".7"/><stop offset="1" stop-color="#ffdc92" stop-opacity="0"/></radialGradient>
       <g id="tuft" fill="none" stroke="currentColor" stroke-linecap="round">
         <path d="M0 0q-3-14-12-21M1 0q-1-17 4-30M2 0q6-15 14-19M-2 0l-13-10"/>
       </g>
     </defs>
     <rect width="900" height="315" fill="url(#sky)"/>
-    <circle cx="610" cy="73" r="22" fill="#d7c9a6" opacity=".8"/>
-    <path fill="#697568" d="M0 154q77-12 122-30l73-18q51-16 89-4l108 29q55 15 93 5l109-31q25-7 57-4l92-19q72-23 157-8v241H0Z"/>
-    <path fill="#53675a" d="M0 126q83 6 154 35 66 26 149 18 82-6 183-43 67-24 132-18 80 10 151-2l131-25v224H0Z"/>
-    <path fill="#374e40" d="M0 195q142-35 262-14 186 34 340-5 130-34 298-24v163H0Z"/>
-    <path fill="#263e32" d="M0 240q163-36 311-17 165 20 313-8 164-31 276-18v118H0Z"/>
+    <g class="day"><circle cx="607" cy="111" r="108" fill="url(#aureola)"/><circle cx="607" cy="111" r="25" fill="#fff0c3"/></g>
+    <g class="night" fill="#eee6cf">
+      <path d="M608 36a21 21 0 1 0 22 27 20 20 0 0 1-22-27Z"/>
+      <g opacity=".8"><circle cx="143" cy="39" r="1.5"/><circle cx="219" cy="71" r="1"/><circle cx="320" cy="29" r="1.3"/><circle cx="365" cy="78" r="1"/><circle cx="452" cy="50" r="1.5"/><circle cx="470" cy="41" r="1"/><circle cx="543" cy="75" r="1.1"/><circle cx="745" cy="33" r="1.5"/><circle cx="801" cy="58" r="1"/></g>
+    </g>
+    <path fill="var(--far)" d="M0 154q77-12 122-30l73-18q51-16 89-4l108 29q55 15 93 5l109-31q25-7 57-4l92-19q72-23 157-8v241H0Z"/>
+    <path fill="var(--ridge)" d="M0 126q83 6 154 35 66 26 149 18 82-6 183-43 67-24 132-18 80 10 151-2l131-25v224H0Z"/>
+    <path fill="var(--field)" d="M0 195q142-35 262-14 186 34 340-5 130-34 298-24v163H0Z"/>
+    <path fill="var(--grass)" d="M0 240q163-36 311-17 165 20 313-8 164-31 276-18v118H0Z"/>
     <g fill="none" stroke="#a6ae8d" opacity=".32">
       <path d="M0 203q98-27 208-23m-173 23q66-16 116-18m292 10q79-2 139-17m96-13q132-25 222-14M0 251q110-31 213-28m382 1q119-23 231-25"/>
     </g>
-    <g transform="translate(325 185)"><use href="#body"/><g class="grazer"><use href="#neck"/></g></g>
-    <g transform="translate(509 188) scale(.85)"><use href="#body"/><g class="drinker"><use href="#neck"/></g></g>
-    <g transform="translate(452 229)">
-      <path d="M-3 1l-2-10 15-5" fill="none" stroke="#d7c9a6" stroke-width="2.6" stroke-linecap="round"/>
-      <path fill="#996e48" stroke="#453f32" d="M-11 0q3 6-1 11-4 11 7 15 9 3 16-4 4-5 0-12-4-7-2-10z"/>
-      <ellipse cy="1" rx="10" ry="2.5" fill="#d4bb92"/><ellipse cy="1" rx="7" ry="1.3" fill="#4c5945"/>
-      <g fill="none" stroke="#e2d6bf" stroke-width="1.3" opacity=".65">
-        <path class="vapour" d="M-7-4q-5-5-1-11t-1-11"/><path class="vapour second" d="M1-5q4-5 1-10"/>
+    <g fill="#18281e" opacity=".25">
+      <ellipse cx="450" cy="249" rx="40" ry="4"/><ellipse cx="594" cy="260" rx="42" ry="5"/>
+    </g>
+    <g class="flock">
+      <g transform="translate(290 271)"><g class="grazer"><image href="/oveja-portada.webp" x="-106" y="-168" width="212" height="212"/></g></g>
+      <image class="figure reader" href="/oveja-lectora.webp" x="392" y="138" width="116" height="116"/>
+      <image class="figure drinker" href="/oveja-matera.webp" x="530" y="129" width="134" height="134"/>
+      <g transform="translate(561 200)" fill="none" stroke="#f7e6c3" stroke-width="1.2">
+        <path class="vapour" d="M-3-2q-5-5-1-11t-1-11"/><path class="vapour second" d="M1-3q4-5 1-10"/>
       </g>
     </g>
-    <g color="#8e9b79"><g transform="translate(310 260) scale(.65)"><g class="blades"><use href="#tuft"/></g></g>
+    <g color="#8e9b79"><g transform="translate(245 247) scale(.65)"><g class="blades"><use href="#tuft"/></g></g>
       <use href="#tuft" transform="translate(285 264) scale(.48)"/><use href="#tuft" transform="translate(618 258) scale(.44)"/>
       <use href="#tuft" transform="translate(141 280) scale(.7)"/><use href="#tuft" transform="translate(728 271) scale(.72)"/>
     </g>
   </svg>
 </main>
+<script>
+  aplicarTema();
+  document.getElementById('tema').addEventListener('click', () => {
+    elegido = document.documentElement.dataset.tema === 'oscuro' ? 'claro' : 'oscuro';
+    try { localStorage.setItem('cyc-tema', elegido) } catch {}
+    aplicarTema();
+  });
+</script>
 </body>
 </html>
