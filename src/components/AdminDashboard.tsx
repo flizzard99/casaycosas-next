@@ -19,6 +19,7 @@ import { parsearEncuadre, estilosEncuadre } from '@/lib/encuadre';
 import type { NotificacionPedidoAdmin, Pedido } from '@/lib/db';
 import { ENVIO_CHILE } from '@/lib/checkout';
 import IntegracionesPanel from './IntegracionesPanel';
+import HoldToConfirm from './HoldToConfirm';
 
 const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 const GRUPOS_PUBLICOS = Object.values(LINEAS).flatMap(({ grupos }) => [...grupos]);
@@ -340,9 +341,6 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   }
 
   function borrarPedido(pedido: Pedido) {
-    const consecuencia = pedido.estado === 'pendiente'
-      ? ' Se liberará el stock reservado.' : '';
-    if (!window.confirm(`¿Estás seguro de borrar el pedido ${pedido.codigo_publico}? Se retirará del panel y el enlace del cliente dejará de funcionar.${consecuencia} Los reembolsos se gestionan por separado.`)) return;
     return ejecutarAccion(`pedido-${pedido.id}`, `/api/pedidos/${pedido.id}`, { method: 'DELETE' },
       'Pedido eliminado.', () => {
         setRecargarPedidos((valor) => valor + 1);
@@ -784,11 +782,10 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                               </button>
                             </form>
                           )}
-                          <button type="button" disabled={!!ocupado} onClick={() => borrarPedido(ped)}
-                            aria-label={`Borrar pedido ${ped.codigo_publico}`}
-                            className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-red-200 px-3 text-sm font-semibold text-red-800 hover:bg-red-50 disabled:opacity-50">
-                            <AdminIcon name="papelera" /> Borrar pedido
-                          </button>
+                          <HoldToConfirm disabled={!!ocupado} onConfirm={() => { void borrarPedido(ped); }}
+                            label="Mantén presionado para borrar" confirmedLabel="Eliminando…" duration={1500}
+                            aria-label={`Mantén presionado para borrar el pedido ${ped.codigo_publico}`}
+                            className="mt-3 w-full sm:w-auto" />
                         </article>
                       ))}
                     </div>
