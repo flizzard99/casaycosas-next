@@ -48,8 +48,8 @@ export async function enviarEmailCambioEstado(pedido: Pedido, estadoUrl: string)
     <p><a href="${escaparHtml(estadoUrl)}" style="background:#588157;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;display:inline-block">Ver estado de mi pedido →</a></p>
     <p style="font-size:13px;color:#888;word-break:break-all">Enlace directo: ${escaparHtml(estadoUrl)}</p>
     <hr style="border:none;border-top:1px solid #eee;margin:20px 0">
-    <p style="font-size:12px;color:#888">Pedido #${pedido.id} · Total ${formatoCLP.format(pedido.total)}</p>
+    <p style="font-size:12px;color:#888">Pedido ${pedido.codigo_publico} · Total ${formatoCLP.format(pedido.total)}</p>
     <p style="font-size:13px;color:#3A5A40;margin-top:24px">— Casa y Cosas</p>
   </div>`;
-  try { await resend.emails.send({ from: fromAddress(), to: pedido.cliente_email, subject: `Pedido #${pedido.id} ${pedido.estado} · Casa y Cosas`, html }); } catch (e) { console.error('[email]cambio-estado:', e); }
+  try { await resend.emails.send({ from: fromAddress(), to: pedido.cliente_email, subject: `Pedido ${pedido.codigo_publico} ${pedido.estado} · Casa y Cosas`, html }); } catch (e) { console.error('[email]cambio-estado:', e); }
 }

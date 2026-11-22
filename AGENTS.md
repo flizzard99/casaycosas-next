@@ -6,7 +6,7 @@ Tienda online para **Casa y Cosas** en Panguipulli, Chile. Vende artículos del 
 ## Stack
 - **Framework:** Next.js 16 (App Router) + TypeScript + Tailwind CSS
 - **DB:** Supabase Postgres (tablas: `productos`, `config`, `pedidos`, `pedido_items`)
-- **Imágenes:** Cloudflare R2 bucket `casaycosas-images` — subida directa vía presigned URLs (hasta 25 MB) o data URL → conversión sharp server-side (HEIC, hasta 4 MB). Dominio: `images.casaycosas.qzz.io`. Egress: $0 siempre.
+- **Imágenes:** Cloudflare R2 bucket `casaycosas-images` — el navegador comprime las fotos grandes y las envía al mismo dominio; el servidor valida el contenido, normaliza a WebP con sharp y guarda en R2. Dominio: `images.casaycosas.qzz.io`.
 - **Deploy:** Vercel (`casaycosas-next.vercel.app`) — auto-deploy desde `main`
 - **Auth admin:** Cookie httpOnly firmada con HMAC (`SESSION_SECRET`), expira 12h. `SameSite=Strict` (anti-CSRF).
 - **CSRF:** Cookie `cyc_admin_csrf` (HMAC-signed, no httpOnly para que JS la lea) + header `X-CSRF-Token`. `src/lib/csrf.ts` valida server-side; `src/lib/adminFetch.ts` adjunta client-side. Toda mutación admin (POST/PUT/PATCH/DELETE) valida session + CSRF.
@@ -17,11 +17,11 @@ Tienda online para **Casa y Cosas** en Panguipulli, Chile. Vende artículos del 
 ## Modelo de datos clave
 - `productos`: id, name, description, category, image_url, instagram_url, price, stock, visible, images[], created_at
 - `config`: JSONB con `category_order` (string[]) y `featured` ({productIds: number[4], title: string})
-- `pedidos`: id, cliente_nombre, cliente_whatsapp, total, estado (pendiente/confirmado/cancelado/expirado), created_at, confirmado_at
+- `pedidos`: id interno, codigo_publico aleatorio, cliente_nombre, cliente_whatsapp, total, estado (pendiente/confirmado/cancelado/expirado), created_at, confirmado_at
 - `pedido_items`: pedido_id, producto_id, nombre, qty, precio
 - Los productos pueden tener imágenes como base64 en la DB (legacy). `db.ts` filtra base64 en runtime.
 - **Sistema de pedidos**: el carrito llama `POST /api/pedido` → crea pedido + decrementa stock atómicamente. Expiración lazy a 48h (restaura stock). Admin gestiona en vista Pedidos.
-- **Seguimiento sin WhatsApp**: página pública `/pedido/[id]` con estado en vivo (polling 20s), QR scaneable, cuenta regresiva de expiración. Email opcional con Resend (`src/lib/email.ts`) — degrada a sin-email si `RESEND_API_KEY` no está. WhatsApp queda como botón opcional, no obligatorio.
+- **Seguimiento sin WhatsApp**: página pública `/mi-pedido/[codigo]` con código aleatorio, estado en vivo (polling 20s) y cuenta regresiva de expiración. Email opcional con Resend (`src/lib/email.ts`) — degrada a sin-email si `RESEND_API_KEY` no está. WhatsApp queda como botón opcional, no obligatorio.
 
 ## Arquitectura importante
 - **Todas las rutas API** tienen `export const runtime = 'nodejs'` y `export const dynamic = 'force-dynamic'` para evitar 405 en Vercel
@@ -31,7 +31,7 @@ Tienda online para **Casa y Cosas** en Panguipulli, Chile. Vende artículos del 
 - `src/lib/config.ts` exporta objeto `tienda` con fallbacks hardcoded (WhatsApp, Instagram, etc.)
 - `src/lib/db.ts` tiene `limpiarImagenes()` y `limpiarImageUrl()` que filtran base64
 - `src/lib/r2.ts` configura el cliente S3-compatible para Cloudflare R2
-- `src/lib/imageStorage.ts` maneja subida a R2 (presigned URLs + data URL con sharp)
+- `src/lib/imageStorage.ts` valida, normaliza y sube imágenes a R2; `/api/upload` mantiene credenciales y validación fuera del navegador
 - `ProductCard` auto-detecta ratio de imagen (`naturalHeight/naturalWidth > 1.3`) para elegir object-cover vs object-contain
 - `CartContext` tiene campo `stock?: number` en CartItem para limitar cantidades
 
@@ -107,3 +107,13 @@ npm run migrate:to-r2           # Ejecutar migración a R2
 - No agregar comentarios al código a menos que el usuario lo pida
 - Seguir el estilo de código existente (Tailwind, componentes client/server)
 - Los archivos en `/home/flizzard/Desktop/Pagina/` son del sitio viejo y archivos auxiliares (logos, texturas, etc.)
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

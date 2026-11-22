@@ -38,7 +38,7 @@ export default function PedidoEstadoClient({ pedidoInicial, referencia }: { pedi
 
   const fetchEstado = useCallback(async (signal: AbortSignal) => {
     try {
-      const respuesta = await fetch(`/api/pedido/${pedidoInicial.id}${referencia ? `?ref=${encodeURIComponent(referencia)}` : ''}`, {
+      const respuesta = await fetch(`/api/pedido/${encodeURIComponent(pedidoInicial.codigo)}${referencia ? `?ref=${encodeURIComponent(referencia)}` : ''}`, {
         cache: 'no-store', signal
       });
       if (respuesta.status === 404) setNoDisponible(true);
@@ -46,7 +46,7 @@ export default function PedidoEstadoClient({ pedidoInicial, referencia }: { pedi
     } catch {
       return;
     }
-  }, [pedidoInicial.id, referencia]);
+  }, [pedidoInicial.codigo, referencia]);
 
   useEffect(() => {
     if (noDisponible || (pedido.estado !== 'pendiente' && (pedido.estado !== 'confirmado' || pedido.despachado_at))) return;
@@ -78,7 +78,7 @@ export default function PedidoEstadoClient({ pedidoInicial, referencia }: { pedi
   const medioPago = pedido.metodo_pago === 'tarjeta' ? 'Tarjeta · Mercado Pago' : pedido.metodo_pago === 'transferencia' ? 'Transferencia bancaria' : 'Coordinado con la tienda';
   const minutosRestantes = Math.max(0, Math.ceil((pedido.expiracionAt - (ahora ?? pedido.expiracionAt)) / 60000));
   const datosTransferencia = transferenciaPendiente && (ahora === null || minutosRestantes > 0) ? pedido.datos_transferencia : null;
-  const mensaje = `Hola, escribo por el pedido #${pedido.id}.`;
+  const mensaje = `Hola, escribo por el pedido ${pedido.codigo}.`;
 
   if (noDisponible) {
     return (
@@ -94,7 +94,7 @@ export default function PedidoEstadoClient({ pedidoInicial, referencia }: { pedi
       <Link href="/" className="shop-accent text-sm font-semibold underline underline-offset-4">Volver a la tienda</Link>
       <div className="mb-7 mt-4 flex flex-wrap items-end justify-between gap-4 sm:mb-9">
         <div>
-          <h1 className="shop-display text-4xl sm:text-5xl">Pedido #{pedido.id}</h1>
+          <h1 className="shop-display break-words text-3xl sm:text-5xl">Pedido {pedido.codigo}</h1>
           <time dateTime={new Date(pedido.created_at).toISOString()} className="mt-2 block text-sm shop-muted">{fechaChile.format(new Date(pedido.created_at))}</time>
         </div>
         <p role="status" className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold ${estado.color}`}>
@@ -143,7 +143,7 @@ export default function PedidoEstadoClient({ pedidoInicial, referencia }: { pedi
           {datosTransferencia && (
             <section aria-labelledby="datos-transferencia" className="rounded-2xl border shop-panel p-5">
               <h2 id="datos-transferencia" className="font-semibold">Datos para transferir</h2>
-              <p className="mt-2 text-sm shop-muted">Transfiere <strong>{formatoCLP.format(pedido.total)}</strong> e indica <strong>Pedido #{pedido.id}</strong> como referencia. La reserva dura {TRANSFERENCIA_RESERVA_HORAS} horas.</p>
+              <p className="mt-2 text-sm shop-muted">Transfiere <strong>{formatoCLP.format(pedido.total)}</strong> e indica <strong>{pedido.codigo}</strong> como referencia. La reserva dura {TRANSFERENCIA_RESERVA_HORAS} horas.</p>
               {ahora !== null && <p className="mt-2 text-sm font-semibold">Tiempo restante: {Math.floor(minutosRestantes / 60)} h {minutosRestantes % 60} min</p>}
               <dl className="mt-4 grid gap-3 border-t shop-divider pt-4 text-sm">
                 {CAMPOS_TRANSFERENCIA.map(({ clave, etiqueta }) => datosTransferencia[clave] && (
@@ -152,7 +152,7 @@ export default function PedidoEstadoClient({ pedidoInicial, referencia }: { pedi
               </dl>
               {datosTransferencia.correo && (
                 <a className="mt-4 inline-block text-sm font-semibold underline shop-accent"
-                  href={`mailto:${datosTransferencia.correo}?subject=${encodeURIComponent(`Comprobante del pedido #${pedido.id}`)}`}>
+                  href={`mailto:${datosTransferencia.correo}?subject=${encodeURIComponent(`Comprobante del pedido ${pedido.codigo}`)}`}>
                   Enviar comprobante por correo
                 </a>
               )}

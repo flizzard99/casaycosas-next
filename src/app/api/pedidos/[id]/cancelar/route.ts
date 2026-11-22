@@ -26,7 +26,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     for (const id of new Set(pedido.items.map((item) => item.producto_id))) revalidatePath(`/producto/${id}`);
     revalidarCatalogo();
     const origen = origenTienda();
-    if (origen) await enviarEmailCambioEstado(pedido, origen + rutaSeguimiento(pedido.id, pedido.pago_referencia));
+    if (origen) await enviarEmailCambioEstado(pedido, origen + rutaSeguimiento(pedido.codigo_publico, pedido.pago_referencia));
     return NextResponse.json(pedido);
   } catch (e: unknown) {
     console.error('[API Error] cancelar:', e);

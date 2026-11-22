@@ -4,7 +4,7 @@ import AdminIcon from './AdminIcon';
 import { LINEAS, grupoProducto, lineaProducto, type Linea } from '@/lib/lineas';
 import { destacadosDeLinea, TITULO_DESTACADOS } from '@/lib/destacados';
 import { precioActual } from '@/lib/precios';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import ProductForm from './ProductForm';
@@ -16,7 +16,7 @@ import TransferenciaEditor from './TransferenciaEditor';
 import type { Producto, FeaturedConfig, Config } from '@/lib/types';
 import { adminFetch } from '@/lib/adminFetch';
 import { parsearEncuadre, estilosEncuadre } from '@/lib/encuadre';
-import type { Pedido } from '@/lib/db';
+import type { NotificacionPedidoAdmin, Pedido } from '@/lib/db';
 import { ENVIO_CHILE } from '@/lib/checkout';
 
 const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
@@ -38,6 +38,14 @@ const ESTADOS_PEDIDO = {
 } as const;
 type FiltroPedido = keyof typeof ESTADOS_PEDIDO;
 const VISTAS: Vista[] = ['productos', 'pedidos', 'categorias', 'destacados', 'diseno'];
+
+type ResumenNotificaciones = {
+  pendientes: number;
+  revision: number;
+  ultimos: NotificacionPedidoAdmin[];
+  nuevos: NotificacionPedidoAdmin[];
+  cursor: string;
+};
 
 function etiquetaPago(pedido: Pedido) {
   if (pedido.pago_estado === 'revision') return 'Requiere revisión';
@@ -78,6 +86,14 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [errorCatalogo, setErrorCatalogo] = useState('');
   const [aviso, setAviso] = useState<{ texto: string; error?: boolean }>();
   const [ocupado, setOcupado] = useState<string>();
+  const [resumenNotificaciones, setResumenNotificaciones] = useState<ResumenNotificaciones>();
+  const [nuevosPedidos, setNuevosPedidos] = useState<NotificacionPedidoAdmin[]>([]);
+  const [notificacionesAbiertas, setNotificacionesAbiertas] = useState(false);
+  const [desdeNotificaciones, setDesdeNotificaciones] = useState<string>();
+  const [permisoNotificaciones, setPermisoNotificaciones] = useState<NotificationPermission | 'unsupported'>('unsupported');
+  const primeraConsultaNotificaciones = useRef(true);
+  const codigosNotificados = useRef(new Set<string>());
+  const panelNotificaciones = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function sincronizarVista() {
@@ -112,6 +128,86 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   useEffect(() => {
     cargarTodo();
   }, []);
+
+  useEffect(() => {
+    const temporizador = window.setTimeout(() => {
+      const haceUnDia = new Date(Date.now() - 86400000).toISOString();
+      const guardado = localStorage.getItem('cyc-pedidos-vistos-hasta');
+      const fechaGuardada = guardado ? new Date(guardado) : null;
+      const valido = fechaGuardada && Number.isFinite(fechaGuardada.getTime()) && fechaGuardada.getTime() >= Date.now() - 30 * 86400000;
+      setDesdeNotificaciones(valido ? fechaGuardada.toISOString() : haceUnDia);
+      setPermisoNotificaciones('Notification' in window ? Notification.permission : 'unsupported');
+    }, 0);
+    return () => window.clearTimeout(temporizador);
+  }, []);
+
+  useEffect(() => {
+    if (!desdeNotificaciones) return;
+    const controller = new AbortController();
+    let consultando = false;
+    async function consultar() {
+      if (consultando || document.visibilityState !== 'visible') return;
+      consultando = true;
+      try {
+        const respuesta = await adminFetch(`/api/pedidos/notificaciones?desde=${encodeURIComponent(desdeNotificaciones!)}`, {
+          method: 'GET', signal: controller.signal
+        });
+        if (!respuesta.ok) return;
+        const data = await respuesta.json() as ResumenNotificaciones;
+        if (controller.signal.aborted) return;
+        setResumenNotificaciones(data);
+        setNuevosPedidos(data.nuevos);
+        for (const pedido of data.nuevos) {
+          if (!primeraConsultaNotificaciones.current && !codigosNotificados.current.has(pedido.codigo_publico) &&
+              'Notification' in window && Notification.permission === 'granted') {
+            const notificacion = new Notification('Nuevo pedido en Casa y Cosas', {
+              body: `${pedido.codigo_publico} · ${formatoCLP.format(pedido.total)}`,
+              icon: '/oveja-logo.png',
+              tag: pedido.codigo_publico
+            });
+            notificacion.onclick = () => {
+              window.focus();
+              window.location.hash = 'pedidos';
+              notificacion.close();
+            };
+          }
+          codigosNotificados.current.add(pedido.codigo_publico);
+        }
+        primeraConsultaNotificaciones.current = false;
+      } catch {
+        return;
+      } finally {
+        consultando = false;
+      }
+    }
+    void consultar();
+    const intervalo = window.setInterval(consultar, 30000);
+    function alVolver() {
+      if (document.visibilityState === 'visible') void consultar();
+    }
+    document.addEventListener('visibilitychange', alVolver);
+    return () => {
+      controller.abort();
+      window.clearInterval(intervalo);
+      document.removeEventListener('visibilitychange', alVolver);
+    };
+  }, [desdeNotificaciones]);
+
+  useEffect(() => {
+    if (!notificacionesAbiertas) return;
+    function cerrarFuera(event: PointerEvent) {
+      if (!panelNotificaciones.current?.contains(event.target as Node)) setNotificacionesAbiertas(false);
+    }
+    function cerrarConEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setNotificacionesAbiertas(false);
+    }
+    document.addEventListener('pointerdown', cerrarFuera);
+    document.addEventListener('keydown', cerrarConEscape);
+    return () => {
+      document.removeEventListener('pointerdown', cerrarFuera);
+      document.removeEventListener('keydown', cerrarConEscape);
+    };
+  }, [notificacionesAbiertas]);
 
   useEffect(() => {
     if (vista !== 'pedidos') return;
@@ -245,7 +341,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   function borrarPedido(pedido: Pedido) {
     const consecuencia = pedido.estado === 'pendiente'
       ? ' Se liberará el stock reservado.' : '';
-    if (!window.confirm(`¿Estás seguro de borrar el pedido #${pedido.id}? Se retirará del panel y el enlace del cliente dejará de funcionar.${consecuencia} Los reembolsos se gestionan por separado.`)) return;
+    if (!window.confirm(`¿Estás seguro de borrar el pedido ${pedido.codigo_publico}? Se retirará del panel y el enlace del cliente dejará de funcionar.${consecuencia} Los reembolsos se gestionan por separado.`)) return;
     return ejecutarAccion(`pedido-${pedido.id}`, `/api/pedidos/${pedido.id}`, { method: 'DELETE' },
       'Pedido eliminado.', () => {
         setRecargarPedidos((valor) => valor + 1);
@@ -261,6 +357,21 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
   async function handleLogout() {
     await ejecutarAccion('salir', '/api/auth/logout', { method: 'POST' }, 'Sesión cerrada.', onLogout);
+  }
+
+  function alternarNotificaciones() {
+    const abrir = !notificacionesAbiertas;
+    setNotificacionesAbiertas(abrir);
+    if (!abrir || !resumenNotificaciones) return;
+    localStorage.setItem('cyc-pedidos-vistos-hasta', resumenNotificaciones.cursor);
+    setDesdeNotificaciones(resumenNotificaciones.cursor);
+    setNuevosPedidos([]);
+  }
+
+  async function activarNotificacionesNavegador() {
+    if (!('Notification' in window)) return;
+    const permiso = await Notification.requestPermission();
+    setPermisoNotificaciones(permiso);
   }
 
   const navItems: { id: Vista; label: string }[] = [
@@ -327,6 +438,48 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             <h1 className="flex-1 font-display text-xl text-verde-noche">
               {navItems.find((item) => item.id === vista)?.label}
             </h1>
+            <div ref={panelNotificaciones} className="relative">
+              <button type="button" onClick={alternarNotificaciones} aria-expanded={notificacionesAbiertas}
+                aria-label={nuevosPedidos.length ? `${nuevosPedidos.length} pedidos nuevos` : 'Notificaciones de pedidos'}
+                className="relative grid size-10 place-items-center rounded-full border border-verde-noche/15 bg-white hover:bg-crema/60">
+                <AdminIcon name="campana" />
+                {nuevosPedidos.length > 0 && <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-600 px-1 text-center text-[11px] font-bold leading-5 text-white">
+                  {Math.min(nuevosPedidos.length, 99)}
+                </span>}
+              </button>
+              {notificacionesAbiertas && (
+                <section aria-label="Últimos pedidos" className="absolute right-0 top-12 z-30 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-verde-noche/15 bg-white p-3 shadow-xl">
+                  <div className="mb-3 flex items-start justify-between gap-3 border-b border-verde-noche/10 pb-3">
+                    <div>
+                      <h2 className="font-semibold">Pedidos recientes</h2>
+                      <p className="text-xs text-verde-noche/65">{resumenNotificaciones?.pendientes ?? 0} pendientes · {resumenNotificaciones?.revision ?? 0} por revisar</p>
+                    </div>
+                    <a href="#pedidos" onClick={() => setNotificacionesAbiertas(false)} className="text-xs font-semibold underline">Ver pedidos</a>
+                  </div>
+                  {resumenNotificaciones?.ultimos.length ? (
+                    <ul className="max-h-64 space-y-1 overflow-y-auto">
+                      {resumenNotificaciones.ultimos.map((pedido) => (
+                        <li key={pedido.codigo_publico} className="rounded-lg px-2 py-2 hover:bg-crema/50">
+                          <div className="flex items-baseline justify-between gap-3 text-sm">
+                            <span className="font-semibold">{pedido.codigo_publico}</span>
+                            <span className="shrink-0 tabular-nums">{formatoCLP.format(pedido.total)}</span>
+                          </div>
+                          <p className="truncate text-xs text-verde-noche/65">{pedido.cliente_nombre || 'Cliente'} · {new Date(pedido.created_at).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Santiago' })}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : <p className="py-4 text-center text-sm text-verde-noche/60">Todavía no hay pedidos.</p>}
+                  {permisoNotificaciones === 'default' && (
+                    <button type="button" onClick={activarNotificacionesNavegador}
+                      className="mt-3 min-h-10 w-full rounded-lg border border-verde-noche/15 px-3 text-sm font-semibold hover:bg-crema/50">
+                      Activar avisos del navegador
+                    </button>
+                  )}
+                  {permisoNotificaciones === 'granted' && <p className="mt-3 text-center text-xs text-verde-oscuro">Avisos del navegador activos</p>}
+                  {permisoNotificaciones === 'denied' && <p className="mt-3 text-center text-xs text-verde-noche/60">Los avisos están bloqueados en el navegador.</p>}
+                </section>
+              )}
+            </div>
             <Link href="/" className="hidden text-sm font-semibold underline sm:inline lg:hidden">Tienda</Link>
             <button type="button" className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-verde-noche/15 px-2 text-sm lg:hidden" onClick={handleLogout}>
               <AdminIcon name="salir" className="size-4" /> Salir
@@ -580,7 +733,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         <article key={ped.id} className="min-w-0 rounded-xl border border-verde-noche/10 bg-white p-4">
                           <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <h2 className="font-semibold">Pedido #{ped.id}</h2>
+                              <h2 className="break-all font-semibold">Pedido {ped.codigo_publico}</h2>
                               <p className="text-xs text-verde-noche/75">{new Date(ped.created_at).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Santiago' })}</p>
                             </div>
                             <span className="rounded-full bg-crema/60 px-2.5 py-1 text-xs font-semibold capitalize">{ped.despachado_at ? 'Despachado' : ped.estado}</span>
@@ -630,7 +783,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                             </form>
                           )}
                           <button type="button" disabled={!!ocupado} onClick={() => borrarPedido(ped)}
-                            aria-label={`Borrar pedido #${ped.id}`}
+                            aria-label={`Borrar pedido ${ped.codigo_publico}`}
                             className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-red-200 px-3 text-sm font-semibold text-red-800 hover:bg-red-50 disabled:opacity-50">
                             <AdminIcon name="papelera" /> Borrar pedido
                           </button>

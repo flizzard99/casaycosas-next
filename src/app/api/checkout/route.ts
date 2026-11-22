@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
     });
     for (const id of new Set(pedido.items.map((item) => item.producto_id))) revalidatePath(`/producto/${id}`);
     revalidarCatalogo();
-    const seguimiento = rutaSeguimiento(pedido.id, referencia);
+    const seguimiento = rutaSeguimiento(pedido.codigo_publico, referencia);
     const url = origen ? await obtenerEnlaceDePago(pedido, referencia, () => crearPreferencia(pedido, referencia, origen)) : null;
     return NextResponse.json({ url, seguimiento }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {

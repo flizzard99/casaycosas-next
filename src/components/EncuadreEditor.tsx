@@ -18,7 +18,7 @@ type Props = {
   index: number;
   onCancelar: () => void;
   onGuardarEncuadre: (urlNueva: string) => void;
-  onRecortar: (dataUrl: string) => void;
+  onRecortar: (archivo: Blob) => Promise<void>;
   onRestablecer: () => void;
 };
 
@@ -39,8 +39,10 @@ function urlToImage(url: string): Promise<HTMLImageElement> {
   });
 }
 
-function canvasToDataUrl(canvas: HTMLCanvasElement, mime: string): string {
-  return canvas.toDataURL(mime, 0.92);
+function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('No se pudo preparar el recorte.')), 'image/webp', 0.9);
+  });
 }
 
 export default function EncuadreEditor({ url, onCancelar, onGuardarEncuadre, onRecortar, onRestablecer }: Props) {
@@ -129,10 +131,7 @@ export default function EncuadreEditor({ url, onCancelar, onGuardarEncuadre, onR
         TAM_SALIDA,
         TAM_SALIDA
       );
-      const eraPng = urlLimpia.toLowerCase().match(/\.png(\?|$)/) || img.src.startsWith('data:image/png');
-      const mime = eraPng ? 'image/png' : 'image/jpeg';
-      const dataUrl = canvasToDataUrl(canvas, mime);
-      onRecortar(dataUrl);
+      await onRecortar(await canvasToBlob(canvas));
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error al recortar';
       setError(message);

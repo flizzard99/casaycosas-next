@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { randomBytes } from 'node:crypto';
 import { categoriaDefinida, type Linea } from './lineas';
 import { MAX_DESTACADOS, TITULO_DESTACADOS } from './destacados';
 import { nombreConVariante } from './variantes';
@@ -113,6 +114,7 @@ async function initializeSchema() {
 
 export type Pedido = {
   id: number;
+  codigo_publico: string;
   cliente_nombre: string;
   cliente_whatsapp: string;
   cliente_email: string;
@@ -179,6 +181,7 @@ async function initializePedidosSchema() {
         confirmado_at TIMESTAMPTZ
       );
       ALTER TABLE pedidos
+        ADD COLUMN IF NOT EXISTS codigo_publico TEXT,
         ADD COLUMN IF NOT EXISTS cliente_email TEXT DEFAULT '',
         ADD COLUMN IF NOT EXISTS cliente_rut TEXT,
         ADD COLUMN IF NOT EXISTS metodo_pago TEXT,
@@ -193,6 +196,13 @@ async function initializePedidosSchema() {
         ADD COLUMN IF NOT EXISTS despacho JSONB,
         ADD COLUMN IF NOT EXISTS despachado_at TIMESTAMPTZ,
         ADD COLUMN IF NOT EXISTS codigo_despacho TEXT;
+      UPDATE pedidos SET codigo_publico = 'CYC-' ||
+        UPPER(SUBSTRING(md5(id::text || random()::text || clock_timestamp()::text), 1, 4)) || '-' ||
+        UPPER(SUBSTRING(md5(id::text || random()::text || clock_timestamp()::text), 5, 4)) || '-' ||
+        UPPER(SUBSTRING(md5(id::text || random()::text || clock_timestamp()::text), 9, 4)) || '-' ||
+        UPPER(SUBSTRING(md5(id::text || random()::text || clock_timestamp()::text), 13, 4))
+        WHERE codigo_publico IS NULL;
+      ALTER TABLE pedidos ALTER COLUMN codigo_publico SET NOT NULL;
       CREATE TABLE IF NOT EXISTS pedido_items (
         id SERIAL PRIMARY KEY,
         pedido_id INTEGER REFERENCES pedidos(id) ON DELETE CASCADE,
@@ -211,6 +221,7 @@ async function initializePedidosSchema() {
       ALTER TABLE config_transferencia ENABLE ROW LEVEL SECURITY;
       CREATE UNIQUE INDEX IF NOT EXISTS pedidos_pago_referencia_uidx ON pedidos(pago_referencia) WHERE pago_referencia IS NOT NULL;
       CREATE UNIQUE INDEX IF NOT EXISTS pedidos_pago_id_uidx ON pedidos(pago_id) WHERE pago_id IS NOT NULL;
+      CREATE UNIQUE INDEX IF NOT EXISTS pedidos_codigo_publico_uidx ON pedidos(codigo_publico);
       CREATE INDEX IF NOT EXISTS pedidos_pendientes_fecha_idx ON pedidos(created_at) WHERE estado = 'pendiente';
       CREATE INDEX IF NOT EXISTS pedido_items_pedido_id_idx ON pedido_items(pedido_id);
     `);
@@ -226,6 +237,7 @@ async function initializePedidosSchema() {
 function formatPedido(row: Record<string, unknown>, items: PedidoItem[] = []): Pedido {
   return {
     id: row.id as number,
+    codigo_publico: row.codigo_publico as string,
     cliente_nombre: (row.cliente_nombre as string) || '',
     cliente_whatsapp: (row.cliente_whatsapp as string) || '',
     cliente_email: (row.cliente_email as string) || '',
@@ -246,6 +258,14 @@ function formatPedido(row: Record<string, unknown>, items: PedidoItem[] = []): P
     despachado_at: (row.despachado_at as string) ?? null,
     codigo_despacho: (row.codigo_despacho as string) ?? null
   };
+}
+
+const ALFABETO_CODIGO_PEDIDO = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+function crearCodigoPublicoPedido() {
+  const bytes = randomBytes(16);
+  const codigo = Array.from(bytes, (byte) => ALFABETO_CODIGO_PEDIDO[byte & 31]).join('');
+  return `CYC-${codigo.slice(0, 4)}-${codigo.slice(4, 8)}-${codigo.slice(8, 12)}-${codigo.slice(12)}`;
 }
 
 const RESTAURAR_STOCK_RESERVADO = `
@@ -350,10 +370,10 @@ export async function crearPedido(items: ItemCompra[], clienteNombre: string, cl
     if (total !== compra.totalEsperado) throw new Error('El precio de los productos cambió. Actualiza el carrito.');
 
     const pedidoRes = await client.query(
-      `INSERT INTO pedidos (cliente_nombre, cliente_whatsapp, cliente_email, total, estado, pago_referencia, pago_estado, despacho,
+      `INSERT INTO pedidos (codigo_publico, cliente_nombre, cliente_whatsapp, cliente_email, total, estado, pago_referencia, pago_estado, despacho,
         cliente_rut, metodo_pago, costo_envio, datos_transferencia)
-       VALUES ($1, $2, $3, $4, 'pendiente', $5, 'pendiente', $6, $7, $8, $9, $10) RETURNING *`,
-      [clienteNombre, clienteWhatsapp, clienteEmail, total, compra.referencia, compra.despacho,
+       VALUES ($1, $2, $3, $4, $5, 'pendiente', $6, 'pendiente', $7, $8, $9, $10, $11) RETURNING *`,
+      [crearCodigoPublicoPedido(), clienteNombre, clienteWhatsapp, clienteEmail, total, compra.referencia, compra.despacho,
         compra.rut, compra.metodo, ENVIO_CHILE.precio, compra.transferencia]
     );
     const pedidoId = pedidoRes.rows[0].id;
@@ -394,6 +414,39 @@ export async function getPedidosAdmin(estado: EstadoPedido | 'revision' | 'todos
     pool.query(`SELECT count(*)::integer AS total FROM pedidos p WHERE ${filtro}`, [estado])
   ]);
   return { pedidos: rows.rows.map((row) => formatPedido(row, row.items)), total: cantidad.rows[0].total };
+}
+
+export type NotificacionPedidoAdmin = {
+  codigo_publico: string;
+  cliente_nombre: string;
+  total: number;
+  created_at: string;
+  metodo_pago: MetodoPago | null;
+};
+
+export async function getNotificacionesPedidosAdmin(desde: Date) {
+  await ensureSchema();
+  await ensurePedidosSchema();
+  const pool = getPool();
+  await expirarPedidosViejos(pool);
+  const corte = new Date((await pool.query<{ corte: string }>('SELECT clock_timestamp() AS corte')).rows[0].corte);
+  const [cantidades, ultimos, nuevos] = await Promise.all([
+    pool.query(`SELECT
+      count(*) FILTER (WHERE estado = 'pendiente')::integer AS pendientes,
+      count(*) FILTER (WHERE pago_estado = 'revision')::integer AS revision
+      FROM pedidos WHERE eliminado_at IS NULL`),
+    pool.query<NotificacionPedidoAdmin>(`SELECT codigo_publico, cliente_nombre, total, created_at, metodo_pago
+      FROM pedidos WHERE eliminado_at IS NULL AND created_at <= $1 ORDER BY created_at DESC, id DESC LIMIT 6`, [corte]),
+    pool.query<NotificacionPedidoAdmin>(`SELECT codigo_publico, cliente_nombre, total, created_at, metodo_pago
+      FROM pedidos WHERE eliminado_at IS NULL AND created_at > $1 AND created_at <= $2 ORDER BY created_at ASC, id ASC LIMIT 100`, [desde, corte])
+  ]);
+  return {
+    pendientes: cantidades.rows[0].pendientes as number,
+    revision: cantidades.rows[0].revision as number,
+    ultimos: ultimos.rows,
+    nuevos: nuevos.rows,
+    cursor: corte.toISOString()
+  };
 }
 
 export async function confirmarPedido(id: number): Promise<Pedido | null> {
@@ -732,7 +785,7 @@ export async function eliminarPedido(id: number): Promise<{ productosLiberados: 
 
 export function resumenPublicoPedido(pedido: Pedido) {
   return {
-    id: pedido.id,
+    codigo: pedido.codigo_publico,
     total: pedido.total,
     costo_envio: pedido.costo_envio,
     estado: pedido.estado,
@@ -751,17 +804,25 @@ export function resumenPublicoPedido(pedido: Pedido) {
 
 export type PedidoPublico = ReturnType<typeof resumenPublicoPedido>;
 
-export async function getPedidoByIdPublic(id: number, referencia?: string): Promise<PedidoPublico | null> {
+export async function getPedidoPublico(codigo: string, referencia?: string): Promise<PedidoPublico | null> {
   await ensureSchema();
   await ensurePedidosSchema();
   const pool = getPool();
   await expirarPedidosViejos(pool);
-  const res = await pool.query(
-    'SELECT * FROM pedidos WHERE id = $1 AND eliminado_at IS NULL AND (pago_referencia IS NULL OR pago_referencia::text = $2)',
-    [id, referencia ?? '']
-  );
+  const codigoValido = /^CYC-(?:[A-Z0-9]{4}-){3}[A-Z0-9]{4}$/.test(codigo);
+  const idAnterior = /^\d{1,10}$/.test(codigo) && referencia ? Number(codigo) : null;
+  if (!codigoValido && (idAnterior === null || !Number.isSafeInteger(idAnterior) || idAnterior < 1 || idAnterior > 2147483647)) return null;
+  const res = codigoValido
+    ? await pool.query(
+      'SELECT * FROM pedidos WHERE codigo_publico = $1 AND eliminado_at IS NULL AND (pago_referencia IS NULL OR pago_referencia::text = $2)',
+      [codigo, referencia ?? '']
+    )
+    : await pool.query(
+      'SELECT * FROM pedidos WHERE id = $1 AND eliminado_at IS NULL AND pago_referencia::text = $2',
+      [idAnterior, referencia]
+    );
   if (!res.rows.length) return null;
-  return resumenPublicoPedido(formatPedido(res.rows[0], await leerItems(pool, id)));
+  return resumenPublicoPedido(formatPedido(res.rows[0], await leerItems(pool, res.rows[0].id)));
 }
 
 export async function obtenerEnlaceDePago(pedido: Pedido, referencia: string, crearEnlace: () => Promise<string>): Promise<string | null> {

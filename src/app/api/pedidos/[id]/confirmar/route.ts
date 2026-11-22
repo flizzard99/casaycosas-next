@@ -22,7 +22,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const pedido = await confirmarPedido(id);
     if (!pedido) return NextResponse.json({ error: 'Pedido no encontrado o ya procesado' }, { status: 404 });
     const origen = origenTienda();
-    if (origen) await enviarEmailCambioEstado(pedido, origen + rutaSeguimiento(pedido.id, pedido.pago_referencia));
+    if (origen) await enviarEmailCambioEstado(pedido, origen + rutaSeguimiento(pedido.codigo_publico, pedido.pago_referencia));
     return NextResponse.json(pedido);
   } catch (e: unknown) {
     console.error('[API Error] confirmar:', e);

@@ -41,6 +41,6 @@ export function normalizarRut(valor: unknown): string | null {
   return formatearRut(`${Number(cuerpo)}${digito}`);
 }
 
-export function rutaSeguimiento(id: number, referencia?: string | null) {
-  return `/mi-pedido/${id}${referencia ? `?ref=${encodeURIComponent(referencia)}` : ''}`;
+export function rutaSeguimiento(codigo: string | number, referencia?: string | null) {
+  return `/mi-pedido/${encodeURIComponent(String(codigo))}${referencia ? `?ref=${encodeURIComponent(referencia)}` : ''}`;
 }

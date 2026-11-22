@@ -26,6 +26,7 @@ const paths = {
   zoom: 'M16 10a6 6 0 1 1-12 0 6 6 0 0 1 12 0zm-1.6 4.4L21 21M7 10h6m-3-3v6',
   candado: 'M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4m-4 4v2',
   despacho: 'M2 5h13v12H8m-4 0H2V5m13 4h4l3 4v4h-2m-4 0h-1M8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm12 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0z',
+  campana: 'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M9.5 21h5',
 } as const;
 
 export default function AdminIcon({ name, className = 'size-[18px]' }: {

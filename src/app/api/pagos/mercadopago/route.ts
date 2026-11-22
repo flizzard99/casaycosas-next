@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     if (!pago) return new NextResponse(null, { status: 204 });
 
     const pedido = await registrarPagoMercadoPago(pago);
-    if (pedido) await enviarEmailCambioEstado(pedido, origen + rutaSeguimiento(pedido.id, pago.referencia));
+    if (pedido) await enviarEmailCambioEstado(pedido, origen + rutaSeguimiento(pedido.codigo_publico, pago.referencia));
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error('[webhook Mercado Pago]', error);

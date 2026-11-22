@@ -32,7 +32,7 @@ async function consultarMercadoPago(path: string, init?: RequestInit) {
 }
 
 export async function crearPreferencia(pedido: Pedido, referencia: string, origen: string) {
-  const seguimiento = origen + rutaSeguimiento(pedido.id, referencia);
+  const seguimiento = origen + rutaSeguimiento(pedido.codigo_publico, referencia);
   const expiracion = new Date(new Date(pedido.created_at).getTime() + (COMPRA_EXPIRACION_MINUTOS - 5) * 60000);
   if (expiracion.getTime() <= Date.now()) throw new Error('La sesión de pago ha expirado');
 

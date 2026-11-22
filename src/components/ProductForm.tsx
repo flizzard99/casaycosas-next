@@ -3,8 +3,8 @@
 import AdminIcon from './AdminIcon';
 import { LINEAS, categoriaDefinida, grupoProducto, lineaProducto } from '@/lib/lineas';
 import { nombreCategoria } from '@/lib/categorias';
-import { useState, useRef, useCallback } from 'react';
-import { fileToDataUrl } from '@/lib/fileToDataUrl';
+import { useEffect, useState, useRef } from 'react';
+import { prepararArchivoDiseno } from '@/lib/imagenDiseno';
 import type { Producto, Variante } from '@/lib/types';
 import { etiquetaVariante } from '@/lib/variantes';
 import { adminFetch } from '@/lib/adminFetch';
@@ -20,16 +20,14 @@ type Props = {
 
 type EstadoSubida = {
   id: string;
-  url?: string;
-  estado: 'subiendo' | 'ok' | 'error';
-  progreso: number;
+  nombre?: string;
+  vistaPrevia?: string;
+  estado: 'preparando' | 'subiendo' | 'error';
   error?: string;
 };
 
-const MIME_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif', 'image/heic', 'image/heif'];
-const ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/avif,image/heic,image/heif,.heic,.heif';
-
-const MIME_DIRECT = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
+const MIME_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/heic', 'image/heif'];
+const ACCEPT = 'image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif';
 
 function esHeic(file: File): boolean {
   const mime = (file.type || '').toLowerCase();
@@ -40,7 +38,7 @@ function archivoValido(file: File): string | null {
   const mime = (file.type || '').toLowerCase();
   const heic = esHeic(file);
   if (!MIME_PERMITIDOS.includes(mime) && !heic) {
-    return 'Formato no admitido (use JPG, PNG, WebP, GIF, AVIF o HEIC)';
+    return 'Formato no admitido (usa JPG, PNG, WebP, AVIF o HEIC)';
   }
   const limit = heic ? MAX_UPLOAD_DIRECT_BYTES : MAX_UPLOAD_BYTES;
   if (file.size > limit) {
@@ -73,58 +71,69 @@ export default function ProductForm({ producto, onGuardado, onCancelar }: Props)
   const [editandoEncuadre, setEditandoEncuadre] = useState<number | null>(null);
   const [convirtiendo, setConvirtiendo] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const vistasSubidas = useRef(new Map<string, string>());
+  const subidasAbortables = useRef(new Map<string, AbortController>());
 
-  const subiendo = subidas.some((s) => s.estado === 'subiendo');
-  const totalPendientes = imagenes.length + subidas.filter((s) => s.estado === 'subiendo').length;
+  const subiendo = subidas.some((s) => s.estado === 'preparando' || s.estado === 'subiendo');
+  const totalPendientes = imagenes.length + subidas.filter((s) => s.estado !== 'error').length;
   const alLimite = totalPendientes >= MAX_PRODUCT_IMAGES;
 
+  useEffect(() => {
+    const vistas = vistasSubidas.current;
+    const controladores = subidasAbortables.current;
+    return () => {
+      for (const url of vistas.values()) URL.revokeObjectURL(url);
+      for (const controller of controladores.values()) controller.abort();
+      vistas.clear();
+      controladores.clear();
+    };
+  }, []);
+
+  function liberarSubida(id: string) {
+    const vista = vistasSubidas.current.get(id);
+    if (vista) URL.revokeObjectURL(vista);
+    vistasSubidas.current.delete(id);
+    subidasAbortables.current.delete(id);
+  }
+
   async function subirArchivo(file: File): Promise<void> {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const id = crypto.randomUUID();
     const errValidacion = archivoValido(file);
     if (errValidacion) {
-      setSubidas((prev) => [...prev, { id, estado: 'error', progreso: 0, error: errValidacion }]);
+      setSubidas((prev) => [...prev, { id, nombre: file.name, estado: 'error', error: errValidacion }]);
       return;
     }
-    setSubidas((prev) => [...prev, { id, estado: 'subiendo', progreso: 0 }]);
+    const vistaPrevia = URL.createObjectURL(file);
+    const controller = new AbortController();
+    vistasSubidas.current.set(id, vistaPrevia);
+    subidasAbortables.current.set(id, controller);
+    setSubidas((prev) => [...prev, { id, nombre: file.name, vistaPrevia, estado: 'preparando' }]);
     try {
-      let url: string;
-      if (esHeic(file)) {
-        const dataUrl = await fileToDataUrl(file);
-        setSubidas((prev) => prev.map((s) => (s.id === id ? { ...s, progreso: 50 } : s)));
-        const res = await adminFetch('/api/upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: dataUrl })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Error al subir la imagen');
-        url = data.url;
-      } else {
-        const signRes = await adminFetch('/api/upload/sign', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contentType: file.type, size: file.size })
-        });
-        const signData = await signRes.json();
-        if (!signRes.ok) throw new Error(signData.error || 'Error al obtener URL de subida');
-        setSubidas((prev) => prev.map((s) => (s.id === id ? { ...s, progreso: 30 } : s)));
-        const putRes = await fetch(signData.signedUrl, {
-          method: 'PUT',
-          body: file,
-          headers: { 'Content-Type': file.type }
-        });
-        if (!putRes.ok) throw new Error('Error al subir la imagen');
-        url = signData.publicUrl;
-      }
-      setImagenes((prev) => [...prev, url]);
-      setSubidas((prev) => prev.map((s) => (s.id === id ? { ...s, estado: 'ok', url, progreso: 100 } : s)));
+      const imagen = await prepararArchivoDiseno(file);
+      if (controller.signal.aborted) return;
+      setSubidas((prev) => prev.map((s) => s.id === id ? { ...s, estado: 'subiendo' } : s));
+      const res = await adminFetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': imagen.type || (file.name.toLowerCase().endsWith('.heif') ? 'image/heif' : 'image/heic') },
+        body: imagen,
+        signal: controller.signal
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || typeof data?.url !== 'string') throw new Error(data?.error || 'No pudimos subir la imagen.');
+      if (controller.signal.aborted) return;
+      setImagenes((prev) => [...prev, data.url]);
+      setSubidas((prev) => prev.filter((s) => s.id !== id));
+      liberarSubida(id);
     } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
       const message = err instanceof Error ? err.message : 'Error al subir la imagen';
       setSubidas((prev) => prev.map((s) => (s.id === id ? { ...s, estado: 'error', error: message } : s)));
+    } finally {
+      subidasAbortables.current.delete(id);
     }
   }
 
-  const procesarArchivos = useCallback((files: FileList | File[]) => {
+  function procesarArchivos(files: FileList | File[]) {
     const arr = Array.from(files);
     if (!arr.length) return;
     const espacioDisponible = MAX_PRODUCT_IMAGES - totalPendientes;
@@ -138,7 +147,7 @@ export default function ProductForm({ producto, onGuardado, onCancelar }: Props)
     } else {
       setError('');
     }
-  }, [totalPendientes]);
+  }
 
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (e.target.files?.length) procesarArchivos(e.target.files);
@@ -167,28 +176,31 @@ export default function ProductForm({ producto, onGuardado, onCancelar }: Props)
     setEditandoEncuadre(null);
   }
 
-  async function handleRecortar(dataUrl: string) {
+  async function handleRecortar(archivo: Blob) {
     if (editandoEncuadre === null) return;
     setConvirtiendo(true);
     try {
       const res = await adminFetch('/api/upload', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: dataUrl })
+        headers: { 'Content-Type': archivo.type || 'image/webp' },
+        body: archivo
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error al subir el recorte');
+      const data = await res.json().catch(() => null);
+      if (!res.ok || typeof data?.url !== 'string') throw new Error(data?.error || 'Error al subir el recorte');
       setImagenes((prev) => prev.map((u, i) => (i === editandoEncuadre ? data.url : u)));
       setEditandoEncuadre(null);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error al procesar el recorte';
       setError(message);
+      throw err;
     } finally {
       setConvirtiendo(false);
     }
   }
 
   function quitarSubida(id: string) {
+    subidasAbortables.current.get(id)?.abort();
+    liberarSubida(id);
     setSubidas((prev) => prev.filter((s) => s.id !== id));
   }
 
@@ -407,7 +419,7 @@ export default function ProductForm({ producto, onGuardado, onCancelar }: Props)
             <AdminIcon name="subir" /> {alLimite ? 'Límite de imágenes alcanzado' : 'Subir imágenes'}
           </button>
           <p className="mt-1 text-xs text-verde-noche/70">También puedes arrastrarlas aquí.</p>
-          <p className="text-xs text-verde-noche/40 mt-1">JPG, PNG, WebP, GIF, AVIF (máx 25 MB) · HEIC (máx 4 MB) · hasta {MAX_PRODUCT_IMAGES} fotos</p>
+          <p className="text-xs text-verde-noche/40 mt-1">JPG, PNG, WebP o AVIF (máx. 25 MB) · HEIC (máx. 4 MB) · hasta {MAX_PRODUCT_IMAGES} fotos</p>
           <input
             ref={inputRef}
             type="file"
@@ -463,16 +475,35 @@ export default function ProductForm({ producto, onGuardado, onCancelar }: Props)
             );
         })}
 
-          {subidas.filter((s) => s.estado === 'subiendo').map((s) => (
-            <div key={s.id} className="relative w-full aspect-square rounded bg-crema flex items-center justify-center">
-              <div className="absolute inset-0 bg-verde/10" style={{ height: `${s.progreso}%` }} />
-              <span className="relative" role="status" aria-label="Subiendo imagen"><AdminIcon name="subir" /></span>
+          {subidas.filter((s) => s.estado === 'preparando' || s.estado === 'subiendo').map((s) => (
+            <div key={s.id} className="relative aspect-square w-full overflow-hidden rounded-lg border border-verde-noche/15 bg-crema">
+              {s.vistaPrevia && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={s.vistaPrevia} alt="" className="h-full w-full object-cover opacity-45" />
+              )}
+              <div className="absolute inset-x-0 bottom-0 h-1 overflow-hidden bg-white/70">
+                <div className="h-full w-full animate-pulse bg-verde" />
+              </div>
+              <div className="absolute inset-0 grid place-content-center gap-1 bg-white/30 p-2 text-center backdrop-blur-[1px]">
+                <span className="mx-auto" role="status"><AdminIcon name="subir" /></span>
+                <span className="text-xs font-semibold">{s.estado === 'preparando' ? 'Preparando…' : 'Subiendo…'}</span>
+                <span className="max-w-full truncate text-[10px] text-verde-noche/65">{s.nombre}</span>
+              </div>
+              <button type="button" onClick={() => quitarSubida(s.id)}
+                className="absolute right-1 top-1 grid size-9 place-items-center rounded-lg bg-white/90 text-verde-noche hover:bg-white"
+                aria-label={`Cancelar subida de ${s.nombre ?? 'imagen'}`}>
+                <AdminIcon name="cerrar" />
+              </button>
             </div>
           ))}
 
           {subidas.filter((s) => s.estado === 'error').map((s) => (
-            <div key={s.id} className="relative w-full aspect-square rounded bg-red-50 flex items-center justify-center p-1 text-center">
-              <span className="text-[9px] text-red-600 leading-tight">{s.error}</span>
+            <div key={s.id} className="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-lg border border-red-200 bg-red-50 p-2 text-center">
+              {s.vistaPrevia && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={s.vistaPrevia} alt="" className="absolute inset-0 h-full w-full object-cover opacity-15" />
+              )}
+              <span className="relative text-[10px] leading-tight text-red-700">{s.error}</span>
               <button
                 type="button"
                 onClick={() => quitarSubida(s.id)}
