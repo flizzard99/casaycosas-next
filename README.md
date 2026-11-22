@@ -159,9 +159,17 @@ El carrito dirige a «Finalizar compra». El pedido incluye los productos en CLP
 4. Prueba primero con credenciales y comprador de prueba, `MP_SANDBOX=true`, una base de desarrollo y una URL HTTPS de ese entorno. En producción usa las credenciales de producción y deja `MP_SANDBOX=false`. Vuelve a desplegar después de cambiar variables.
 5. En **Administración → Pedidos**, comprueba el cambio de pendiente a aprobado tras recibir el webhook. Al despachar, registra el código de seguimiento si el transportista lo facilita.
 
+En **Administración → Pedidos → Estado de pagos y correos** puedes comprobar el modo configurado y ejecutar un envío real de prueba. Un Access Token que comienza con `TEST-` debe usarse con `MP_SANDBOX=true`; las credenciales de producción requieren `MP_SANDBOX=false`.
+
 En una compra con tarjeta el stock se reserva durante 45 minutos. El enlace de Mercado Pago vence 5 minutos antes para dejar tiempo a las notificaciones. Si se aprueba un pago fuera de plazo o llega un cobro duplicado, el pedido queda en **Pagos por revisar**. Confirma la operación con Mercado Pago antes de despachar o reembolsar.
 
 Activa la transferencia bancaria en **Administración → Pedidos → Cuenta para transferencias**. El cliente ve el monto y la cuenta en su enlace de pedido. El stock se reserva durante 48 horas. Tras verificar el abono, usa **Confirmar transferencia recibida** para habilitar el despacho.
+
+## Correos y seguimiento de pedidos
+
+Configura `RESEND_API_KEY` y un `RESEND_FROM` perteneciente al dominio que aparece como **Verified** en Resend, por ejemplo `Casa y Cosas <pedidos@casaycosas.cl>`. El remitente `onboarding@resend.dev` es solo para pruebas limitadas. Después de modificar variables en Vercel vuelve a desplegar y usa **Administración → Pedidos → Estado de pagos y correos → Probar correo**. La herramienta muestra el código y mensaje que devuelve Resend sin exponer credenciales.
+
+Al crear un pedido se envía un correo con el resumen y su enlace de seguimiento. El cliente también puede entrar a `/seguimiento` con el código público de seis caracteres y el mismo correo utilizado en la compra. La combinación código + correo evita que un tercero pueda consultar un pedido adivinando únicamente su código. Los pedidos antiguos conservan sus códigos anteriores para no romper sus enlaces.
 
 
 ## Colecciones públicas

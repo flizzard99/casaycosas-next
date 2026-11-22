@@ -22,10 +22,11 @@ export function checkAdminRateLimit(
   cleanup();
   const forwarded = req.headers.get('x-forwarded-for');
   const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown';
+  const key = `${req.method}:${req.nextUrl.pathname}:${ip}`;
   const now = Date.now();
-  const entry = hits.get(ip);
+  const entry = hits.get(key);
   if (!entry || entry.resetAt <= now) {
-    hits.set(ip, { count: 1, resetAt: now + windowMs });
+    hits.set(key, { count: 1, resetAt: now + windowMs });
     return true;
   }
   entry.count++;

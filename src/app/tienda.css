@@ -181,7 +181,7 @@ html[data-tienda-tema='oscuro'] .shop-danger { color: #ffa7ad; }
 }
 [data-linea='cristiana'] .shop-brand-icon { background: #664779; }
 .shop-tools { grid-row: 1; grid-column: 2; justify-content: end; }
-.shop-nav { grid-column: 1 / -1; justify-content: center; }
+.shop-nav { grid-column: 1 / -1; flex-wrap: wrap; justify-content: center; }
 .shop-nav a, .shop-icon-button {
   min-height: 2.5rem;
   border-radius: .55rem;

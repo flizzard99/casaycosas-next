@@ -127,6 +127,7 @@ export type Pedido = {
   items: PedidoItem[];
   pago_estado: 'pendiente' | 'aprobado' | 'revision' | null;
   pago_id: string | null;
+  pago_url: string | null;
   pago_referencia: string | null;
   metodo_pago: MetodoPago | null;
   datos_transferencia: DatosTransferencia | null;
@@ -250,6 +251,7 @@ function formatPedido(row: Record<string, unknown>, items: PedidoItem[] = []): P
     items,
     pago_estado: (row.pago_estado as Pedido['pago_estado']) ?? null,
     pago_id: (row.pago_id as string) ?? null,
+    pago_url: (row.pago_url as string) ?? null,
     pago_referencia: (row.pago_referencia as string) ?? null,
     metodo_pago: (row.metodo_pago as MetodoPago) ?? (row.pago_referencia ? 'tarjeta' : null),
     datos_transferencia: (row.datos_transferencia as DatosTransferencia) ?? null,
@@ -260,12 +262,22 @@ function formatPedido(row: Record<string, unknown>, items: PedidoItem[] = []): P
   };
 }
 
-const ALFABETO_CODIGO_PEDIDO = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const ALFABETO_CODIGO_PEDIDO = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
 function crearCodigoPublicoPedido() {
-  const bytes = randomBytes(16);
-  const codigo = Array.from(bytes, (byte) => ALFABETO_CODIGO_PEDIDO[byte & 31]).join('');
-  return `CYC-${codigo.slice(0, 4)}-${codigo.slice(4, 8)}-${codigo.slice(8, 12)}-${codigo.slice(12)}`;
+  let codigo = '';
+  while (codigo.length < 6) {
+    for (const byte of randomBytes(8)) {
+      if (byte >= 252) continue;
+      codigo += ALFABETO_CODIGO_PEDIDO[byte % ALFABETO_CODIGO_PEDIDO.length];
+      if (codigo.length === 6) break;
+    }
+  }
+  return codigo;
+}
+
+function codigoPedidoValido(codigo: string) {
+  return /^[A-Z0-9]{6}$/.test(codigo) || /^CYC-(?:[A-Z0-9]{4}-){3}[A-Z0-9]{4}$/.test(codigo);
 }
 
 const RESTAURAR_STOCK_RESERVADO = `
@@ -369,14 +381,20 @@ export async function crearPedido(items: ItemCompra[], clienteNombre: string, cl
     if (total <= ENVIO_CHILE.precio || total > 2147483647) throw new Error('Total de compra inválido');
     if (total !== compra.totalEsperado) throw new Error('El precio de los productos cambió. Actualiza el carrito.');
 
-    const pedidoRes = await client.query(
-      `INSERT INTO pedidos (codigo_publico, cliente_nombre, cliente_whatsapp, cliente_email, total, estado, pago_referencia, pago_estado, despacho,
-        cliente_rut, metodo_pago, costo_envio, datos_transferencia)
-       VALUES ($1, $2, $3, $4, $5, 'pendiente', $6, 'pendiente', $7, $8, $9, $10, $11) RETURNING *`,
-      [crearCodigoPublicoPedido(), clienteNombre, clienteWhatsapp, clienteEmail, total, compra.referencia, compra.despacho,
-        compra.rut, compra.metodo, ENVIO_CHILE.precio, compra.transferencia]
-    );
-    const pedidoId = pedidoRes.rows[0].id;
+    let pedidoRow: Record<string, unknown> | undefined;
+    for (let intento = 0; intento < 5 && !pedidoRow; intento++) {
+      const pedidoRes = await client.query(
+        `INSERT INTO pedidos (codigo_publico, cliente_nombre, cliente_whatsapp, cliente_email, total, estado, pago_referencia, pago_estado, despacho,
+          cliente_rut, metodo_pago, costo_envio, datos_transferencia)
+         VALUES ($1, $2, $3, $4, $5, 'pendiente', $6, 'pendiente', $7, $8, $9, $10, $11)
+         ON CONFLICT (codigo_publico) DO NOTHING RETURNING *`,
+        [crearCodigoPublicoPedido(), clienteNombre, clienteWhatsapp, clienteEmail, total, compra.referencia, compra.despacho,
+          compra.rut, compra.metodo, ENVIO_CHILE.precio, compra.transferencia]
+      );
+      pedidoRow = pedidoRes.rows[0];
+    }
+    if (!pedidoRow) throw new Error('No se pudo generar un código único para el pedido.');
+    const pedidoId = pedidoRow.id as number;
 
     for (const item of itemsDetalle) {
       await client.query(
@@ -386,7 +404,7 @@ export async function crearPedido(items: ItemCompra[], clienteNombre: string, cl
     }
 
     await client.query('COMMIT');
-    return formatPedido(pedidoRes.rows[0], itemsDetalle);
+    return formatPedido(pedidoRow, itemsDetalle);
   } catch (e) {
     await client.query('ROLLBACK');
     throw e;
@@ -755,16 +773,17 @@ export async function getFeaturedProducts(productIds: number[]): Promise<Product
   return ids.map((id) => byId.get(id)).filter((p): p is Producto => !!p);
 }
 
-export async function despacharPedido(id: number, codigo: string): Promise<boolean> {
+export async function despacharPedido(id: number, codigo: string): Promise<Pedido | null> {
   await ensureSchema();
   await ensurePedidosSchema();
   const result = await getPool().query(
     `UPDATE pedidos SET despachado_at = NOW(), codigo_despacho = NULLIF($2, '')
      WHERE id = $1 AND estado = 'confirmado' AND despachado_at IS NULL AND eliminado_at IS NULL
-       AND (pago_estado = 'aprobado' OR pago_referencia IS NULL)`,
+       AND (pago_estado = 'aprobado' OR pago_referencia IS NULL) RETURNING *`,
     [id, codigo]
   );
-  return result.rowCount === 1;
+  if (!result.rows[0]) return null;
+  return formatPedido(result.rows[0], await leerItems(getPool(), id));
 }
 
 export async function eliminarPedido(id: number): Promise<{ productosLiberados: number[] } | null> {
@@ -790,6 +809,8 @@ export function resumenPublicoPedido(pedido: Pedido) {
     costo_envio: pedido.costo_envio,
     estado: pedido.estado,
     pago_estado: pedido.pago_estado,
+    pago_url: pedido.metodo_pago === 'tarjeta' && pedido.estado === 'pendiente' && pedido.pago_url &&
+      /^https:\/\/([a-z0-9-]+\.)*mercadopago\.(cl|com)(\/|$)/i.test(pedido.pago_url) ? pedido.pago_url : null,
     metodo_pago: pedido.metodo_pago,
     datos_transferencia: pedido.metodo_pago === 'transferencia' && pedido.estado === 'pendiente' ? pedido.datos_transferencia : null,
     created_at: pedido.created_at,
@@ -804,18 +825,18 @@ export function resumenPublicoPedido(pedido: Pedido) {
 
 export type PedidoPublico = ReturnType<typeof resumenPublicoPedido>;
 
-export async function getPedidoPublico(codigo: string, referencia?: string): Promise<PedidoPublico | null> {
+export async function getPedidoPublico(codigo: string, referencia?: string, accesoAutorizado = false): Promise<PedidoPublico | null> {
   await ensureSchema();
   await ensurePedidosSchema();
   const pool = getPool();
   await expirarPedidosViejos(pool);
-  const codigoValido = /^CYC-(?:[A-Z0-9]{4}-){3}[A-Z0-9]{4}$/.test(codigo);
+  const codigoValido = codigoPedidoValido(codigo);
   const idAnterior = /^\d{1,10}$/.test(codigo) && referencia ? Number(codigo) : null;
   if (!codigoValido && (idAnterior === null || !Number.isSafeInteger(idAnterior) || idAnterior < 1 || idAnterior > 2147483647)) return null;
   const res = codigoValido
     ? await pool.query(
-      'SELECT * FROM pedidos WHERE codigo_publico = $1 AND eliminado_at IS NULL AND (pago_referencia IS NULL OR pago_referencia::text = $2)',
-      [codigo, referencia ?? '']
+      'SELECT * FROM pedidos WHERE codigo_publico = $1 AND eliminado_at IS NULL AND ($2::boolean OR pago_referencia IS NULL OR pago_referencia::text = $3)',
+      [codigo, accesoAutorizado, referencia ?? '']
     )
     : await pool.query(
       'SELECT * FROM pedidos WHERE id = $1 AND eliminado_at IS NULL AND pago_referencia::text = $2',
@@ -823,6 +844,17 @@ export async function getPedidoPublico(codigo: string, referencia?: string): Pro
     );
   if (!res.rows.length) return null;
   return resumenPublicoPedido(formatPedido(res.rows[0], await leerItems(pool, res.rows[0].id)));
+}
+
+export async function autorizarSeguimientoPedido(codigo: string, email: string): Promise<boolean> {
+  if (!codigoPedidoValido(codigo) || !/^\S+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) return false;
+  await ensurePedidosSchema();
+  const { rowCount } = await getPool().query(
+    `SELECT 1 FROM pedidos WHERE codigo_publico = $1 AND eliminado_at IS NULL
+      AND lower(cliente_email) = lower($2) LIMIT 1`,
+    [codigo, email]
+  );
+  return rowCount === 1;
 }
 
 export async function obtenerEnlaceDePago(pedido: Pedido, referencia: string, crearEnlace: () => Promise<string>): Promise<string | null> {

@@ -2,6 +2,8 @@ import { createHmac, timingSafeEqual, randomBytes } from 'crypto';
 
 const SESSION_COOKIE = 'cyc_admin_session';
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 12; // 12 horas
+const ORDER_ACCESS_COOKIE = 'cyc_order_access';
+const ORDER_ACCESS_DURATION_MS = 1000 * 60 * 60 * 24 * 30;
 
 function getSecret(): string {
   const secret = process.env.SESSION_SECRET;
@@ -75,6 +77,29 @@ export function verifyCsrfToken(token: string | undefined | null): boolean {
   }
 }
 
+export function createOrderAccessToken(codigo: string): string {
+  const payload = JSON.stringify({ purpose: 'order', codigo, exp: Date.now() + ORDER_ACCESS_DURATION_MS });
+  const payloadB64 = Buffer.from(payload).toString('base64url');
+  return `${payloadB64}.${sign(payloadB64)}`;
+}
+
+export function verifyOrderAccessToken(token: string | undefined | null, codigo: string): boolean {
+  if (!token) return false;
+  const [payloadB64, signature] = token.split('.');
+  if (!payloadB64 || !signature) return false;
+  const esperado = sign(payloadB64);
+  const a = Buffer.from(signature);
+  const b = Buffer.from(esperado);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return false;
+  try {
+    const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString());
+    return payload.purpose === 'order' && payload.codigo === codigo && payload.exp > Date.now();
+  } catch {
+    return false;
+  }
+}
+
 export const CSRF_COOKIE_NAME = CSRF_COOKIE;
 
 export const SESSION_COOKIE_NAME = SESSION_COOKIE;
+export const ORDER_ACCESS_COOKIE_NAME = ORDER_ACCESS_COOKIE;

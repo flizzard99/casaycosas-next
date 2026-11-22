@@ -72,7 +72,7 @@ Ver `.env.example` y `README.md` para tabla completa. Las más importantes:
 - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`
 - `ADMIN_PASSWORD`, `SESSION_SECRET`
 - `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (rate-limit login; optional pero recomendado)
-- `RESEND_API_KEY`, `RESEND_FROM` (email de pedidos; optional, degrada a sin-email si no están)
+- `RESEND_API_KEY`, `RESEND_FROM` (email de pedidos; el remitente debe pertenecer a un dominio verificado en Resend)
 - Las `NEXT_PUBLIC_*` de contacto tienen fallbacks en `config.ts`
 - `NEXT_PUBLIC_SITE_URL`
 - Las `NEXT_PUBLIC_*` de contacto tienen fallbacks en `config.ts`

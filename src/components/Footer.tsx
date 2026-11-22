@@ -19,6 +19,7 @@ export default function Footer() {
           {Object.values(LINEAS).map(({ href, nombre }) => (
             <Link key={href} href={href} className="hover:underline">{nombre}</Link>
           ))}
+          <Link href="/seguimiento" className="hover:underline">Seguir pedido</Link>
           <Link href="/#contacto" className="hover:underline">Redes sociales</Link>
           <a href={tienda.whatsappUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">WhatsApp</a>
         </nav>

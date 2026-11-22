@@ -138,6 +138,9 @@ export default function PedidoEstadoClient({ pedidoInicial, referencia }: { pedi
               {pedido.destino_envio && <div><dt className="font-semibold">Destino</dt><dd className="shop-muted">{pedido.destino_envio.comuna}, {pedido.destino_envio.region}</dd></div>}
               {pedido.codigo_despacho && <div><dt className="font-semibold">Código de seguimiento</dt><dd className="break-words shop-muted">{pedido.codigo_despacho}</dd></div>}
             </dl>
+            {pedido.pago_url && (
+              <a href={pedido.pago_url} className="shop-button mt-4 w-full" rel="nofollow">Continuar pago en Mercado Pago</a>
+            )}
           </section>
 
           {datosTransferencia && (

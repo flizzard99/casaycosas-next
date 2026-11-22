@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { getPedidoPublico } from '@/lib/db';
+import { ORDER_ACCESS_COOKIE_NAME, verifyOrderAccessToken } from '@/lib/auth';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
@@ -23,7 +25,9 @@ export default async function MiPedidoPage({ params, searchParams }: {
   const codigo = decodeURIComponent(valor).toUpperCase();
   const { ref } = await searchParams;
   const referencia = typeof ref === 'string' ? ref : undefined;
-  const pedido = await getPedidoPublico(codigo, referencia);
+  const cookieStore = await cookies();
+  const accesoAutorizado = verifyOrderAccessToken(cookieStore.get(ORDER_ACCESS_COOKIE_NAME)?.value, codigo);
+  const pedido = await getPedidoPublico(codigo, referencia, accesoAutorizado);
   if (!pedido) notFound();
 
   return (

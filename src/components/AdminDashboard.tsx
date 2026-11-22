@@ -18,6 +18,7 @@ import { adminFetch } from '@/lib/adminFetch';
 import { parsearEncuadre, estilosEncuadre } from '@/lib/encuadre';
 import type { NotificacionPedidoAdmin, Pedido } from '@/lib/db';
 import { ENVIO_CHILE } from '@/lib/checkout';
+import IntegracionesPanel from './IntegracionesPanel';
 
 const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 const GRUPOS_PUBLICOS = Object.values(LINEAS).flatMap(({ grupos }) => [...grupos]);
@@ -708,6 +709,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
           {vista === 'pedidos' && (
             <section aria-label="Pedidos de la tienda">
+              <IntegracionesPanel />
               <details className="mb-4 rounded-xl border border-verde-noche/15 bg-white p-4" onToggle={(event) => setMostrarCuenta(event.currentTarget.open)}>
                 <summary className="cursor-pointer text-sm font-semibold">Cuenta para transferencias</summary>
                 {mostrarCuenta && <TransferenciaEditor />}

@@ -45,6 +45,7 @@ export default function Header({ linea }: { linea?: Linea }) {
               {coleccion.nombre}
             </Link>
           ))}
+          <Link href="/seguimiento" prefetch={false} aria-current={pathname === '/seguimiento' ? 'page' : undefined}>Seguir pedido</Link>
         </nav>
         <div className="shop-tools">
           <ThemeToggle />

@@ -3,11 +3,12 @@ import { revalidatePath } from 'next/cache';
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminRateLimit } from '@/lib/adminRateLimit';
 import { crearPedido, getDatosTransferencia, obtenerEnlaceDePago } from '@/lib/db';
-import { crearPreferencia, esReferenciaDeCompra, origenCheckout } from '@/lib/mercadoPago';
+import { crearPreferencia, esReferenciaDeCompra, MercadoPagoError, origenCheckout } from '@/lib/mercadoPago';
 import { normalizarRut, rutaSeguimiento } from '@/lib/checkout';
 import { origenTienda } from '@/lib/origenTienda';
 import { revalidarCatalogo } from '@/lib/revalidarCatalogo';
 import { validarDestinoChile } from '@/lib/geografiaChile';
+import { enviarEmailPedidoCreado } from '@/lib/email';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
   if (metodo !== 'tarjeta' && metodo !== 'transferencia') {
     return NextResponse.json({ error: 'Selecciona cómo quieres pagar.' }, { status: 400 });
   }
-  const origen = metodo === 'tarjeta' ? origenCheckout() : null;
+  const origen = metodo === 'tarjeta' ? origenCheckout(req.nextUrl.origin) : null;
   if (metodo === 'tarjeta' && !origen) {
     return NextResponse.json({ error: 'El pago con tarjeta todavía no está disponible.' }, { status: 503 });
   }
@@ -77,8 +78,13 @@ export async function POST(req: NextRequest) {
     revalidarCatalogo();
     const seguimiento = rutaSeguimiento(pedido.codigo_publico, referencia);
     const url = origen ? await obtenerEnlaceDePago(pedido, referencia, () => crearPreferencia(pedido, referencia, origen)) : null;
-    return NextResponse.json({ url, seguimiento }, { headers: { 'Cache-Control': 'private, no-store' } });
+    const correo = await enviarEmailPedidoCreado(pedido, req.nextUrl.origin + seguimiento);
+    return NextResponse.json({ url, seguimiento, correo: correo.ok ? 'enviado' : 'no_enviado' }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
+    if (error instanceof MercadoPagoError) {
+      console.error('[checkout][mercadopago]', { codigo: error.codigo, detalle: error.message });
+      return NextResponse.json({ error: error.mensajePublico, code: error.codigo }, { status: 503 });
+    }
     const detalle = error instanceof Error ? error.message : '';
     if (/^(Stock insuficiente|Producto \d+ no encontrado|El precio de los productos cambió|La sesión de pago corresponde|Total de compra inválido|Selecciona una variante|El pedido fue eliminado)/.test(detalle)) {
       return NextResponse.json({ error: detalle }, { status: 409 });
