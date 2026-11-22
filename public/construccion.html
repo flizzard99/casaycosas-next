@@ -28,38 +28,33 @@
   [data-tema="oscuro"] .thumb { transform:translateX(24px) }
   .night, [data-tema="oscuro"] .day { display:none }
   [data-tema="oscuro"] .night { display:inline }
-  .figure { transform-box:fill-box; transform-origin:center bottom }
   [data-tema="oscuro"] .flock { filter:brightness(.85) saturate(.84) }
-  .grazer { animation:graze 7s ease-in-out infinite }
-  .reader { animation:read 8s ease-in-out infinite }
-  .drinker { animation:sip 8.5s ease-in-out infinite }
-  .vapour { transform-box: fill-box; transform-origin: center; animation: rise 4.8s ease-out infinite }
-  .second { animation-delay: -2.4s }
-  .blades { transform-box: fill-box; transform-origin: center bottom; animation: breeze 6s ease-in-out infinite alternate }
-  @keyframes graze {
-    0%, 100% { transform:translateY(0) scale(1) }
-    45%, 60% { transform:translateY(2px) scale(1.006,.994) }
+  .cloud { fill:#fff9ed; opacity:.25; will-change:transform }
+  .cloud-a { animation:cloud-a 30s ease-in-out infinite alternate }
+  .cloud-b { animation:cloud-b 38s ease-in-out infinite alternate }
+  .stars circle { opacity:.28 }
+  [data-tema="oscuro"] .cloud { animation:none }
+  [data-tema="oscuro"] .stars circle { animation:twinkle 5s ease-in-out infinite }
+  [data-tema="oscuro"] .stars circle:nth-child(3n+1) { animation-delay:-1.8s; animation-duration:4.2s }
+  [data-tema="oscuro"] .stars circle:nth-child(3n+2) { animation-delay:-3.4s; animation-duration:6.2s }
+  @keyframes cloud-a {
+    from { transform:translateX(-28px) }
+    to { transform:translateX(38px) }
   }
-  @keyframes read {
-    0%, 100% { transform:translateY(0) }
-    48%, 58% { transform:translateY(1.5px) rotate(.35deg) }
+  @keyframes cloud-b {
+    from { transform:translateX(35px) }
+    to { transform:translateX(-32px) }
   }
-  @keyframes sip {
-    0%, 100% { transform:translateY(0) rotate(0) }
-    42%, 62% { transform:translateY(1.5px) rotate(-.5deg) }
+  @keyframes twinkle {
+    0%, 100% { opacity:.28 }
+    50% { opacity:.95 }
   }
-  @keyframes rise {
-    0% { opacity: 0; transform: translateY(3px) }
-    35% { opacity: .55 }
-    100% { opacity: 0; transform: translate(3px,-9px) }
-  }
-  @keyframes breeze { to { transform: skewX(-6deg) } }
   @media (max-width: 580px) {
     main { width: calc(100% - 2.25rem) }
     .scene { width: calc(100% + 2.25rem); margin-left: -1.125rem; height: min(48vw, 16rem) }
   }
   @media (prefers-reduced-motion: reduce) {
-    .grazer, .reader, .drinker, .vapour, .blades { animation: none }
+    .cloud, [data-tema="oscuro"] .stars circle { animation:none }
     .thumb { transition:none }
   }
 </style>
@@ -102,10 +97,16 @@
       </g>
     </defs>
     <rect width="900" height="315" fill="url(#sky)"/>
+    <g class="day cloud cloud-a">
+      <path d="M65 73c8-16 31-18 42-5 11-12 36-7 39 10 15-3 28 4 31 15H49c2-10 7-17 16-20Z"/>
+    </g>
+    <g class="day cloud cloud-b" opacity=".18">
+      <path d="M676 126c6-13 24-15 34-5 11-11 32-6 35 9 13-3 24 4 27 13H661c2-8 7-14 15-17Z"/>
+    </g>
     <g class="day"><circle cx="607" cy="111" r="108" fill="url(#aureola)"/><circle cx="607" cy="111" r="25" fill="#fff0c3"/></g>
     <g class="night" fill="#eee6cf">
       <path d="M608 36a21 21 0 1 0 22 27 20 20 0 0 1-22-27Z"/>
-      <g opacity=".8"><circle cx="143" cy="39" r="1.5"/><circle cx="219" cy="71" r="1"/><circle cx="320" cy="29" r="1.3"/><circle cx="365" cy="78" r="1"/><circle cx="452" cy="50" r="1.5"/><circle cx="470" cy="41" r="1"/><circle cx="543" cy="75" r="1.1"/><circle cx="745" cy="33" r="1.5"/><circle cx="801" cy="58" r="1"/></g>
+      <g class="stars"><circle cx="96" cy="68" r="1.2"/><circle cx="143" cy="39" r="1.5"/><circle cx="219" cy="71" r="1"/><circle cx="272" cy="48" r=".8"/><circle cx="320" cy="29" r="1.3"/><circle cx="365" cy="78" r="1"/><circle cx="452" cy="50" r="1.5"/><circle cx="510" cy="88" r=".8"/><circle cx="543" cy="75" r="1.1"/><circle cx="690" cy="74" r=".9"/><circle cx="745" cy="33" r="1.5"/><circle cx="801" cy="58" r="1"/></g>
     </g>
     <path fill="var(--far)" d="M0 154q77-12 122-30l73-18q51-16 89-4l108 29q55 15 93 5l109-31q25-7 57-4l92-19q72-23 157-8v241H0Z"/>
     <path fill="var(--ridge)" d="M0 126q83 6 154 35 66 26 149 18 82-6 183-43 67-24 132-18 80 10 151-2l131-25v224H0Z"/>
@@ -115,17 +116,14 @@
       <path d="M0 203q98-27 208-23m-173 23q66-16 116-18m292 10q79-2 139-17m96-13q132-25 222-14M0 251q110-31 213-28m382 1q119-23 231-25"/>
     </g>
     <g fill="#18281e" opacity=".25">
-      <ellipse cx="290" cy="266" rx="55" ry="5"/><ellipse cx="450" cy="249" rx="40" ry="4"/><ellipse cx="594" cy="260" rx="42" ry="5"/>
+      <ellipse cx="290" cy="264" rx="43" ry="4"/><ellipse cx="450" cy="249" rx="40" ry="4"/><ellipse cx="594" cy="260" rx="42" ry="5"/>
     </g>
     <g class="flock">
-      <image class="figure grazer" href="/oveja-pastando.webp" x="190" y="123" width="205" height="151"/>
-      <image class="figure reader" href="/oveja-lectora.webp" x="392" y="138" width="116" height="116"/>
-      <image class="figure drinker" href="/oveja-matera.webp" x="530" y="129" width="134" height="134"/>
-      <g transform="translate(561 200)" fill="none" stroke="#f7e6c3" stroke-width="1.2">
-        <path class="vapour" d="M-3-2q-5-5-1-11t-1-11"/><path class="vapour second" d="M1-3q4-5 1-10"/>
-      </g>
+      <image href="/oveja-pastando.webp" x="218" y="151" width="158" height="116"/>
+      <image href="/oveja-lectora.webp" x="392" y="138" width="116" height="116"/>
+      <image href="/oveja-matera.webp" x="530" y="129" width="134" height="134"/>
     </g>
-    <g color="#8e9b79"><g transform="translate(245 247) scale(.65)"><g class="blades"><use href="#tuft"/></g></g>
+    <g color="#8e9b79"><g transform="translate(245 247) scale(.65)"><use href="#tuft"/></g>
       <use href="#tuft" transform="translate(285 264) scale(.48)"/><use href="#tuft" transform="translate(618 258) scale(.44)"/>
       <use href="#tuft" transform="translate(141 280) scale(.7)"/><use href="#tuft" transform="translate(728 271) scale(.72)"/>
     </g>
