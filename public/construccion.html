@@ -24,9 +24,14 @@
   .controls { margin-left:auto; display:flex; align-items:center; gap:.45rem }
   .toggle { min-height:44px; padding:5px 0; border:0; background:none; color:var(--ink); cursor:pointer }
   .toggle:focus-visible { outline:2px solid currentColor; outline-offset:3px; border-radius:20px }
+  .cursor-button { width:38px; height:38px; display:grid; place-items:center; padding:0; border:1px solid var(--rule); border-radius:50%; background:transparent; color:var(--ink); cursor:pointer; transition:background .2s ease, color .2s ease, border-color .2s ease, box-shadow .25s ease, transform .2s ease }
+  .cursor-button:hover { transform:translateY(-1px) }
+  .cursor-button:focus-visible { outline:2px solid currentColor; outline-offset:3px }
+  [data-seguidor="true"] .cursor-button { background:var(--ink); color:var(--paper); border-color:var(--ink); box-shadow:0 0 0 3px rgba(119,92,63,.14), 0 0 18px rgba(119,92,63,.5) }
+  [data-tema="oscuro"][data-seguidor="true"] .cursor-button { box-shadow:0 0 0 3px rgba(204,192,158,.14), 0 0 20px rgba(204,192,158,.48) }
   .track { display:flex; width:58px; padding:3px; border-radius:30px; border:1px solid var(--rule) }
-  .theme-thumb, .cursor-thumb { display:grid; place-items:center; width:26px; height:26px; background:var(--ink); color:var(--paper); border-radius:50%; transition:transform .25s ease }
-  [data-tema="oscuro"] .theme-thumb, [data-seguidor="true"] .cursor-thumb { transform:translateX(24px) }
+  .theme-thumb { display:grid; place-items:center; width:26px; height:26px; background:var(--ink); color:var(--paper); border-radius:50%; transition:transform .25s ease }
+  [data-tema="oscuro"] .theme-thumb { transform:translateX(24px) }
   .night, [data-tema="oscuro"] .day { display:none }
   [data-tema="oscuro"] .night { display:inline }
   [data-tema="oscuro"] .flock { filter:brightness(.85) saturate(.84) }
@@ -53,8 +58,8 @@
   #cursor-pasto { width:28px; height:28px; color:#66824a; filter:drop-shadow(0 3px 2px rgba(25,47,35,.2)) }
   #cursor-pasto svg, #cursor-oveja img { display:block; width:100%; height:100% }
   #cursor-oveja { width:62px; height:65px; filter:drop-shadow(0 5px 4px rgba(25,47,35,.22)) }
-  #cursor-oveja img { object-fit:contain; transform-origin:center; transition:transform .18s ease }
-  #cursor-oveja[data-direccion="izquierda"] img { transform:scaleX(-1) }
+  #cursor-oveja img { object-fit:contain; transform-origin:center }
+  #cursor-oveja[data-direccion="derecha"] img { transform:scaleX(-1) }
   [data-tema="oscuro"] #cursor-pasto { color:#a6bf75; filter:drop-shadow(0 0 5px rgba(181,213,126,.42)) }
   [data-puntero="visible"] #cursor-pasto, [data-puntero="visible"] #cursor-oveja { opacity:1 }
   @media (hover:hover) and (pointer:fine) {
@@ -69,7 +74,7 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .cloud, [data-tema="oscuro"] .stars circle { animation:none }
-    .theme-thumb, .cursor-thumb { transition:none }
+    .theme-thumb, .cursor-button { transition:none }
     #seguidor, #cursor-pasto, #cursor-oveja { display:none }
   }
 </style>
@@ -89,7 +94,7 @@
   }
   function aplicarSeguidor() {
     document.documentElement.dataset.seguidor = String(seguidorActivo);
-    document.getElementById('seguidor')?.setAttribute('aria-checked', String(seguidorActivo));
+    document.getElementById('seguidor')?.setAttribute('aria-pressed', String(seguidorActivo));
     if (!seguidorActivo || !mediaPuntero.matches || mediaMovimiento.matches) ocultarSeguidor();
   }
   function ocultarSeguidor() {
@@ -106,12 +111,10 @@
 <main>
   <header><img src="/oveja-logo.png" alt="">Casa y Cosas
     <div class="controls">
-    <button type="button" id="seguidor" class="toggle" role="switch" aria-label="Oveja siguiendo el cursor" aria-checked="true">
-      <span class="track" aria-hidden="true"><span class="cursor-thumb">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M5 19c1-4 3-7 6-10m-1 10c0-5 2-9 6-13m-1 13c1-4 2-6 5-8M4 19h16"/>
-        </svg>
-      </span></span>
+    <button type="button" id="seguidor" class="cursor-button" aria-label="Oveja siguiendo el cursor" aria-pressed="true">
+      <svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 19c1-4 3-7 6-10m-1 10c0-5 2-9 6-13m-1 13c1-4 2-6 5-8M4 19h16"/>
+      </svg>
     </button>
     <button type="button" id="tema" class="toggle" role="switch" aria-label="Modo oscuro" aria-checked="false">
       <span class="track" aria-hidden="true"><span class="theme-thumb">
