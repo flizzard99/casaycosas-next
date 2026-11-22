@@ -7,7 +7,7 @@ export function proxy(request: NextRequest) {
   }
 
   const path = request.nextUrl.pathname;
-  if (['/logo.png', '/oveja-portada.webp', '/oveja-lectora.webp', '/oveja-matera.webp', '/api/pagos/mercadopago'].includes(path)) {
+  if (['/oveja-logo.png', '/oveja-pastando.webp', '/oveja-lectora.webp', '/oveja-matera.webp', '/api/pagos/mercadopago'].includes(path)) {
     return NextResponse.next();
   }
 

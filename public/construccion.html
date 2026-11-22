@@ -6,13 +6,12 @@
 <meta name="theme-color" content="#192c27">
 <meta name="robots" content="noindex">
 <title>Pronto, página en construcción · Casa y Cosas</title>
-<link rel="icon" href="/logo.png">
+<link rel="icon" href="/oveja-logo.png">
 <style>
   * { box-sizing: border-box }
   body { margin: 0; background: #192c27; color: #f4ecdc; font-family: Georgia, serif }
   main { width: min(100% - 3rem, 64rem); min-height: 100svh; margin: auto; padding: clamp(2rem, 8vh, 6rem) 0; display: flex; flex-direction: column; justify-content: center }
   header { display: flex; align-items: center; gap: .65rem; padding-bottom: .9rem; border-bottom: 1px solid #536257; font: italic 1.35rem Georgia, serif }
-  header img { width: 3.5rem; height: 3.5rem; margin: -.75rem; margin-right: -.55rem }
   h1 { font-weight: 400; font-size: clamp(2.8rem, 6.8vw, 5.8rem); letter-spacing: -.055em; line-height: 1.04; margin: .5em 0 .42em; text-wrap: balance }
   h1 small { display: block; color: #d1b990; font: 600 .7rem/2 system-ui, sans-serif; letter-spacing: .2em; text-transform: uppercase; margin-bottom: 1rem }
   .scene { width: 100%; height: auto; display: block; border-bottom: 1px solid #657164 }
@@ -20,7 +19,7 @@
   :root[data-tema="oscuro"] { color-scheme: dark; --paper:#131e29; --ink:#f0eee3; --accent:#ccc09e; --rule:#475862; --sky-top:#101c36; --sky-middle:#26395a; --sky-low:#576780; --far:#46576a; --ridge:#35495b; --field:#293d46; --grass:#203238 }
   body { background:var(--paper); color:var(--ink) }
   header, .scene { border-color:var(--rule) }
-  header img { width:3.75rem; height:3.75rem; border-radius:50%; background:white; margin:0 }
+  header img { width:3.75rem; height:3.75rem; object-fit:contain }
   h1 small { color:var(--accent) }
   #tema { margin-left:auto; min-height:44px; padding:5px 0; border:0; background:none; color:var(--ink); cursor:pointer }
   #tema:focus-visible { outline:2px solid currentColor; outline-offset:4px; border-radius:20px }
@@ -31,19 +30,24 @@
   [data-tema="oscuro"] .night { display:inline }
   .figure { transform-box:fill-box; transform-origin:center bottom }
   [data-tema="oscuro"] .flock { filter:brightness(.85) saturate(.84) }
-  .grazer { transform:rotate(-14deg); animation:graze 8s ease-in-out infinite }
-  .reader { animation:read 7s ease-in-out infinite }
-  .drinker { animation:sip 9s ease-in-out infinite }
+  .grazer { animation:graze 7s ease-in-out infinite }
+  .reader { animation:read 8s ease-in-out infinite }
+  .drinker { animation:sip 8.5s ease-in-out infinite }
   .vapour { transform-box: fill-box; transform-origin: center; animation: rise 4.8s ease-out infinite }
   .second { animation-delay: -2.4s }
   .blades { transform-box: fill-box; transform-origin: center bottom; animation: breeze 6s ease-in-out infinite alternate }
   @keyframes graze {
-    0%, 100% { transform:rotate(-9deg) }
-    38%, 68% { transform:rotate(-16deg) scaleY(.97) }
-    52% { transform:rotate(-14deg) }
+    0%, 100% { transform:translateY(0) scale(1) }
+    45%, 60% { transform:translateY(2px) scale(1.006,.994) }
   }
-  @keyframes read { 50% { transform:skewX(-.7deg) scaleY(.985) } }
-  @keyframes sip { 45%, 65% { transform:rotate(-1.4deg) scaleY(.986) } }
+  @keyframes read {
+    0%, 100% { transform:translateY(0) }
+    48%, 58% { transform:translateY(1.5px) rotate(.35deg) }
+  }
+  @keyframes sip {
+    0%, 100% { transform:translateY(0) rotate(0) }
+    42%, 62% { transform:translateY(1.5px) rotate(-.5deg) }
+  }
   @keyframes rise {
     0% { opacity: 0; transform: translateY(3px) }
     35% { opacity: .55 }
@@ -75,7 +79,7 @@
 </head>
 <body>
 <main>
-  <header><img src="/logo.png" alt="">Casa y Cosas
+  <header><img src="/oveja-logo.png" alt="">Casa y Cosas
     <button type="button" id="tema" role="switch" aria-label="Modo oscuro" aria-checked="false">
       <span class="track" aria-hidden="true"><span class="thumb">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
@@ -111,10 +115,10 @@
       <path d="M0 203q98-27 208-23m-173 23q66-16 116-18m292 10q79-2 139-17m96-13q132-25 222-14M0 251q110-31 213-28m382 1q119-23 231-25"/>
     </g>
     <g fill="#18281e" opacity=".25">
-      <ellipse cx="450" cy="249" rx="40" ry="4"/><ellipse cx="594" cy="260" rx="42" ry="5"/>
+      <ellipse cx="290" cy="266" rx="55" ry="5"/><ellipse cx="450" cy="249" rx="40" ry="4"/><ellipse cx="594" cy="260" rx="42" ry="5"/>
     </g>
     <g class="flock">
-      <g transform="translate(290 271)"><g class="grazer"><image href="/oveja-portada.webp" x="-106" y="-168" width="212" height="212"/></g></g>
+      <image class="figure grazer" href="/oveja-pastando.webp" x="190" y="123" width="205" height="151"/>
       <image class="figure reader" href="/oveja-lectora.webp" x="392" y="138" width="116" height="116"/>
       <image class="figure drinker" href="/oveja-matera.webp" x="530" y="129" width="134" height="134"/>
       <g transform="translate(561 200)" fill="none" stroke="#f7e6c3" stroke-width="1.2">
