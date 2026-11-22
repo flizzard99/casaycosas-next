@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es-CL">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f6f1e7">
+<meta name="robots" content="noindex">
+<title>Pronto, página en construcción · Casa y Cosas</title>
+<link rel="icon" href="/oveja-portada.webp">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f6f1e7;color:#294539;font-family:Georgia,serif}
+main{max-width:850px;width:90%;margin:auto;min-height:100svh;display:flex;flex-direction:column;justify-content:center;padding:40px 0}
+header{border-top:1px solid #a7b49d;display:flex;align-items:center;justify-content:center;padding:18px 0;font-size:1.2rem;font-style:italic}
+h1{text-align:center;font-size:clamp(2.35rem,7vw,5rem);font-weight:400;line-height:1.05;letter-spacing:-.045em;margin:.45em 0 .55em;text-wrap:balance}
+h1 small{display:block;font:600 .76rem/2 system-ui,sans-serif;letter-spacing:.18em;text-transform:uppercase;margin-bottom:1em}
+.scene{display:block;width:100%;height:auto;border-radius:48% 48% 12px 12px / 17% 17% 12px 12px;background:#e4eadb}
+.graze,.sip{transform-box:fill-box;transform-origin:65% 82%}
+.graze{animation:graze 3.4s ease-in-out infinite}
+.sip{animation:sip 4.2s ease-in-out infinite}
+@keyframes graze{0%,100%{transform:rotate(-5deg)}40%,68%{transform:rotate(-38deg) translateY(9px)}53%{transform:rotate(-34deg)}}
+@keyframes sip{0%,100%{transform:rotate(0)}35%,65%{transform:rotate(-9deg)}}
+@media(prefers-reduced-motion:reduce){.graze,.sip{animation:none}}
+</style>
+<main>
+<header>Casa y Cosas</header>
+<h1><small>Pronto,</small>página en construcción</h1>
+<svg class="scene" viewBox="0 0 760 330" role="img" aria-labelledby="escena">
+<title id="escena">Una ovejita come pasto mientras su compañera toma mate en el campo.</title>
+<defs>
+<linearGradient id="sky" x2="0" y2="1"><stop stop-color="#dae4d7"/><stop offset="1" stop-color="#f7e8d3"/></linearGradient>
+<g id="pasto" fill="none" stroke="#627e53" stroke-width="3" stroke-linecap="round"><path d="M0 0q-2-10-9-14M0 0q1-14 4-20M0 0q5-10 12-12"/></g>
+</defs>
+<path fill="url(#sky)" d="M0 0h760v330H0z"/>
+<circle cx="565" cy="82" r="36" fill="#f7d696"/>
+<path d="M0 189Q86 182 174 125T350 141Q455 218 588 129T760 108V330H0Z" fill="#bfccb3"/>
+<path d="M0 202Q140 136 320 187T624 173Q710 152 760 163V330H0Z" fill="#9bab89"/>
+<path d="M0 228Q157 192 359 217T760 196V330H0Z" fill="#859c76"/>
+<ellipse cx="226" cy="247" rx="62" ry="8" fill="#687f60"/>
+<ellipse cx="516" cy="239" rx="53" ry="6" fill="#687f60"/>
+<g class="graze"><image href="/oveja-portada.webp" x="97" y="64" width="255" height="255"/></g>
+<g class="sip"><image href="/oveja-portada.webp" x="414" y="87" width="207" height="207"/></g>
+<g stroke-linejoin="round"><path d="M463 210l-8-22 36-12" fill="none" stroke="#414d45" stroke-width="4"/><path d="M449 204q-15 26 10 30 25-2 12-30z" fill="#835334" stroke="#57422e" stroke-width="2"/><ellipse cx="460" cy="204" rx="12" ry="4" fill="#d6b184"/><ellipse cx="460" cy="204" rx="9" ry="2" fill="#54623f"/></g>
+<use href="#pasto" x="146" y="240"/><use href="#pasto" x="165" y="244"/><use href="#pasto" x="77" y="278"/><use href="#pasto" x="361" y="264"/><use href="#pasto" x="651" y="258"/>
+<path d="M0 300q110-24 251-9t283 5q129-18 226-11v45H0Z" fill="#748c66"/>
+</svg>
+</main>
+</html>

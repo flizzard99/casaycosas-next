@@ -27,6 +27,9 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
+  ...(process.env.TIENDA_PUBLICADA !== 'true' && {
+    env: { NEXT_PUBLIC_SITE_URL: 'https://casaycosas-next.vercel.app' }
+  }),
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 86400,
