@@ -17,6 +17,10 @@ export function validarInventario(data: Record<string, unknown>) {
     return 'El precio de oferta debe ser mayor que cero y menor que el precio normal.';
   }
   if (!entero(data.stock ?? 0, 1000000)) return 'Ingresa un stock válido.';
+  if (data.subcategoria !== undefined && (typeof data.subcategoria !== 'string' || data.subcategoria.trim().length > 80)) {
+    return 'La subcategoría no puede superar 80 caracteres.';
+  }
+  if (typeof data.subcategoria === 'string') data.subcategoria = data.subcategoria.trim();
   if (data.variantes !== undefined) {
     const variantes = data.variantes;
     if (!Array.isArray(variantes) || variantes.length > 30 ||

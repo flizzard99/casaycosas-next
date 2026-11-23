@@ -252,7 +252,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       const linea = lineaProducto(p);
       const grupo = grupoProducto(p, linea);
       const porCategoria = categoriaFiltro === 'todas' || grupo === categoriaFiltro;
-      const porTexto = !term || p.name.toLowerCase().includes(term);
+      const porTexto = !term || `${p.name} ${p.category} ${p.subcategoria}`.toLowerCase().includes(term);
       const porEstado =
         estadoFiltro === 'todos' ||
         (estadoFiltro === 'en-stock' && p.stock > 0) ||
@@ -620,7 +620,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                             <div className="flex items-start justify-between gap-2 mb-2">
                               <h3 className="text-sm font-medium text-verde-noche line-clamp-2 leading-tight">{p.name}</h3>
                             </div>
-                            <p className="mb-2 text-xs font-medium text-verde-oscuro">{LINEAS[linea].nombre} · {grupoProducto(p, linea)}</p>
+                            <p className="mb-2 text-xs font-medium text-verde-oscuro">{LINEAS[linea].nombre} · {grupoProducto(p, linea)}{p.subcategoria ? ` · ${p.subcategoria}` : ''}</p>
                             <div className="flex items-center justify-between mb-3">
                               <PrecioProducto producto={p} className="text-sm font-semibold text-verde-oscuro" />
                               <span className={`rounded-full px-2 py-1 text-xs font-semibold ${stockColor}`}>

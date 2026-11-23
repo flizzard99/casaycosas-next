@@ -6,3 +6,7 @@ export function precioActual(producto: { price: number; precioOferta?: number | 
   const oferta = producto.precioOferta;
   return oferta && oferta > 0 && oferta < producto.price ? oferta : producto.price;
 }
+
+export function esOferta(producto: { price: number; precioOferta?: number | null; remate?: boolean }) {
+  return !producto.remate && precioActual(producto) < producto.price;
+}

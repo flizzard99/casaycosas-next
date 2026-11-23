@@ -40,7 +40,7 @@ export default function ProductDetailClient({ linea, producto, relacionados = []
         </div>
 
         <div className="flex flex-col md:py-6">
-          <div className="shop-accent text-sm font-semibold">{grupoProducto(producto, linea)}</div>
+          <div className="shop-accent text-sm font-semibold">{grupoProducto(producto, linea)}{producto.subcategoria ? ` · ${producto.subcategoria}` : ''}</div>
           <h1 className="shop-display balance-text mt-2 text-3xl sm:text-4xl">{producto.name}</h1>
           <PrecioProducto producto={producto} className="shop-accent text-2xl font-semibold mt-3" />
 

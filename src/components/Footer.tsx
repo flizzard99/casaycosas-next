@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { tienda } from '@/lib/config';
 import { LINEAS } from '@/lib/lineas';
+import { ENLACES_LEGALES } from '@/lib/legal';
 
 export default function Footer() {
   const telefono = tienda.whatsappNumber.replace(/\D/g, '');
@@ -22,6 +23,11 @@ export default function Footer() {
           <Link href="/seguimiento" className="hover:underline">Seguir pedido</Link>
           <Link href="/#contacto" className="hover:underline">Redes sociales</Link>
           <a href={tienda.whatsappUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">WhatsApp</a>
+        </nav>
+        <nav aria-label="Información legal" className="w-full border-t border-white/15 pt-4 text-sm">
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            {ENLACES_LEGALES.map(({ href, label }) => <Link key={href} href={href} className="hover:underline">{label}</Link>)}
+          </div>
         </nav>
       </div>
     </footer>

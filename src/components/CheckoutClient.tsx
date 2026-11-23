@@ -39,7 +39,8 @@ export default function CheckoutClient({ tarjeta, transferencia }: { tarjeta: bo
       return;
     }
     const productos = items.map(({ id, qty, varianteId }) => ({ id, qty, varianteId }));
-    const clave = JSON.stringify({ datos: { ...datos, rut }, metodoPago, productos, total });
+    const aceptaTerminos = datos.aceptaTerminos === 'on';
+    const clave = JSON.stringify({ datos: { ...datos, rut, aceptaTerminos }, metodoPago, productos, total });
     const referencia = intento.current?.clave === clave ? intento.current.referencia : crypto.randomUUID();
     intento.current = { clave, referencia };
     setProcesando(true);
@@ -48,7 +49,7 @@ export default function CheckoutClient({ tarjeta, transferencia }: { tarjeta: bo
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...datos, rut, metodoPago, referencia, total, items: productos })
+        body: JSON.stringify({ ...datos, rut, aceptaTerminos, metodoPago, referencia, total, items: productos })
       });
       const resultado = await response.json();
       if (!response.ok) {
@@ -150,6 +151,10 @@ export default function CheckoutClient({ tarjeta, transferencia }: { tarjeta: bo
             </label>
           ))}
         </fieldset>
+        <label className="mb-4 flex items-start gap-2 text-xs leading-5 shop-muted">
+          <input name="aceptaTerminos" type="checkbox" required className="shop-checkbox mt-0.5 size-4 shrink-0" />
+          <span>He leído y acepto los <Link href="/terminos-y-condiciones" target="_blank" className="font-semibold underline">términos y condiciones</Link>, la <Link href="/privacidad" target="_blank" className="font-semibold underline">política de privacidad</Link> y las políticas de <Link href="/despachos" target="_blank" className="font-semibold underline">despacho</Link> y <Link href="/cambios-devoluciones" target="_blank" className="font-semibold underline">cambios y garantía</Link>.</span>
+        </label>
         {error && <p className="mb-3 text-sm shop-danger" role="alert">{error}</p>}
         <button type="submit" disabled={procesando || subtotal < 1} className="shop-button min-h-12 w-full">
           {metodoPago === 'tarjeta' ? (procesando ? 'Abriendo Mercado Pago…' : 'Continuar a Mercado Pago') :

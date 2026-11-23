@@ -33,6 +33,17 @@ export const LINEAS = {
 export type Linea = keyof typeof LINEAS;
 type ProductoDeLinea = Pick<Producto, 'category' | 'name'> & Partial<Pick<Producto, 'remate'>>;
 
+export const SUBCATEGORIAS_SUGERIDAS: Record<string, readonly string[]> = {
+  'Yerbas Mate': ['Tradicionales', 'Premium', 'Suaves', 'Compuestas', 'Saborizadas'],
+  'Mates': ['Calabaza', 'Madera y Algarrobo', 'Acero inoxidable', 'Cerámica', 'Vidrio', 'Plástico y Autocebantes'],
+  'Decant': ['Acero inoxidable', 'Vidrio', 'Plástico', 'Repuestos'],
+  'Accesorios': ['Bombillas', 'Termos', 'Yerberos', 'Limpieza y cuidado', 'Repuestos'],
+  'Biblias': ['Biblias de estudio', 'Devocionales', 'Letra grande', 'Juveniles', 'Infantiles'],
+  'Biblias Personalizadas': ['Mujer', 'Hombre', 'Juveniles', 'Infantiles'],
+  'Restauraciones': ['Restauración completa', 'Encuadernación', 'Reparación'],
+  'Papelería y Accesorios': ['Cuadernos y libretas', 'Separadores', 'Escritura', 'Regalos']
+};
+
 export function normalizarBusqueda(texto: string) {
   return texto.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim();
 }

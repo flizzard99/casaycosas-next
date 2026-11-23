@@ -9,6 +9,7 @@ import { origenTienda } from '@/lib/origenTienda';
 import { revalidarCatalogo } from '@/lib/revalidarCatalogo';
 import { validarDestinoChile } from '@/lib/geografiaChile';
 import { enviarEmailPedidoCreado } from '@/lib/email';
+import { VERSION_LEGAL } from '@/lib/legal';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,6 +31,9 @@ export async function POST(req: NextRequest) {
   const metodo = body?.metodoPago;
   if (metodo !== 'tarjeta' && metodo !== 'transferencia') {
     return NextResponse.json({ error: 'Selecciona cómo quieres pagar.' }, { status: 400 });
+  }
+  if (body?.aceptaTerminos !== true) {
+    return NextResponse.json({ error: 'Debes aceptar los términos y políticas para continuar.' }, { status: 400 });
   }
   const origen = metodo === 'tarjeta' ? origenCheckout(req.nextUrl.origin) : null;
   if (metodo === 'tarjeta' && !origen) {
@@ -72,7 +76,8 @@ export async function POST(req: NextRequest) {
     }
     const datosPago = transferencia ? { metodo: 'transferencia' as const, transferencia } : { metodo: 'tarjeta' as const, transferencia: null };
     const pedido = await crearPedido(items, nombre, telefono, email, {
-      ...datosPago, referencia, rut, despacho: { ...destino, direccion, ...(nota && { nota }) }, totalEsperado: body.total
+      ...datosPago, referencia, rut, despacho: { ...destino, direccion, ...(nota && { nota }) }, totalEsperado: body.total,
+      aceptacionLegal: { version: VERSION_LEGAL, fecha: new Date().toISOString() }
     });
     for (const id of new Set(pedido.items.map((item) => item.producto_id))) revalidatePath(`/producto/${id}`);
     revalidarCatalogo();

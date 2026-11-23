@@ -15,13 +15,15 @@ Tienda online para **Casa y Cosas** en Panguipulli, Chile. Vende artículos del 
 - **`limpiarImagenes` solo filtra prefijo `data:`** (no más por longitud ≥500 — URLs Supabase con token firmado largas eran descartadas).
 
 ## Modelo de datos clave
-- `productos`: id, name, description, category, image_url, instagram_url, price, stock, visible, images[], created_at
+- `productos`: id, name, description, category, subcategoria, image_url, instagram_url, price, precio_oferta, stock, visible, images[], created_at
 - `config`: JSONB con `category_order` (string[]) y `featured` ({productIds: number[4], title: string})
 - `pedidos`: id interno, codigo_publico aleatorio, cliente_nombre, cliente_whatsapp, total, estado (pendiente/confirmado/cancelado/expirado), created_at, confirmado_at
 - `pedido_items`: pedido_id, producto_id, nombre, qty, precio
 - Los productos pueden tener imágenes como base64 en la DB (legacy). `db.ts` filtra base64 en runtime.
 - **Sistema de pedidos**: el carrito llama `POST /api/pedido` → crea pedido + decrementa stock atómicamente. Expiración lazy a 48h (restaura stock). Admin gestiona en vista Pedidos.
 - **Seguimiento sin WhatsApp**: página pública `/mi-pedido/[codigo]` con código aleatorio, estado en vivo (polling 20s) y cuenta regresiva de expiración. Email opcional con Resend (`src/lib/email.ts`) — degrada a sin-email si `RESEND_API_KEY` no está. WhatsApp queda como botón opcional, no obligatorio.
+- **Catálogo**: Matera y Cristiana tienen una categoría virtual `Ofertas`, calculada desde `precio_oferta`; Remate queda excluido. Las subcategorías se asignan por producto y los filtros solo aparecen cuando contienen productos. El catálogo usa paginación de 12 productos con estado en la URL.
+- **Políticas legales**: `/terminos-y-condiciones`, `/privacidad`, `/despachos` y `/cambios-devoluciones`. El checkout exige aceptación y guarda su versión en `pedidos.aceptacion_legal`.
 
 ## Arquitectura importante
 - **Todas las rutas API** tienen `export const runtime = 'nodejs'` y `export const dynamic = 'force-dynamic'` para evitar 405 en Vercel

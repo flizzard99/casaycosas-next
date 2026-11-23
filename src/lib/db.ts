@@ -74,6 +74,7 @@ async function initializeSchema() {
         ADD COLUMN IF NOT EXISTS visible BOOLEAN DEFAULT TRUE,
         ADD COLUMN IF NOT EXISTS remate BOOLEAN NOT NULL DEFAULT FALSE,
         ADD COLUMN IF NOT EXISTS precio_oferta INTEGER,
+        ADD COLUMN IF NOT EXISTS subcategoria TEXT NOT NULL DEFAULT '',
         ADD COLUMN IF NOT EXISTS variantes JSONB NOT NULL DEFAULT '[]'::jsonb,
         ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()
     `);
@@ -138,7 +139,8 @@ export type Pedido = {
 };
 
 export type DespachoPedido = { region: string; comuna: string; direccion: string; nota?: string };
-type Compra = { referencia: string; despacho: DespachoPedido; totalEsperado: number; rut: string } & (
+type Compra = { referencia: string; despacho: DespachoPedido; totalEsperado: number; rut: string;
+  aceptacionLegal: { version: string; fecha: string } } & (
   { metodo: 'tarjeta'; transferencia: null } | { metodo: 'transferencia'; transferencia: DatosTransferencia }
 );
 
@@ -197,6 +199,7 @@ async function initializePedidosSchema() {
         ADD COLUMN IF NOT EXISTS despacho JSONB,
         ADD COLUMN IF NOT EXISTS despachado_at TIMESTAMPTZ,
         ADD COLUMN IF NOT EXISTS codigo_despacho TEXT;
+      ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS aceptacion_legal JSONB;
       UPDATE pedidos SET codigo_publico = 'CYC-' ||
         UPPER(SUBSTRING(md5(id::text || random()::text || clock_timestamp()::text), 1, 4)) || '-' ||
         UPPER(SUBSTRING(md5(id::text || random()::text || clock_timestamp()::text), 5, 4)) || '-' ||
@@ -385,11 +388,11 @@ export async function crearPedido(items: ItemCompra[], clienteNombre: string, cl
     for (let intento = 0; intento < 5 && !pedidoRow; intento++) {
       const pedidoRes = await client.query(
         `INSERT INTO pedidos (codigo_publico, cliente_nombre, cliente_whatsapp, cliente_email, total, estado, pago_referencia, pago_estado, despacho,
-          cliente_rut, metodo_pago, costo_envio, datos_transferencia)
-         VALUES ($1, $2, $3, $4, $5, 'pendiente', $6, 'pendiente', $7, $8, $9, $10, $11)
+          cliente_rut, metodo_pago, costo_envio, datos_transferencia, aceptacion_legal)
+         VALUES ($1, $2, $3, $4, $5, 'pendiente', $6, 'pendiente', $7, $8, $9, $10, $11, $12)
          ON CONFLICT (codigo_publico) DO NOTHING RETURNING *`,
         [crearCodigoPublicoPedido(), clienteNombre, clienteWhatsapp, clienteEmail, total, compra.referencia, compra.despacho,
-          compra.rut, compra.metodo, ENVIO_CHILE.precio, compra.transferencia]
+          compra.rut, compra.metodo, ENVIO_CHILE.precio, compra.transferencia, compra.aceptacionLegal]
       );
       pedidoRow = pedidoRes.rows[0];
     }
@@ -537,6 +540,7 @@ function formatProducto(row: Record<string, unknown>): Producto {
     name: row.name as string,
     description: (row.description as string) || '',
     category: row.category as string,
+    subcategoria: (row.subcategoria as string) || '',
     image_url: limpiarImageUrl(row.image_url as string) || images[0] || '',
     instagram_url: (row.instagram_url as string) || '',
     remate: row.remate === true,
@@ -556,7 +560,7 @@ export async function getProductosPublicos(): Promise<Producto[]> {
   await ensureSchema();
   const pool = getPool();
   const result = await pool.query(
-    `SELECT id, name, description, category, image_url, instagram_url, price, stock, visible, remate, precio_oferta, variantes, created_at, images[1:1] AS images
+    `SELECT id, name, description, category, subcategoria, image_url, instagram_url, price, stock, visible, remate, precio_oferta, variantes, created_at, images[1:1] AS images
      FROM productos WHERE visible = TRUE ORDER BY created_at DESC`
   );
   return result.rows.map(formatProducto);
@@ -574,7 +578,7 @@ export async function getProductoById(id: number): Promise<Producto | null> {
   await ensureSchema();
   const pool = getPool();
   const result = await pool.query(
-    `SELECT id, name, description, category, image_url, instagram_url, price, stock, visible, remate, precio_oferta, variantes, created_at, images[1:10] AS images
+    `SELECT id, name, description, category, subcategoria, image_url, instagram_url, price, stock, visible, remate, precio_oferta, variantes, created_at, images[1:10] AS images
      FROM productos WHERE id = $1`,
     [id]
   );
@@ -589,9 +593,9 @@ export async function createProducto(data: ProductoInput): Promise<Producto> {
   const variantes = data.variantes ?? [];
   const stock = variantes.length ? variantes.reduce((total, v) => total + v.stock, 0) : data.stock ?? 0;
   const result = await getPool().query(
-    `INSERT INTO productos (name, description, category, image_url, instagram_url, visible, price, stock, images, precio_oferta, variantes, remate)
-     VALUES ($1, $2, $3, $4, $5, TRUE, $6, $7, $8, $9, $10::jsonb, $11) RETURNING *`,
-    [data.name, data.description || '', data.category, data.image_url || images[0] || '', data.instagram_url || '',
+    `INSERT INTO productos (name, description, category, subcategoria, image_url, instagram_url, visible, price, stock, images, precio_oferta, variantes, remate)
+     VALUES ($1, $2, $3, $4, $5, $6, TRUE, $7, $8, $9, $10, $11::jsonb, $12) RETURNING *`,
+    [data.name, data.description || '', data.category, data.subcategoria || '', data.image_url || images[0] || '', data.instagram_url || '',
       data.price ?? 0, stock, images, data.precioOferta ?? null, JSON.stringify(variantes),
       categoriaDefinida(data.category)?.linea === 'remate']
   );
@@ -630,10 +634,10 @@ export async function updateProducto(id: number, data: ProductoInput): Promise<P
     const categoria = categoriaDefinida(data.category);
     const stock = variantes.length ? variantes.reduce((total, v) => total + v.stock, 0) : data.stock ?? anterior.stock;
     const result = await client.query(
-      `UPDATE productos SET name = $1, description = $2, category = $3, image_url = $4, instagram_url = $5,
-       price = $7, stock = $8, images = $9, precio_oferta = $10, variantes = $11::jsonb, remate = $12 WHERE id = $6 RETURNING *`,
-      [data.name, data.description || '', data.category, data.image_url || images[0] || '', data.instagram_url || '',
-        id, data.price ?? anterior.price, stock, images,
+      `UPDATE productos SET name = $1, description = $2, category = $3, subcategoria = $4, image_url = $5, instagram_url = $6,
+       price = $8, stock = $9, images = $10, precio_oferta = $11, variantes = $12::jsonb, remate = $13 WHERE id = $7 RETURNING *`,
+      [data.name, data.description || '', data.category, data.subcategoria ?? anterior.subcategoria ?? '',
+        data.image_url || images[0] || '', data.instagram_url || '', id, data.price ?? anterior.price, stock, images,
         data.precioOferta === undefined ? anterior.precio_oferta : data.precioOferta, JSON.stringify(variantes),
         data.category !== anterior.category && categoria ? categoria.linea === 'remate' : anterior.remate]
     );
@@ -765,7 +769,7 @@ export async function getFeaturedProducts(productIds: number[]): Promise<Product
   await ensureSchema();
   const pool = getPool();
   const result = await pool.query(
-    `SELECT id, name, description, category, image_url, instagram_url, price, stock, visible, remate, precio_oferta, variantes, created_at, images[1:1] AS images
+    `SELECT id, name, description, category, subcategoria, image_url, instagram_url, price, stock, visible, remate, precio_oferta, variantes, created_at, images[1:1] AS images
      FROM productos WHERE id = ANY($1) AND visible = TRUE`,
     [ids]
   );

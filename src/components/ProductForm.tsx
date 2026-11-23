@@ -1,7 +1,7 @@
 'use client';
 
 import AdminIcon from './AdminIcon';
-import { LINEAS, categoriaDefinida, grupoProducto, lineaProducto } from '@/lib/lineas';
+import { LINEAS, SUBCATEGORIAS_SUGERIDAS, categoriaDefinida, grupoProducto, lineaProducto } from '@/lib/lineas';
 import { nombreCategoria } from '@/lib/categorias';
 import { useEffect, useState, useRef } from 'react';
 import { prepararArchivoDiseno } from '@/lib/imagenDiseno';
@@ -52,6 +52,7 @@ export default function ProductForm({ producto, onGuardado, onCancelar }: Props)
   const [name, setName] = useState(producto?.name || '');
   const [description, setDescription] = useState(producto?.description || '');
   const [category, setCategory] = useState(producto?.category || '');
+  const [subcategoria, setSubcategoria] = useState(producto?.subcategoria || '');
   const lineaAnterior = producto && lineaProducto(producto);
   const categoriaAnterior = producto && lineaAnterior ? grupoProducto(producto, lineaAnterior) : '';
   const grupos = Object.values(LINEAS);
@@ -260,6 +261,7 @@ export default function ProductForm({ producto, onGuardado, onCancelar }: Props)
         name: name.trim(),
         description,
         category: categoriaFinal.trim(),
+        subcategoria: subcategoria.trim(),
         price: Number(price),
         stock: variantes.length ? 0 : Number(stock),
         precioOferta: precioOferta === '' ? null : Number(precioOferta),
@@ -314,7 +316,7 @@ export default function ProductForm({ producto, onGuardado, onCancelar }: Props)
 
         <label className="mb-3 grid gap-1 text-sm font-medium">
           Categoría
-          <select value={category} required onChange={(event) => setCategory(event.target.value)}
+          <select value={category} required onChange={(event) => { setCategory(event.target.value); setSubcategoria(''); }}
             className="min-h-11 rounded-lg border border-verde-noche/20 px-3">
             <option value="">Elige una categoría</option>
             {category && !esCategoriaActual && (
@@ -326,6 +328,17 @@ export default function ProductForm({ producto, onGuardado, onCancelar }: Props)
               </optgroup>
             ))}
           </select>
+        </label>
+        <label className="mb-3 grid gap-1 text-sm font-medium">
+          Subcategoría <span className="font-normal text-verde-noche/65">(opcional)</span>
+          <input value={subcategoria} onChange={(event) => setSubcategoria(event.target.value)} maxLength={80}
+            list="subcategorias-producto" placeholder={category ? 'Elige una sugerencia o escribe otra' : 'Elige primero una categoría'}
+            disabled={!category || categoriaDefinida(category)?.linea === 'remate'}
+            className="min-h-11 rounded-lg border border-verde-noche/20 px-3 disabled:bg-verde-noche/5 disabled:opacity-70" />
+          <datalist id="subcategorias-producto">
+            {(SUBCATEGORIAS_SUGERIDAS[category] ?? []).map((opcion) => <option key={opcion} value={opcion} />)}
+          </datalist>
+          <span className="text-xs font-normal text-verde-noche/65">Se convertirá automáticamente en un filtro cuando tenga productos asignados.</span>
         </label>
         {categoriaDefinida(category)?.linea === 'remate' && category !== producto?.category && (
           <p className="mb-3 text-xs text-verde-noche/75">Esta categoría asigna el producto a {LINEAS.remate.nombre} al guardar.</p>

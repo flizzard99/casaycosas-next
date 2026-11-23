@@ -7,6 +7,7 @@ export type Producto = {
   name: string;
   description: string;
   category: string;
+  subcategoria: string;
   image_url: string;
   instagram_url: string;
   visible: boolean;
@@ -24,6 +25,7 @@ export type ProductoInput = {
   name: string;
   description?: string;
   category: string;
+  subcategoria?: string;
   image_url?: string;
   instagram_url?: string;
   price?: number;

@@ -59,7 +59,7 @@ export default function ProductCard({ producto }: { producto: Producto }) {
       </Link>
       <div className="p-4 flex flex-col flex-1">
         <Link href={`/producto/${producto.id}`} prefetch={false}>
-          <div className="shop-muted text-xs font-medium">{grupoProducto(producto, linea)}</div>
+          <div className="shop-muted text-xs font-medium">{grupoProducto(producto, linea)}{producto.subcategoria ? ` · ${producto.subcategoria}` : ''}</div>
           <h3 className="mt-1 text-sm font-semibold leading-snug hover:underline sm:text-base">{producto.name}</h3>
         </Link>
         <div className="mt-2 flex flex-1 flex-wrap content-start items-baseline gap-x-2 gap-y-1">
