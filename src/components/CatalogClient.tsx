@@ -6,7 +6,7 @@ import { esOferta, precioActual } from '@/lib/precios';
 import ProductCard from './ProductCard';
 import type { Producto } from '@/lib/types';
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 8;
 const CATEGORIA_OFERTAS = 'Ofertas';
 const ORDENES = [
   { value: 'recientes', label: 'Más recientes' },

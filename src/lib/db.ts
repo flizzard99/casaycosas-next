@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { categoriaDefinida, type Linea } from './lineas';
 import { MAX_DESTACADOS, TITULO_DESTACADOS } from './destacados';
 import { nombreConVariante } from './variantes';
@@ -82,6 +82,14 @@ async function initializeSchema() {
       `CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value JSONB DEFAULT '{}'::jsonb)`
     );
     await client.query(`
+      CREATE TABLE IF NOT EXISTS app_migrations (
+        key TEXT PRIMARY KEY,
+        applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      ALTER TABLE app_migrations ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE productos ADD COLUMN IF NOT EXISTS fusionado_en INTEGER;
+    `);
+    await client.query(`
       CREATE OR REPLACE FUNCTION update_updated_at()
       RETURNS TRIGGER
       SET search_path = pg_catalog
@@ -104,12 +112,160 @@ async function initializeSchema() {
         END IF;
       END $$
     `);
+    await migrarProductosPorColor(client);
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
   } finally {
     client.release();
+  }
+}
+
+const GRUPOS_COLOR_LEGACY = [
+  {
+    key: 'fusion-colores-bombilla-inox-keep-v1', principal: 823, nombre: 'Bombilla INOX KEEP',
+    productos: [
+      { id: 823, nombre: 'Bombilla INOX KEEP Rosada', color: 'Rosada' },
+      { id: 822, nombre: 'Bombilla INOX KEEP Plateada', color: 'Plateada' },
+      { id: 821, nombre: 'Bombilla INOX KEEP Verde', color: 'Verde' },
+      { id: 820, nombre: 'Bombilla INOX KEEP Negra', color: 'Negra' }
+    ]
+  },
+  {
+    key: 'fusion-colores-kit-yerbera-ecocuero-v1', principal: 810, nombre: 'Kit Yerbera + Azucarera Ecocuero',
+    productos: [
+      { id: 813, nombre: 'Kit Yerbera + Azucarera Ecocuero Café', color: 'Café' },
+      { id: 812, nombre: 'Kit Yerbera + Azucarera Ecocuero Gris', color: 'Gris' },
+      { id: 811, nombre: 'Kit Yerbera + Azucarera Ecocuero Negra', color: 'Negra' },
+      { id: 810, nombre: 'Kit Yerbera + Azucarera Ecocuero Borgoña', color: 'Borgoña' }
+    ]
+  },
+  {
+    key: 'fusion-colores-mate-autocebante-keep-v1', principal: 807, nombre: 'Mate AUTOCEBANTE KEEP',
+    productos: [
+      { id: 809, nombre: 'Mate AUTOCEBANTE KEEP Morado', color: 'Morado' },
+      { id: 808, nombre: 'Mate AUTOCEBANTE KEEP Verde', color: 'Verde' },
+      { id: 807, nombre: 'Mate AUTOCEBANTE KEEP Negro', color: 'Negro' }
+    ]
+  },
+  {
+    key: 'fusion-colores-yerbera-anymate-v1', principal: 803, nombre: 'Yerbera Metálica ANYMATE',
+    productos: [
+      { id: 806, nombre: 'Yerbera Metálica NARANJA ANYMATE', color: 'Naranja' },
+      { id: 805, nombre: 'Yerbera Metálica AZUL ANYMATE', color: 'Azul' },
+      { id: 804, nombre: 'Yerbera Metálica VERDE ANYMATE', color: 'Verde' },
+      { id: 803, nombre: 'Yerbera Metálica NEGRA ANYMATE', color: 'Negra' }
+    ]
+  },
+  {
+    key: 'fusion-colores-termo-bala-anymate-v1', principal: 798, nombre: 'Termo Bala ANYMATE 500ml',
+    productos: [
+      { id: 801, nombre: 'Termo Bala NEGRO ANYMATE 500ml', color: 'Negro' },
+      { id: 800, nombre: 'Termo Bala PLATA ANYMATE 500ml', color: 'Plata' },
+      { id: 799, nombre: 'Termo Bala COBRE ANYMATE 500ml', color: 'Cobre' },
+      { id: 798, nombre: 'Termo Bala AZUL ANYMATE 500ml', color: 'Azul' }
+    ]
+  },
+  {
+    key: 'fusion-colores-termo-cebador-anymate-v1', principal: 794, nombre: 'Termo Cebador ANYMATE 800ml',
+    productos: [
+      { id: 797, nombre: 'Termo Cebador VERDE ANYMATE 800ml', color: 'Verde' },
+      { id: 796, nombre: 'Termo Cebador ROSA ANYMATE 800ml', color: 'Rosa' },
+      { id: 795, nombre: 'Termo Cebador Negro ANYMATE 800ml', color: 'Negro' },
+      { id: 794, nombre: 'Termo Cebador ANYMATE AZUL 800ml', color: 'Azul' }
+    ]
+  },
+  {
+    key: 'fusion-colores-canasto-ecocuero-v1', principal: 792, nombre: 'Canasto Matero EcoCuero Reforzado',
+    productos: [
+      { id: 793, nombre: 'Canasto Matero NEGRO EcoCuero Reforzado', color: 'Negro' },
+      { id: 792, nombre: 'Canasto Matero FUCSIA EcoCuero Reforzado', color: 'Fucsia' }
+    ]
+  },
+  {
+    key: 'fusion-colores-canasto-cuero-v1', principal: 790, nombre: 'Canasto Matero 100% Cuero',
+    productos: [
+      { id: 791, nombre: 'Canasto Matero CAFÉ 100% Cuero', color: 'Café' },
+      { id: 790, nombre: 'Canasto Matero NEGRO 100% Cuero', color: 'Negro' }
+    ]
+  },
+  {
+    key: 'fusion-colores-biblia-gran-viaje-v1', principal: 310, nombre: 'Biblia Mi Gran Viaje',
+    productos: [
+      { id: 310, nombre: 'Biblia Mi Gran Viaje Rosado', color: 'Rosado' },
+      { id: 143, nombre: 'Biblia Mi Gran Viaje Amarilla', color: 'Amarilla' },
+      { id: 119, nombre: 'Biblia Mi Gran Viaje Azul', color: 'Azul' }
+    ]
+  }
+] as const;
+
+function reemplazarDestacados(valor: unknown, ids: Map<number, number>): unknown {
+  if (Array.isArray(valor)) return valor.map((item) => reemplazarDestacados(item, ids));
+  if (!valor || typeof valor !== 'object') return valor;
+  const actualizado: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(valor)) {
+    if (key === 'productIds' && Array.isArray(item)) {
+      actualizado[key] = [...new Set(item.map((id) => typeof id === 'number' ? ids.get(id) ?? id : id))];
+    } else {
+      actualizado[key] = reemplazarDestacados(item, ids);
+    }
+  }
+  return actualizado;
+}
+
+async function migrarProductosPorColor(client: import('pg').PoolClient) {
+  const tablaPedidos = await client.query("SELECT to_regclass('public.pedidos') IS NOT NULL AND to_regclass('public.pedido_items') IS NOT NULL AS existe");
+  const reemplazos = new Map<number, number>();
+  for (const grupo of GRUPOS_COLOR_LEGACY) {
+    const aplicada = await client.query('SELECT 1 FROM app_migrations WHERE key = $1', [grupo.key]);
+    if (aplicada.rowCount) continue;
+    const ids = grupo.productos.map(({ id }) => id);
+    const resultado = await client.query('SELECT * FROM productos WHERE id = ANY($1::integer[]) FOR UPDATE', [ids]);
+    if (resultado.rows.length !== ids.length) continue;
+    const filas = new Map<number, Record<string, unknown>>(resultado.rows.map((row) => [row.id, row]));
+    if (grupo.productos.some(({ id, nombre }) => filas.get(id)?.name !== nombre)) continue;
+    if (tablaPedidos.rows[0]?.existe) {
+      const pendientes = await client.query(
+        `SELECT 1 FROM pedido_items i JOIN pedidos p ON p.id = i.pedido_id
+         WHERE i.producto_id = ANY($1::integer[]) AND p.estado = 'pendiente' AND p.eliminado_at IS NULL LIMIT 1`, [ids]
+      );
+      if (pendientes.rowCount) continue;
+    }
+    const principal = filas.get(grupo.principal)!;
+    const variantes: Variante[] = [];
+    const imagenes: string[] = [];
+    for (const item of grupo.productos) {
+      const fila = filas.get(item.id)!;
+      const existentes = Array.isArray(fila.variantes) ? fila.variantes as Variante[] : [];
+      if (existentes.length) {
+        variantes.push(...existentes.map((variante) => ({ ...variante, color: variante.color || item.color })));
+      } else {
+        variantes.push({ id: randomUUID(), color: item.color, stock: Number(fila.stock) || 0 });
+      }
+      for (const imagen of [fila.image_url, ...(Array.isArray(fila.images) ? fila.images : [])]) {
+        if (typeof imagen === 'string' && imagen && !imagenes.includes(imagen)) imagenes.push(imagen);
+      }
+      if (item.id !== grupo.principal) reemplazos.set(item.id, grupo.principal);
+    }
+    await client.query(
+      `UPDATE productos SET name = $2, stock = $3, variantes = $4::jsonb, images = $5,
+       image_url = $6, visible = TRUE, fusionado_en = NULL WHERE id = $1`,
+      [grupo.principal, grupo.nombre, variantes.reduce((total, variante) => total + variante.stock, 0),
+        JSON.stringify(variantes), imagenes.slice(0, 20), imagenes[0] || principal.image_url || '']
+    );
+    await client.query(
+      'UPDATE productos SET visible = FALSE, fusionado_en = $1 WHERE id = ANY($2::integer[])',
+      [grupo.principal, ids.filter((id) => id !== grupo.principal)]
+    );
+    await client.query('INSERT INTO app_migrations (key) VALUES ($1)', [grupo.key]);
+  }
+  if (reemplazos.size) {
+    const configs = await client.query("SELECT key, value FROM config WHERE key IN ('featured', 'featured_by_line')");
+    for (const config of configs.rows) {
+      await client.query('UPDATE config SET value = $2::jsonb WHERE key = $1',
+        [config.key, JSON.stringify(reemplazarDestacados(config.value, reemplazos))]);
+    }
   }
 }
 
@@ -561,7 +717,7 @@ export async function getProductosPublicos(): Promise<Producto[]> {
   const pool = getPool();
   const result = await pool.query(
     `SELECT id, name, description, category, subcategoria, image_url, instagram_url, price, stock, visible, remate, precio_oferta, variantes, created_at, images[1:1] AS images
-     FROM productos WHERE visible = TRUE ORDER BY created_at DESC`
+     FROM productos WHERE visible = TRUE AND fusionado_en IS NULL ORDER BY created_at DESC`
   );
   return result.rows.map(formatProducto);
 }
@@ -570,7 +726,7 @@ export async function getProductosPublicos(): Promise<Producto[]> {
 export async function getProductosAdmin(): Promise<Producto[]> {
   await ensureSchema();
   const pool = getPool();
-  const result = await pool.query(`SELECT * FROM productos ORDER BY created_at DESC`);
+  const result = await pool.query(`SELECT * FROM productos WHERE fusionado_en IS NULL ORDER BY created_at DESC`);
   return result.rows.map(formatProducto);
 }
 
@@ -579,7 +735,7 @@ export async function getProductoById(id: number): Promise<Producto | null> {
   const pool = getPool();
   const result = await pool.query(
     `SELECT id, name, description, category, subcategoria, image_url, instagram_url, price, stock, visible, remate, precio_oferta, variantes, created_at, images[1:10] AS images
-     FROM productos WHERE id = $1`,
+     FROM productos WHERE id = COALESCE((SELECT fusionado_en FROM productos WHERE id = $1), $1)`,
     [id]
   );
   return result.rows.length ? formatProducto(result.rows[0]) : null;
@@ -770,7 +926,7 @@ export async function getFeaturedProducts(productIds: number[]): Promise<Product
   const pool = getPool();
   const result = await pool.query(
     `SELECT id, name, description, category, subcategoria, image_url, instagram_url, price, stock, visible, remate, precio_oferta, variantes, created_at, images[1:1] AS images
-     FROM productos WHERE id = ANY($1) AND visible = TRUE`,
+     FROM productos WHERE id = ANY($1) AND visible = TRUE AND fusionado_en IS NULL`,
     [ids]
   );
   const byId = new Map(result.rows.map((r) => [r.id, formatProducto(r)]));

@@ -22,7 +22,8 @@ Tienda online para **Casa y Cosas** en Panguipulli, Chile. Vende artículos del 
 - Los productos pueden tener imágenes como base64 en la DB (legacy). `db.ts` filtra base64 en runtime.
 - **Sistema de pedidos**: el carrito llama `POST /api/pedido` → crea pedido + decrementa stock atómicamente. Expiración lazy a 48h (restaura stock). Admin gestiona en vista Pedidos.
 - **Seguimiento sin WhatsApp**: página pública `/mi-pedido/[codigo]` con código aleatorio, estado en vivo (polling 20s) y cuenta regresiva de expiración. Email opcional con Resend (`src/lib/email.ts`) — degrada a sin-email si `RESEND_API_KEY` no está. WhatsApp queda como botón opcional, no obligatorio.
-- **Catálogo**: Matera y Cristiana tienen una categoría virtual `Ofertas`, calculada desde `precio_oferta`; Remate queda excluido. Las subcategorías se asignan por producto y los filtros solo aparecen cuando contienen productos. El catálogo usa paginación de 12 productos con estado en la URL.
+- **Catálogo**: Matera y Cristiana tienen una categoría virtual `Ofertas`, calculada desde `precio_oferta`; Remate queda excluido. Las subcategorías se asignan por producto y los filtros solo aparecen cuando contienen productos. El catálogo usa paginación de 8 productos con estado en la URL.
+- **Productos por color**: `productos.variantes` concentra color/talla y stock. La migración `fusion-colores-*-v1` conserva fichas antiguas con `fusionado_en`, las oculta y redirige sus consultas a la ficha principal; no procesa grupos con pedidos pendientes.
 - **Políticas legales**: `/terminos-y-condiciones`, `/privacidad`, `/despachos` y `/cambios-devoluciones`. El checkout exige aceptación y guarda su versión en `pedidos.aceptacion_legal`.
 
 ## Arquitectura importante
