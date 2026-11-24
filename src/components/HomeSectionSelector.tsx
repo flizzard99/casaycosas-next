@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type CSSProperties, type MouseEvent } from
 import { useRouter } from 'next/navigation';
 import { ENLACES_LEGALES } from '@/lib/legal';
 import { tienda } from '@/lib/config';
+import { useCart } from '@/context/CartContext';
 
 const SECCIONES = [
   {
@@ -38,6 +39,7 @@ type SeccionId = typeof SECCIONES[number]['id'];
 
 export default function HomeSectionSelector() {
   const router = useRouter();
+  const { count, open: abrirCarrito } = useCart();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const menuRef = useRef<HTMLDialogElement>(null);
   const [activa, setActiva] = useState<SeccionId>('matera');
@@ -87,6 +89,14 @@ export default function HomeSectionSelector() {
         <nav className="home-mini-navigation" aria-label="Navegación principal">
           <Link href="/seguimiento">Seguimiento</Link>
           <a href={tienda.whatsappUrl} target="_blank" rel="noopener noreferrer">Ayuda</a>
+          <button type="button" className="home-cart-button" onClick={abrirCarrito}
+            aria-label={count ? `Abrir carrito, ${count} productos` : 'Abrir carrito'} aria-haspopup="dialog">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" strokeLinejoin="round" />
+              <path d="M3 6h18M16 10a4 4 0 0 1-8 0" strokeLinecap="round" />
+            </svg>
+            {count > 0 && <span>{count > 99 ? '99+' : count}</span>}
+          </button>
           <button type="button" className="home-menu-toggle" aria-label={menuAbierto ? 'Cerrar menú de información' : 'Abrir menú de información'}
             aria-expanded={menuAbierto} aria-controls="home-information-menu" onClick={() => setMenuAbierto((abierto) => !abierto)}>
             <span aria-hidden="true"><i /><i /><i /></span>
