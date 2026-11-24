@@ -1,5 +1,5 @@
 export const ENVIO_CHILE = { servicio: 'Blue Express', precio: 4000 };
-export const TRANSFERENCIA_RESERVA_HORAS = 48;
+export const TRANSFERENCIA_RESERVA_HORAS = 2;
 
 export type MetodoPago = 'tarjeta' | 'transferencia';
 

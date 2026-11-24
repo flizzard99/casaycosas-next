@@ -18,7 +18,7 @@ export default function CambiosPage() {
       <section>
         <h2>2. Derecho a retracto</h2>
         <p>En compras realizadas a distancia puedes comunicar el retracto dentro de 10 días corridos desde la recepción, conforme a la Ley N.º 19.496. Para ejercerlo debes identificar el pedido y manifestar de forma inequívoca tu decisión por el correo de contacto.</p>
-        <p>El producto debe devolverse completo y en buen estado. Una vez recibido y revisado, se devolverán los montos que legalmente correspondan mediante un medio compatible con el pago original. Los costos directos de devolución corresponden al consumidor, salvo error de Casa y Cosas o acuerdo diferente.</p>
+        <p>El producto debe devolverse completo y en perfectas condiciones. Una vez recibido y revisado, se devolverán los montos que legalmente correspondan mediante un medio compatible con el pago original. Los costos directos de devolución corresponden al consumidor, salvo error de Casa y Cosas o acuerdo diferente.</p>
         <p>El retracto puede no proceder respecto de productos confeccionados conforme a especificaciones del cliente o claramente personalizados, bienes que por su naturaleza no puedan ser devueltos o se deterioren rápidamente, y servicios ya ejecutados con autorización, dentro de las excepciones permitidas por la ley.</p>
       </section>
       <section>

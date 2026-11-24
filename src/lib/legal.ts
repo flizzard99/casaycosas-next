@@ -1,5 +1,5 @@
-export const VERSION_LEGAL = '2026-11-23';
-export const FECHA_LEGAL = '23 de noviembre de 2026';
+export const VERSION_LEGAL = '2026-11-24';
+export const FECHA_LEGAL = '24 de noviembre de 2026';
 
 export const DATOS_VENDEDOR = {
   nombreFantasia: 'Casa y Cosas',

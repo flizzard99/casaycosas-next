@@ -29,7 +29,7 @@ export default async function ShopSection({ linea }: { linea: Linea }) {
           )}
           <div className="store-shell shop-section-layout">
             <div className="shop-section-copy">
-              {(linea !== 'remate' || diseno?.titulo) && <p className="shop-eyebrow">{coleccion.nombre}</p>}
+              {(linea !== 'remate' || diseno?.titulo) && <p className="shop-eyebrow">{linea === 'matera' ? 'Sección Matera' : coleccion.nombre}</p>}
               <h1>{diseno?.titulo || coleccion.titulo}</h1>
               <p className="shop-section-description">{diseno?.descripcion || coleccion.descripcion}</p>
               <Link href="#productos" className="shop-button">Ver productos <span aria-hidden="true">↓</span></Link>

@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import LegalPage from '@/components/LegalPage';
 import { ENVIO_CHILE } from '@/lib/checkout';
-import { formatoCLP } from '@/lib/precios';
 
 export const metadata: Metadata = {
   title: 'Política de despachos',
@@ -14,7 +13,7 @@ export default function DespachosPage() {
     <LegalPage titulo="Política de despachos" introduccion="Condiciones de preparación, entrega y seguimiento para las compras enviadas por Casa y Cosas.">
       <section>
         <h2>1. Servicio y costo</h2>
-        <p>El despacho se realiza mediante {ENVIO_CHILE.servicio} con una tarifa fija de <strong>{formatoCLP.format(ENVIO_CHILE.precio)}</strong>, informada y sumada al total antes del pago. La cobertura efectiva depende de las comunas y condiciones operativas del transportista.</p>
+        <p>El despacho se realiza mediante {ENVIO_CHILE.servicio} con una tarifa fija que se verá reflejada en el resumen de la compra, informada y sumada al total antes del pago. La cobertura efectiva depende de las comunas y condiciones operativas del transportista.</p>
       </section>
       <section>
         <h2>2. Preparación</h2>
@@ -26,7 +25,7 @@ export default function DespachosPage() {
       </section>
       <section>
         <h2>4. Dirección y recepción</h2>
-        <p>El cliente debe entregar una dirección completa, comuna, región y teléfono de contacto. Antes del despacho puede solicitar una corrección; después de entregado al transportista, cualquier cambio queda sujeto a disponibilidad y costos adicionales.</p>
+        <p>El cliente debe entregar una dirección completa, comuna, región, teléfono y correo de contacto. Antes del despacho puede solicitar una corrección; después de entregado al transportista, cualquier cambio queda sujeto a disponibilidad y costos adicionales.</p>
         <p>Si la entrega falla por dirección incorrecta, ausencia reiterada o rechazo injustificado, el costo de un nuevo despacho podrá ser cobrado al cliente, sin afectar sus derechos legales.</p>
       </section>
       <section>

@@ -96,6 +96,7 @@ export default function CartDrawer() {
                 <div className="flex justify-between gap-3"><dt>Envío · {ENVIO_CHILE.servicio}</dt><dd>{formatoCLP.format(ENVIO_CHILE.precio)}</dd></div>
                 <div className="flex justify-between gap-3 font-semibold"><dt>Total</dt><dd>{formatoCLP.format(total + ENVIO_CHILE.precio)}</dd></div>
               </dl>
+              <p className="mb-3 text-xs shop-muted">Nota: despachos de 1 a 5 días hábiles.</p>
               <Link href="/comprar" onClick={close}
                 className="shop-button w-full">
                 Finalizar compra

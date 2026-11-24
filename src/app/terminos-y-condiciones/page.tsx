@@ -26,7 +26,7 @@ export default function TerminosPage() {
       <section>
         <h2>4. Formación de la compra</h2>
         <p>El cliente debe entregar datos completos y correctos. Al finalizar se genera un código de pedido y se envía un resumen al correo informado. La compra se considera pagada cuando Mercado Pago comunica su aprobación o cuando Casa y Cosas verifica una transferencia.</p>
-        <p>Los pedidos con tarjeta reservan stock durante 45 minutos. Los pedidos por transferencia lo reservan durante 48 horas. Si el pago no se confirma dentro de ese plazo, el pedido puede expirar y las unidades vuelven al inventario.</p>
+        <p>Los pedidos con tarjeta reservan stock durante 45 minutos. Los pedidos por transferencia lo reservan durante 2 horas. Si el pago no se confirma dentro de ese plazo, el pedido puede expirar y las unidades vuelven al inventario.</p>
       </section>
       <section>
         <h2>5. Medios de pago y seguridad</h2>
@@ -34,7 +34,7 @@ export default function TerminosPage() {
       </section>
       <section>
         <h2>6. Documento tributario</h2>
-        <p>Se emitirá el documento tributario que corresponda conforme a la normativa del Servicio de Impuestos Internos. El cliente es responsable de entregar oportunamente los datos requeridos cuando solicite factura.</p>
+        <p>Se emitirá el documento tributario que corresponda conforme a la normativa del Servicio de Impuestos Internos. El cliente es responsable de entregar de forma correcta y oportuna los datos requeridos cuando solicite factura.</p>
       </section>
       <section>
         <h2>7. Comunicaciones y seguimiento</h2>

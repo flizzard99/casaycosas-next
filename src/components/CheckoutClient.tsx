@@ -23,6 +23,7 @@ export default function CheckoutClient({ tarjeta, transferencia }: { tarjeta: bo
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState('');
   const [metodoPago, setMetodoPago] = useState<MetodoPago>(tarjeta ? 'tarjeta' : 'transferencia');
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
   const [rut, setRut] = useState('');
   const [region, setRegion] = useState('');
   const [comuna, setComuna] = useState('');
@@ -39,7 +40,6 @@ export default function CheckoutClient({ tarjeta, transferencia }: { tarjeta: bo
       return;
     }
     const productos = items.map(({ id, qty, varianteId }) => ({ id, qty, varianteId }));
-    const aceptaTerminos = datos.aceptaTerminos === 'on';
     const clave = JSON.stringify({ datos: { ...datos, rut, aceptaTerminos }, metodoPago, productos, total });
     const referencia = intento.current?.clave === clave ? intento.current.referencia : crypto.randomUUID();
     intento.current = { clave, referencia };
@@ -152,11 +152,12 @@ export default function CheckoutClient({ tarjeta, transferencia }: { tarjeta: bo
           ))}
         </fieldset>
         <label className="mb-4 flex items-start gap-2 text-xs leading-5 shop-muted">
-          <input name="aceptaTerminos" type="checkbox" required className="shop-checkbox mt-0.5 size-4 shrink-0" />
+          <input name="aceptaTerminos" type="checkbox" required checked={aceptaTerminos}
+            onChange={(event) => setAceptaTerminos(event.target.checked)} className="shop-checkbox mt-0.5 size-4 shrink-0" />
           <span>He leído y acepto los <Link href="/terminos-y-condiciones" target="_blank" className="font-semibold underline">términos y condiciones</Link>, la <Link href="/privacidad" target="_blank" className="font-semibold underline">política de privacidad</Link> y las políticas de <Link href="/despachos" target="_blank" className="font-semibold underline">despacho</Link> y <Link href="/cambios-devoluciones" target="_blank" className="font-semibold underline">cambios y garantía</Link>.</span>
         </label>
         {error && <p className="mb-3 text-sm shop-danger" role="alert">{error}</p>}
-        <button type="submit" disabled={procesando || subtotal < 1} className="shop-button min-h-12 w-full">
+        <button type="submit" disabled={procesando || subtotal < 1 || !aceptaTerminos} className="shop-button min-h-12 w-full">
           {metodoPago === 'tarjeta' ? (procesando ? 'Abriendo Mercado Pago…' : 'Continuar a Mercado Pago') :
             (procesando ? 'Registrando pedido…' : 'Finalizar pedido por transferencia')}
         </button>

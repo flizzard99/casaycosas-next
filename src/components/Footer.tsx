@@ -7,16 +7,16 @@ export default function Footer() {
   const telefono = tienda.whatsappNumber.replace(/\D/g, '');
   const telefonoVisible = `+${telefono.replace(/^(56)(\d)(\d{4})(\d{4})$/, '$1 $2 $3 $4')}`;
   return (
-    <footer className="shop-footer py-7">
+    <footer className="shop-footer py-6">
       <div className="store-shell flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="font-display text-lg">Casa y Cosas</p>
-          <p className="mt-1 text-sm">Tienda online</p>
-          <a href={`tel:${telefonoVisible.replaceAll(' ', '')}`} className="mt-2 inline-block text-sm font-semibold underline underline-offset-4">
+          <p className="font-display text-base">Casa y Cosas</p>
+          <p className="mt-1 text-xs">Tienda online</p>
+          <a href={`tel:${telefonoVisible.replaceAll(' ', '')}`} className="mt-2 inline-block text-xs font-semibold underline underline-offset-4">
             {telefonoVisible}
           </a>
         </div>
-        <nav aria-label="Enlaces del pie de página" className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+        <nav aria-label="Enlaces del pie de página" className="flex flex-wrap gap-x-5 gap-y-2 text-xs">
           {Object.values(LINEAS).map(({ href, nombre }) => (
             <Link key={href} href={href} className="hover:underline">{nombre}</Link>
           ))}
@@ -24,7 +24,7 @@ export default function Footer() {
           <Link href="/#contacto" className="hover:underline">Redes sociales</Link>
           <a href={tienda.whatsappUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">WhatsApp</a>
         </nav>
-        <nav aria-label="Información legal" className="w-full border-t border-white/15 pt-4 text-sm">
+        <nav aria-label="Información legal" className="w-full border-t border-white/15 pt-4 text-xs">
           <div className="flex flex-wrap gap-x-5 gap-y-2">
             {ENLACES_LEGALES.map(({ href, label }) => <Link key={href} href={href} className="hover:underline">{label}</Link>)}
           </div>
