@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { tienda } from '@/lib/config';
 import { LINEAS } from '@/lib/lineas';
@@ -7,28 +8,42 @@ export default function Footer() {
   const telefono = tienda.whatsappNumber.replace(/\D/g, '');
   const telefonoVisible = `+${telefono.replace(/^(56)(\d)(\d{4})(\d{4})$/, '$1 $2 $3 $4')}`;
   return (
-    <footer className="shop-footer py-6">
-      <div className="store-shell flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="font-display text-base">Casa y Cosas</p>
-          <p className="mt-1 text-xs">Tienda online</p>
-          <a href={`tel:${telefonoVisible.replaceAll(' ', '')}`} className="mt-2 inline-block text-xs font-semibold underline underline-offset-4">
-            {telefonoVisible}
-          </a>
-        </div>
-        <nav aria-label="Enlaces del pie de página" className="flex flex-wrap gap-x-5 gap-y-2 text-xs">
-          {Object.values(LINEAS).map(({ href, nombre }) => (
-            <Link key={href} href={href} className="hover:underline">{nombre}</Link>
-          ))}
-          <Link href="/seguimiento" className="hover:underline">Seguir pedido</Link>
-          <Link href="/#contacto" className="hover:underline">Redes sociales</Link>
-          <a href={tienda.whatsappUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">WhatsApp</a>
-        </nav>
-        <nav aria-label="Información legal" className="w-full border-t border-white/15 pt-4 text-xs">
-          <div className="flex flex-wrap gap-x-5 gap-y-2">
-            {ENLACES_LEGALES.map(({ href, label }) => <Link key={href} href={href} className="hover:underline">{label}</Link>)}
+    <footer className="shop-footer">
+      <div className="store-shell shop-footer-grid">
+        <div className="shop-footer-brand">
+          <div className="shop-footer-identity">
+            <Image src="/oveja-logo-hd.webp" alt="" width={44} height={44} />
+            <div>
+              <p>Casa y Cosas</p>
+              <span>Tienda online</span>
+            </div>
           </div>
+          <p className="shop-footer-description">Detalles para regalar, compartir y hacer hogar.</p>
+          <a href={`tel:${telefonoVisible.replaceAll(' ', '')}`} className="shop-footer-phone">{telefonoVisible}</a>
+        </div>
+
+        <nav aria-labelledby="footer-comprar" className="shop-footer-group">
+          <h2 id="footer-comprar">Comprar</h2>
+          {Object.values(LINEAS).map(({ href, nombre }) => (
+            <Link key={href} href={href}>{nombre}</Link>
+          ))}
         </nav>
+
+        <nav aria-labelledby="footer-ayuda" className="shop-footer-group">
+          <h2 id="footer-ayuda">Ayuda</h2>
+          <Link href="/seguimiento">Seguir pedido</Link>
+          <a href={tienda.whatsappUrl} target="_blank" rel="noopener noreferrer">WhatsApp</a>
+          <a href={tienda.instagramUrl} target="_blank" rel="noopener noreferrer">Instagram</a>
+        </nav>
+
+        <nav aria-labelledby="footer-legal" className="shop-footer-group shop-footer-legal">
+          <h2 id="footer-legal">Información legal</h2>
+          {ENLACES_LEGALES.map(({ href, label }) => <Link key={href} href={href}>{label}</Link>)}
+        </nav>
+      </div>
+      <div className="store-shell shop-footer-bottom">
+        <p>© 2026 Casa y Cosas</p>
+        <p>Compra segura y despacho a todo Chile.</p>
       </div>
     </footer>
   );

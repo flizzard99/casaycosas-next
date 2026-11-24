@@ -35,7 +35,7 @@ export default function Header({ linea }: { linea?: Linea }) {
       </a>
       <div className="store-shell shop-header-inner">
         <Link href="/" className="shop-brand">
-          <span className="shop-brand-icon"><Image src="/oveja-logo.png" alt="" width={33} height={33} unoptimized /></span>
+          <span className="shop-brand-icon"><Image src="/oveja-logo-hd.webp" alt="" width={36} height={36} /></span>
           <span>Casa y Cosas</span>
         </Link>
         <nav aria-label="Colecciones" className="shop-nav">
