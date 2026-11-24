@@ -281,6 +281,8 @@ export type Pedido = {
   estado: 'pendiente' | 'confirmado' | 'cancelado' | 'expirado';
   created_at: string;
   confirmado_at: string | null;
+  revisado_at: string | null;
+  eliminado_at: string | null;
   items: PedidoItem[];
   pago_estado: 'pendiente' | 'aprobado' | 'revision' | null;
   pago_id: string | null;
@@ -355,6 +357,17 @@ async function initializePedidosSchema() {
         ADD COLUMN IF NOT EXISTS despacho JSONB,
         ADD COLUMN IF NOT EXISTS despachado_at TIMESTAMPTZ,
         ADD COLUMN IF NOT EXISTS codigo_despacho TEXT;
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'pedidos' AND column_name = 'revisado_at'
+        ) THEN
+          ALTER TABLE pedidos ADD COLUMN revisado_at TIMESTAMPTZ;
+          UPDATE pedidos SET revisado_at = created_at;
+        END IF;
+      END $$;
+      ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS estado_antes_eliminar TEXT;
       ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS aceptacion_legal JSONB;
       UPDATE pedidos SET codigo_publico = 'CYC-' ||
         UPPER(SUBSTRING(md5(id::text || random()::text || clock_timestamp()::text), 1, 4)) || '-' ||
@@ -383,6 +396,8 @@ async function initializePedidosSchema() {
       CREATE UNIQUE INDEX IF NOT EXISTS pedidos_pago_id_uidx ON pedidos(pago_id) WHERE pago_id IS NOT NULL;
       CREATE UNIQUE INDEX IF NOT EXISTS pedidos_codigo_publico_uidx ON pedidos(codigo_publico);
       CREATE INDEX IF NOT EXISTS pedidos_pendientes_fecha_idx ON pedidos(created_at) WHERE estado = 'pendiente';
+      CREATE INDEX IF NOT EXISTS pedidos_eliminados_fecha_idx ON pedidos(eliminado_at) WHERE eliminado_at IS NOT NULL;
+      CREATE INDEX IF NOT EXISTS pedidos_sin_revisar_idx ON pedidos(created_at DESC) WHERE revisado_at IS NULL AND eliminado_at IS NULL;
       CREATE INDEX IF NOT EXISTS pedido_items_pedido_id_idx ON pedido_items(pedido_id);
     `);
     await client.query('COMMIT');
@@ -407,6 +422,8 @@ function formatPedido(row: Record<string, unknown>, items: PedidoItem[] = []): P
     estado: (row.estado as EstadoPedido) || 'pendiente',
     created_at: row.created_at as string,
     confirmado_at: row.confirmado_at ? (row.confirmado_at as string) : null,
+    revisado_at: row.revisado_at ? (row.revisado_at as string) : null,
+    eliminado_at: row.eliminado_at ? (row.eliminado_at as string) : null,
     items,
     pago_estado: (row.pago_estado as Pedido['pago_estado']) ?? null,
     pago_id: (row.pago_id as string) ?? null,
@@ -572,12 +589,15 @@ export async function crearPedido(items: ItemCompra[], clienteNombre: string, cl
   }
 }
 
-export async function getPedidosAdmin(estado: EstadoPedido | 'revision' | 'todos', pagina: number): Promise<{ pedidos: Pedido[]; total: number }> {
+export async function getPedidosAdmin(estado: EstadoPedido | 'revision' | 'sin_revisar' | 'papelera' | 'todos', pagina: number): Promise<{ pedidos: Pedido[]; total: number }> {
   await ensureSchema();
   await ensurePedidosSchema();
   const pool = getPool();
   await expirarPedidosViejos(pool);
-  const filtro = `p.eliminado_at IS NULL AND (($1 = 'todos') OR ($1 = 'revision' AND p.pago_estado = 'revision') OR p.estado = $1)`;
+  await pool.query("DELETE FROM pedidos WHERE eliminado_at < NOW() - INTERVAL '30 days'");
+  const filtro = `(CASE WHEN $1 = 'papelera' THEN p.eliminado_at IS NOT NULL ELSE
+    p.eliminado_at IS NULL AND (($1 = 'todos') OR ($1 = 'revision' AND p.pago_estado = 'revision') OR
+      ($1 = 'sin_revisar' AND p.revisado_at IS NULL) OR p.estado = $1) END)`;
   const [rows, cantidad] = await Promise.all([
     pool.query(`
       SELECT p.*, COALESCE(detalle.items, '[]'::json) AS items
@@ -610,7 +630,8 @@ export async function getNotificacionesPedidosAdmin(desde: Date) {
   const [cantidades, ultimos, nuevos] = await Promise.all([
     pool.query(`SELECT
       count(*) FILTER (WHERE estado = 'pendiente')::integer AS pendientes,
-      count(*) FILTER (WHERE pago_estado = 'revision')::integer AS revision
+      count(*) FILTER (WHERE pago_estado = 'revision')::integer AS revision,
+      count(*) FILTER (WHERE revisado_at IS NULL)::integer AS sin_revisar
       FROM pedidos WHERE eliminado_at IS NULL`),
     pool.query<NotificacionPedidoAdmin>(`SELECT codigo_publico, cliente_nombre, total, created_at, metodo_pago
       FROM pedidos WHERE eliminado_at IS NULL AND created_at <= $1 ORDER BY created_at DESC, id DESC LIMIT 6`, [corte]),
@@ -620,6 +641,7 @@ export async function getNotificacionesPedidosAdmin(desde: Date) {
   return {
     pendientes: cantidades.rows[0].pendientes as number,
     revision: cantidades.rows[0].revision as number,
+    sinRevisar: cantidades.rows[0].sin_revisar as number,
     ultimos: ultimos.rows,
     nuevos: nuevos.rows,
     cursor: corte.toISOString()
@@ -632,7 +654,7 @@ export async function confirmarPedido(id: number): Promise<Pedido | null> {
   const pool = getPool();
   await expirarPedidosViejos(pool);
   const res = await pool.query(
-    `UPDATE pedidos SET estado = 'confirmado', confirmado_at = NOW(),
+    `UPDATE pedidos SET estado = 'confirmado', confirmado_at = NOW(), revisado_at = COALESCE(revisado_at, NOW()),
         pago_estado = CASE WHEN metodo_pago = 'transferencia' THEN 'aprobado' ELSE pago_estado END
       WHERE id = $1 AND estado = 'pendiente' AND eliminado_at IS NULL
         AND (pago_referencia IS NULL OR metodo_pago = 'transferencia') RETURNING *`,
@@ -659,7 +681,7 @@ export async function cancelarPedido(id: number): Promise<Pedido | null> {
       return null;
     }
     await client.query(
-      `WITH pedidos_liberados AS (UPDATE pedidos SET estado = 'cancelado' WHERE id = $1 RETURNING id),
+      `WITH pedidos_liberados AS (UPDATE pedidos SET estado = 'cancelado', revisado_at = COALESCE(revisado_at, NOW()) WHERE id = $1 RETURNING id),
         ${RESTAURAR_STOCK_RESERVADO} SELECT id FROM stock_liberado`,
       [id]
     );
@@ -937,7 +959,7 @@ export async function despacharPedido(id: number, codigo: string): Promise<Pedid
   await ensureSchema();
   await ensurePedidosSchema();
   const result = await getPool().query(
-    `UPDATE pedidos SET despachado_at = NOW(), codigo_despacho = NULLIF($2, '')
+    `UPDATE pedidos SET despachado_at = NOW(), codigo_despacho = NULLIF($2, ''), revisado_at = COALESCE(revisado_at, NOW())
      WHERE id = $1 AND estado = 'confirmado' AND despachado_at IS NULL AND eliminado_at IS NULL
        AND (pago_estado = 'aprobado' OR pago_referencia IS NULL) RETURNING *`,
     [id, codigo]
@@ -952,7 +974,7 @@ export async function eliminarPedido(id: number): Promise<{ productosLiberados: 
   const { rows } = await getPool().query(`WITH candidato AS (
       SELECT id, estado FROM pedidos WHERE id = $1 AND eliminado_at IS NULL FOR UPDATE
     ), eliminado AS (
-      UPDATE pedidos p SET eliminado_at = NOW(),
+      UPDATE pedidos p SET eliminado_at = NOW(), estado_antes_eliminar = candidato.estado,
         estado = CASE WHEN candidato.estado = 'pendiente' THEN 'cancelado' ELSE candidato.estado END
       FROM candidato WHERE p.id = candidato.id RETURNING p.id, candidato.estado AS estado_anterior
     ), pedidos_liberados AS (
@@ -960,6 +982,38 @@ export async function eliminarPedido(id: number): Promise<{ productosLiberados: 
     ), ${RESTAURAR_STOCK_RESERVADO}
     SELECT ARRAY(SELECT id FROM stock_liberado) AS "productosLiberados" FROM eliminado`, [id]);
   return rows[0] ?? null;
+}
+
+export async function marcarPedidoRevisado(id: number): Promise<Pedido | null> {
+  await ensureSchema();
+  await ensurePedidosSchema();
+  const result = await getPool().query(
+    `UPDATE pedidos SET revisado_at = COALESCE(revisado_at, NOW())
+     WHERE id = $1 AND eliminado_at IS NULL RETURNING *`,
+    [id]
+  );
+  if (!result.rows[0]) return null;
+  return formatPedido(result.rows[0], await leerItems(getPool(), id));
+}
+
+export async function restaurarPedido(id: number): Promise<Pedido | null> {
+  await ensureSchema();
+  await ensurePedidosSchema();
+  const result = await getPool().query(
+    `UPDATE pedidos SET eliminado_at = NULL,
+       estado = CASE
+         WHEN estado_antes_eliminar IN ('confirmado', 'cancelado', 'expirado') THEN estado_antes_eliminar
+         ELSE 'cancelado'
+       END,
+       estado_antes_eliminar = NULL,
+       revisado_at = COALESCE(revisado_at, NOW())
+     WHERE id = $1 AND eliminado_at IS NOT NULL
+       AND eliminado_at >= NOW() - INTERVAL '30 days'
+     RETURNING *`,
+    [id]
+  );
+  if (!result.rows[0]) return null;
+  return formatPedido(result.rows[0], await leerItems(getPool(), id));
 }
 
 export function resumenPublicoPedido(pedido: Pedido) {

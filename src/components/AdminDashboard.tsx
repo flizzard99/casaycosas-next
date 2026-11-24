@@ -31,11 +31,13 @@ const PAGE_SIZE = 24;
 type Vista = 'productos' | 'categorias' | 'destacados' | 'pedidos' | 'diseno';
 type FiltroEstado = 'todos' | 'en-stock' | 'agotado' | 'ocultos' | 'remate';
 const ESTADOS_PEDIDO = {
+  sin_revisar: 'Nuevos · sin revisar',
   pendiente: 'Pendientes',
   confirmado: 'Confirmados',
   revision: 'Pagos por revisar',
   cancelado: 'Cancelados',
   expirado: 'Vencidos',
+  papelera: 'Papelera (30 días)',
   todos: 'Todos'
 } as const;
 type FiltroPedido = keyof typeof ESTADOS_PEDIDO;
@@ -44,6 +46,7 @@ const VISTAS: Vista[] = ['productos', 'pedidos', 'categorias', 'destacados', 'di
 type ResumenNotificaciones = {
   pendientes: number;
   revision: number;
+  sinRevisar: number;
   ultimos: NotificacionPedidoAdmin[];
   nuevos: NotificacionPedidoAdmin[];
   cursor: string;
@@ -130,6 +133,12 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   useEffect(() => {
     cargarTodo();
   }, []);
+
+  useEffect(() => {
+    if (!aviso) return;
+    const temporizador = window.setTimeout(() => setAviso(undefined), aviso.error ? 8000 : 4000);
+    return () => window.clearTimeout(temporizador);
+  }, [aviso]);
 
   useEffect(() => {
     const temporizador = window.setTimeout(() => {
@@ -278,7 +287,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const paginaActual = Math.min(pagina, totalPaginas || 1);
   const productosPagina = filtrados.slice((paginaActual - 1) * PAGE_SIZE, paginaActual * PAGE_SIZE);
 
-  async function ejecutarAccion(clave: string, url: string, opciones: RequestInit, mensaje: string, actualizar: (dato: Producto) => void) {
+  async function ejecutarAccion<T>(clave: string, url: string, opciones: RequestInit, mensaje: string, actualizar: (dato: T) => void) {
     if (ocupado) return;
     setOcupado(clave);
     setAviso(undefined);
@@ -348,6 +357,19 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       });
   }
 
+  function marcarRevisado(id: number) {
+    return ejecutarAccion<Pedido>(`pedido-${id}`, `/api/pedidos/${id}/revisar`, { method: 'PATCH' },
+      'Pedido marcado como revisado.', () => {
+        setRecargarPedidos((valor) => valor + 1);
+        setResumenNotificaciones((actual) => actual ? { ...actual, sinRevisar: Math.max(0, actual.sinRevisar - 1) } : actual);
+      });
+  }
+
+  function restaurarPedidoEliminado(id: number) {
+    return ejecutarAccion<Pedido>(`pedido-${id}`, `/api/pedidos/${id}/restaurar`, { method: 'PATCH' },
+      'Pedido restaurado como historial.', () => setRecargarPedidos((valor) => valor + 1));
+  }
+
   function registrarDespacho(id: number, codigo: string) {
     return ejecutarAccion(`pedido-${id}`, `/api/pedidos/${id}/despachar`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigo })
@@ -373,11 +395,11 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     setPermisoNotificaciones(permiso);
   }
 
-  const navItems: { id: Vista; label: string }[] = [
+  const navItems: { id: Vista; label: string; mobileLabel?: string }[] = [
     { id: 'productos', label: 'Productos' },
     { id: 'pedidos', label: 'Pedidos' },
-    { id: 'categorias', label: 'Categorías' },
-    { id: 'destacados', label: 'Más vendidos' },
+    { id: 'categorias', label: 'Orden del catálogo', mobileLabel: 'Catálogo' },
+    { id: 'destacados', label: 'Más vendidos', mobileLabel: 'Destacados' },
     { id: 'diseno', label: 'Diseño' },
   ];
 
@@ -451,7 +473,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   <div className="mb-3 flex items-start justify-between gap-3 border-b border-verde-noche/10 pb-3">
                     <div>
                       <h2 className="font-semibold">Pedidos recientes</h2>
-                      <p className="text-xs text-verde-noche/65">{resumenNotificaciones?.pendientes ?? 0} pendientes · {resumenNotificaciones?.revision ?? 0} por revisar</p>
+                      <p className="text-xs text-verde-noche/65">{resumenNotificaciones?.sinRevisar ?? 0} nuevos · {resumenNotificaciones?.pendientes ?? 0} pendientes · {resumenNotificaciones?.revision ?? 0} con alerta</p>
                     </div>
                     <a href="#pedidos" onClick={() => setNotificacionesAbiertas(false)} className="text-xs font-semibold underline">Ver pedidos</a>
                   </div>
@@ -499,14 +521,22 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               <a href={`#${item.id}`} key={item.id} aria-current={vista === item.id ? 'page' : undefined}
                 className={`grid min-h-10 min-w-0 place-items-center gap-1 rounded-lg px-0.5 py-2 text-center text-[10px] font-semibold sm:text-sm ${vista === item.id ? 'bg-verde-noche text-white' : 'hover:bg-crema/50'}`}>
                 <AdminIcon name={item.id} />
-                {item.label}
+                {item.mobileLabel ?? item.label}
               </a>
             ))}
           </nav>
         </header>
 
         <main className="w-full max-w-screen-2xl flex-1 p-4 md:p-8">
-          {aviso && <p role={aviso.error ? 'alert' : 'status'} className={`mb-4 rounded-lg border p-3 text-sm ${aviso.error ? 'border-red-200 bg-red-50 text-red-800' : 'border-verde/20 bg-sage/20'}`}>{aviso.texto}</p>}
+          {aviso && (
+            <div role={aviso.error ? 'alert' : 'status'} className={`fixed right-4 top-24 z-50 flex max-w-[calc(100vw-2rem)] items-center gap-3 rounded-xl border px-4 py-3 text-sm shadow-lg ${aviso.error ? 'border-red-200 bg-red-50 text-red-800' : 'border-verde/25 bg-white text-verde-noche'}`}>
+              <AdminIcon name={aviso.error ? 'cerrar' : 'check'} className="size-4" />
+              <p>{aviso.texto}</p>
+              <button type="button" onClick={() => setAviso(undefined)} aria-label="Cerrar mensaje" className="grid size-8 place-items-center rounded-lg hover:bg-black/5">
+                <AdminIcon name="cerrar" className="size-4" />
+              </button>
+            </div>
+          )}
           {errorCatalogo && vista !== 'pedidos' && (
             <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
               <p>{errorCatalogo}</p><button onClick={recargarCatalogo} className="font-semibold underline">Reintentar</button>
@@ -729,14 +759,27 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 : (
                   <>
                     <div className="grid gap-4 xl:grid-cols-2">
-                      {pedidos.map((ped) => (
-                        <article key={ped.id} className="min-w-0 rounded-xl border border-verde-noche/10 bg-white p-4">
+                      {pedidos.map((ped) => {
+                        const sinRevisar = !ped.revisado_at && !ped.eliminado_at;
+                        const requiereRevision = ped.pago_estado === 'revision';
+                        const enPapelera = Boolean(ped.eliminado_at);
+                        return (
+                        <article key={ped.id} className={`relative min-w-0 rounded-xl border bg-white p-4 transition-shadow ${requiereRevision
+                          ? 'border-amber-400 ring-2 ring-amber-300/35 shadow-[0_0_26px_rgba(245,158,11,0.18)]'
+                          : sinRevisar
+                            ? 'border-verde ring-2 ring-verde/20 shadow-[0_0_24px_rgba(88,129,87,0.22)]'
+                            : enPapelera ? 'border-dashed border-verde-noche/20 opacity-90' : 'border-verde-noche/10'}`}>
                           <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <h2 className="break-all font-semibold">Pedido {ped.codigo_publico}</h2>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h2 className="break-all font-semibold">Pedido {ped.codigo_publico}</h2>
+                                {sinRevisar && <span className="rounded-full bg-verde-oscuro px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Nuevo · sin revisar</span>}
+                                {requiereRevision && <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-950">Revisión urgente</span>}
+                              </div>
                               <p className="text-xs text-verde-noche/75">{new Date(ped.created_at).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Santiago' })}</p>
+                              {ped.eliminado_at && <p className="mt-1 text-xs font-medium text-red-700">En papelera desde {new Date(ped.eliminado_at).toLocaleDateString('es-CL', { timeZone: 'America/Santiago' })}. Se eliminará automáticamente a los 30 días.</p>}
                             </div>
-                            <span className="rounded-full bg-crema/60 px-2.5 py-1 text-xs font-semibold capitalize">{ped.despachado_at ? 'Despachado' : ped.estado}</span>
+                            <span className="rounded-full bg-crema/60 px-2.5 py-1 text-xs font-semibold capitalize">{enPapelera ? 'En papelera' : ped.despachado_at ? 'Despachado' : ped.estado}</span>
                           </div>
                           <dl className="space-y-1 break-words text-sm">
                             <div><dt className="inline font-semibold">Cliente: </dt><dd className="inline">{ped.cliente_nombre || 'Sin nombre'}</dd></div>
@@ -760,7 +803,13 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                           </ul>
                           {ped.costo_envio > 0 && <p className="mb-1 text-right text-sm">Envío {formatoCLP.format(ped.costo_envio)}</p>}
                           <p className="mb-3 text-right font-semibold">Total {formatoCLP.format(ped.total)}</p>
-                          {ped.estado === 'pendiente' && (!ped.metodo_pago || ped.metodo_pago === 'transferencia') && (
+                          {!enPapelera && sinRevisar && (
+                            <button disabled={!!ocupado} onClick={() => marcarRevisado(ped.id)}
+                              className="mb-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-verde/40 bg-sage/15 px-3 text-sm font-semibold text-verde-noche hover:bg-sage/30 disabled:opacity-50">
+                              <AdminIcon name="visible" /> Marcar como revisado
+                            </button>
+                          )}
+                          {!enPapelera && ped.estado === 'pendiente' && (!ped.metodo_pago || ped.metodo_pago === 'transferencia') && (
                             <div className="flex gap-2">
                               <button disabled={!!ocupado} onClick={() => procesarPedido(ped.id, 'confirmar')}
                                 className="min-h-10 flex-1 rounded-lg bg-verde-oscuro px-2 text-sm font-semibold text-white disabled:opacity-50"><span className="inline-flex items-center gap-1"><AdminIcon name="check" /> {ped.metodo_pago === 'transferencia' ? 'Confirmar transferencia recibida' : 'Confirmar'}</span></button>
@@ -768,7 +817,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                                 className="min-h-10 flex-1 rounded-lg border border-red-200 px-2 text-sm font-semibold text-red-700 disabled:opacity-50"><span className="inline-flex items-center gap-1"><AdminIcon name="cerrar" /> Cancelar</span></button>
                             </div>
                           )}
-                          {ped.estado === 'confirmado' && ped.pago_estado !== 'revision' && !ped.despachado_at && (
+                          {!enPapelera && ped.estado === 'confirmado' && ped.pago_estado !== 'revision' && !ped.despachado_at && (
                             <form onSubmit={(event) => {
                               event.preventDefault();
                               registrarDespacho(ped.id, String(new FormData(event.currentTarget).get('codigo') || ''));
@@ -782,12 +831,20 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                               </button>
                             </form>
                           )}
-                          <HoldToConfirm disabled={!!ocupado} onConfirm={() => { void borrarPedido(ped); }}
-                            label="Mantén presionado para borrar" confirmedLabel="Eliminando…" duration={1500}
-                            aria-label={`Mantén presionado para borrar el pedido ${ped.codigo_publico}`}
-                            className="mt-3 w-full sm:w-auto" />
+                          {enPapelera ? (
+                            <button type="button" disabled={!!ocupado} onClick={() => restaurarPedidoEliminado(ped.id)}
+                              className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-verde-oscuro px-3 text-sm font-semibold text-white hover:bg-verde-noche disabled:opacity-50 sm:w-auto">
+                              <AdminIcon name="restaurar" /> Restaurar pedido
+                            </button>
+                          ) : (
+                            <HoldToConfirm disabled={!!ocupado} onConfirm={() => { void borrarPedido(ped); }}
+                              label="Mover a papelera" confirmedLabel="Moviendo…" duration={1500}
+                              aria-label={`Mantén presionado para mover el pedido ${ped.codigo_publico} a la papelera`}
+                              className="mt-3 w-full sm:w-auto" />
+                          )}
                         </article>
-                      ))}
+                        );
+                      })}
                     </div>
                     <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
                       <p>{totalPedidos} {totalPedidos === 1 ? 'pedido' : 'pedidos'} · Página {paginaPedidos} de {Math.ceil(totalPedidos / PAGE_SIZE)}</p>

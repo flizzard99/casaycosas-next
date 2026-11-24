@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   }
   try {
     const estado = req.nextUrl.searchParams.get('estado');
-    const estados = ['pendiente', 'confirmado', 'cancelado', 'expirado', 'revision', 'todos'] as const;
+    const estados = ['pendiente', 'confirmado', 'cancelado', 'expirado', 'revision', 'sin_revisar', 'papelera', 'todos'] as const;
     const filtro = estados.find((opcion) => opcion === estado) ?? 'pendiente';
     const pagina = Number(req.nextUrl.searchParams.get('pagina') ?? '1');
     if (!Number.isSafeInteger(pagina) || pagina < 1 || pagina > 100000) {

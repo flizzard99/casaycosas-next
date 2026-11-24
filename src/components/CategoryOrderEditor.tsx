@@ -55,9 +55,9 @@ export default function CategoryOrderEditor({
   }
 
   return (
-    <div className="bg-white rounded-lg p-5 shadow-sm">
-      <h3 className="font-display text-lg text-verde-noche mb-1">Orden de categorías</h3>
-      <p className="text-xs text-verde-noche/60 mb-4">Así se ordenan los filtros dentro de cada colección.</p>
+    <div className="rounded-xl border border-verde-noche/10 bg-white p-5 shadow-sm">
+      <h3 className="font-display text-lg text-verde-noche mb-1">Orden de filtros del catálogo</h3>
+      <p className="mb-4 text-sm leading-relaxed text-verde-noche/65">Esta configuración sigue activa: define el orden en que los clientes ven las categorías disponibles dentro de Matera, Cristiana y Casa y Cosas.</p>
       <ul className="space-y-1.5 mb-4">
         {orden.map((cat, i) => (
           <li

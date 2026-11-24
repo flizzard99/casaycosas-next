@@ -17,7 +17,7 @@ Tienda online para **Casa y Cosas** en Panguipulli, Chile. Vende artículos del 
 ## Modelo de datos clave
 - `productos`: id, name, description, category, subcategoria, image_url, instagram_url, price, precio_oferta, stock, visible, images[], created_at
 - `config`: JSONB con `category_order` (string[]) y `featured` ({productIds: number[4], title: string})
-- `pedidos`: id interno, codigo_publico aleatorio, cliente_nombre, cliente_whatsapp, total, estado (pendiente/confirmado/cancelado/expirado), created_at, confirmado_at
+- `pedidos`: id interno, codigo_publico aleatorio, cliente_nombre, cliente_whatsapp, total, estado (pendiente/confirmado/cancelado/expirado), created_at, confirmado_at, revisado_at, eliminado_at
 - `pedido_items`: pedido_id, producto_id, nombre, qty, precio
 - Los productos pueden tener imágenes como base64 en la DB (legacy). `db.ts` filtra base64 en runtime.
 - **Sistema de pedidos**: el carrito llama `POST /api/pedido` → crea pedido + decrementa stock atómicamente. Expiración lazy a 48h (restaura stock). Admin gestiona en vista Pedidos.
@@ -48,8 +48,8 @@ Tienda online para **Casa y Cosas** en Panguipulli, Chile. Vende artículos del 
 - `CartDrawer.tsx`: Drawer lateral con + − por item (cap en stock), WhatsApp + Instagram
 - `ProductCarousel.tsx`: Carrusel de imágenes en detalle de producto
 - `FloatWhatsApp.tsx`: Botón flotante de WhatsApp
-- `Footer.tsx`: Footer con ® discreto que lleva a `/admin`
-- `AdminDashboard.tsx`: CRUD productos, orden categorías, selección destacados (exactamente 4)
+- `Footer.tsx`: Footer público con navegación de compra, ayuda y políticas legales
+- `AdminDashboard.tsx`: CRUD de productos, gestión de pedidos con revisión y papelera, orden del catálogo, selección de destacados y diseño
 
 ## Paleta de colores (tailwind.config.js)
 - verde: #588157

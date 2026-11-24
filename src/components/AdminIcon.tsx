@@ -20,6 +20,7 @@ const paths = {
   guardar: 'M4 4h13l3 3v13H4zM8 4v6h8V4M8 20v-6h8v6',
   check: 'm5 12 4 4L19 6',
   recargar: 'M20 7v5h-5m5 0a8 8 0 1 0-2 5',
+  restaurar: 'M4 7v5h5M4 12a8 8 0 1 1 2.3 5.7',
   subir: 'M12 16V4m-5 5 5-5 5 5M4 16v4h16v-4',
   encuadrar: 'M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5M9 9h6v6H9z',
   recortar: 'M6 3v15h15M3 6h15v15',
