@@ -4,12 +4,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminRateLimit } from '@/lib/adminRateLimit';
 import { crearPedido, getDatosTransferencia, obtenerEnlaceDePago } from '@/lib/db';
 import { crearPreferencia, esReferenciaDeCompra, MercadoPagoError, origenCheckout } from '@/lib/mercadoPago';
-import { normalizarRut, rutaSeguimiento } from '@/lib/checkout';
+import { rutaSeguimiento } from '@/lib/checkout';
 import { origenTienda } from '@/lib/origenTienda';
 import { revalidarCatalogo } from '@/lib/revalidarCatalogo';
 import { validarDestinoChile } from '@/lib/geografiaChile';
 import { enviarEmailPedidoCreado } from '@/lib/email';
-import { VERSION_LEGAL } from '@/lib/legal';
+import { VERSION_LEGAL, VERSION_PRIVACIDAD } from '@/lib/legal';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -50,8 +50,6 @@ export async function POST(req: NextRequest) {
   if (body.conEnvio !== undefined && typeof body.conEnvio !== 'boolean') {
     return NextResponse.json({ error: 'Selecciona una modalidad de entrega válida.' }, { status: 400 });
   }
-  const rut = normalizarRut(body.rut);
-  if (!rut) return NextResponse.json({ error: 'Ingresa un RUT chileno válido.' }, { status: 400 });
   let despacho = null;
   if (body.conEnvio !== false) {
     const destino = validarDestinoChile(texto(body.region, 100), texto(body.comuna, 100));
@@ -83,8 +81,8 @@ export async function POST(req: NextRequest) {
     }
     const datosPago = transferencia ? { metodo: 'transferencia' as const, transferencia } : { metodo: 'tarjeta' as const, transferencia: null };
     const pedido = await crearPedido(items, nombre, telefono, email, {
-      ...datosPago, referencia, rut, despacho, totalEsperado: body.total,
-      aceptacionLegal: { version: VERSION_LEGAL, fecha: new Date().toISOString() }
+      ...datosPago, referencia, despacho, totalEsperado: body.total,
+      aceptacionLegal: { version: VERSION_LEGAL, fecha: new Date().toISOString(), avisoPrivacidad: VERSION_PRIVACIDAD }
     });
     for (const id of new Set(pedido.items.map((item) => item.producto_id))) revalidatePath(`/producto/${id}`);
     revalidarCatalogo();
@@ -94,14 +92,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url, seguimiento, correo: correo.ok ? 'enviado' : 'no_enviado' }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     if (error instanceof MercadoPagoError) {
-      console.error('[checkout][mercadopago]', { codigo: error.codigo, detalle: error.message });
+      console.error('[checkout][mercadopago]', { codigo: error.codigo });
       return NextResponse.json({ error: error.mensajePublico, code: error.codigo }, { status: 503 });
     }
     const detalle = error instanceof Error ? error.message : '';
     if (/^(Stock insuficiente|Producto \d+ no encontrado|El precio de los productos cambió|La sesión de pago corresponde|Total de compra inválido|Selecciona una variante|El pedido fue eliminado)/.test(detalle)) {
       return NextResponse.json({ error: detalle }, { status: 409 });
     }
-    console.error('[checkout]', error);
+    console.error('[checkout] No se pudo completar el pedido.');
     return NextResponse.json({ error: 'No pudimos continuar con el pedido. Puedes volver a intentarlo.' }, { status: 502 });
   }
 }

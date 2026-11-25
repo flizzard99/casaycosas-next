@@ -298,8 +298,8 @@ export type Pedido = {
 };
 
 export type DespachoPedido = { region: string; comuna: string; direccion: string; nota?: string };
-type Compra = { referencia: string; despacho: DespachoPedido | null; totalEsperado: number; rut: string;
-  aceptacionLegal: { version: string; fecha: string } } & (
+type Compra = { referencia: string; despacho: DespachoPedido | null; totalEsperado: number;
+  aceptacionLegal: { version: string; fecha: string; avisoPrivacidad: string } } & (
   { metodo: 'tarjeta'; transferencia: null } | { metodo: 'transferencia'; transferencia: DatosTransferencia }
 );
 
@@ -540,7 +540,7 @@ export async function crearPedido(items: ItemCompra[], clienteNombre: string, cl
       const detalle = await leerItems(client, row.id);
       if (row.total !== compra.totalEsperado || row.metodo_pago !== compra.metodo || detalle.length !== items.length ||
           !items.every((item) => detalle.some((linea) => linea.producto_id === item.id && linea.qty === item.qty && (linea.variante_id ?? undefined) === item.varianteId)) ||
-          row.cliente_nombre !== clienteNombre || row.cliente_whatsapp !== clienteWhatsapp || row.cliente_email !== clienteEmail || row.cliente_rut !== compra.rut ||
+          row.cliente_nombre !== clienteNombre || row.cliente_whatsapp !== clienteWhatsapp || row.cliente_email !== clienteEmail ||
           row.sin_envio !== sinEnvio || row.despacho?.region !== compra.despacho?.region || row.despacho?.comuna !== compra.despacho?.comuna ||
           row.despacho?.direccion !== compra.despacho?.direccion || (row.despacho?.nota ?? '') !== (compra.despacho?.nota ?? '')) {
         throw new Error('La sesión de pago corresponde a otro carrito o despacho.');
@@ -585,7 +585,7 @@ export async function crearPedido(items: ItemCompra[], clienteNombre: string, cl
          VALUES ($1, $2, $3, $4, $5, 'pendiente', $6, 'pendiente', $7, $8, $9, $10, $11, $12, $13)
          ON CONFLICT (codigo_publico) DO NOTHING RETURNING *`,
         [crearCodigoPublicoPedido(), clienteNombre, clienteWhatsapp, clienteEmail, total, compra.referencia, compra.despacho,
-          compra.rut, compra.metodo, costoEnvio, compra.transferencia, compra.aceptacionLegal, sinEnvio]
+          null, compra.metodo, costoEnvio, compra.transferencia, compra.aceptacionLegal, sinEnvio]
       );
       pedidoRow = pedidoRes.rows[0];
     }
@@ -609,13 +609,15 @@ export async function crearPedido(items: ItemCompra[], clienteNombre: string, cl
   }
 }
 
-export async function getPedidosAdmin(estado: EstadoPedido | 'revision' | 'sin_revisar' | 'papelera' | 'todos', pagina: number): Promise<{ pedidos: Pedido[]; total: number }> {
+export async function getPedidosAdmin(estado: EstadoPedido | 'revision' | 'sin_revisar' | 'papelera' | 'archivo' | 'todos', pagina: number): Promise<{ pedidos: Pedido[]; total: number }> {
   await ensureSchema();
   await ensurePedidosSchema();
   const pool = getPool();
   await expirarPedidosViejos(pool);
-  await pool.query("DELETE FROM pedidos WHERE eliminado_at < NOW() - INTERVAL '30 days'");
-  const filtro = `(CASE WHEN $1 = 'papelera' THEN p.eliminado_at IS NOT NULL ELSE
+  const filtro = `(CASE
+    WHEN $1 = 'papelera' THEN p.eliminado_at >= NOW() - INTERVAL '30 days'
+    WHEN $1 = 'archivo' THEN p.eliminado_at < NOW() - INTERVAL '30 days'
+    ELSE
     p.eliminado_at IS NULL AND (($1 = 'todos') OR ($1 = 'revision' AND p.pago_estado = 'revision') OR
       ($1 = 'sin_revisar' AND p.revisado_at IS NULL) OR p.estado = $1) END)`;
   const [rows, cantidad] = await Promise.all([
@@ -1031,7 +1033,6 @@ export async function restaurarPedido(id: number): Promise<Pedido | null> {
        estado_antes_eliminar = NULL,
        revisado_at = COALESCE(revisado_at, NOW())
      WHERE id = $1 AND eliminado_at IS NOT NULL
-       AND eliminado_at >= NOW() - INTERVAL '30 days'
      RETURNING *`,
     [id]
   );
@@ -1077,7 +1078,7 @@ export async function getPedidoPublico(codigo: string, referencia?: string, acce
   if (!codigoValido && (idAnterior === null || !Number.isSafeInteger(idAnterior) || idAnterior < 1 || idAnterior > 2147483647)) return null;
   const res = codigoValido
     ? await pool.query(
-      'SELECT * FROM pedidos WHERE codigo_publico = $1 AND eliminado_at IS NULL AND ($2::boolean OR pago_referencia IS NULL OR pago_referencia::text = $3)',
+      'SELECT * FROM pedidos WHERE codigo_publico = $1 AND eliminado_at IS NULL AND ($2::boolean OR pago_referencia::text = $3)',
       [codigo, accesoAutorizado, referencia ?? '']
     )
     : await pool.query(

@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import { CartProvider } from '@/context/CartContext';
-import { Analytics } from '@vercel/analytics/react';
 import { tienda } from '@/lib/config';
 import './globals.css';
 import './tienda.css';
@@ -85,7 +84,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd).replace(/</g, '\\u003c') }}
         />
         <CartProvider>{children}</CartProvider>
-        <Analytics />
       </body>
     </html>
   );

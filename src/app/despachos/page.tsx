@@ -13,7 +13,7 @@ export default function DespachosPage() {
     <LegalPage titulo="Política de despachos" introduccion="Condiciones de preparación, entrega y seguimiento para las compras enviadas por Casa y Cosas.">
       <section>
         <h2>1. Servicio y costo</h2>
-        <p>El despacho se realiza mediante {ENVIO_CHILE.servicio} con una tarifa fija que se verá reflejada en el resumen de la compra, informada y sumada al total antes del pago. La cobertura efectiva depende de las comunas y condiciones operativas del transportista.</p>
+        <p>Las ventas y los despachos se realizan únicamente dentro de Chile. El despacho se realiza mediante {ENVIO_CHILE.servicio} con una tarifa fija que se verá reflejada en el resumen de la compra, informada y sumada al total antes del pago. La cobertura efectiva depende de las comunas y condiciones operativas del transportista.</p>
       </section>
       <section>
         <h2>2. Preparación</h2>

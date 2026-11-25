@@ -4,14 +4,12 @@ import { useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { claveCarrito, useCart } from '@/context/CartContext';
 import { REGIONES_CHILE } from '@/lib/geografiaChile';
-import { ENVIO_CHILE, normalizarRut, type MetodoPago } from '@/lib/checkout';
+import { ENVIO_CHILE, type MetodoPago } from '@/lib/checkout';
 import { tienda } from '@/lib/config';
-import CampoRut from './CampoRut';
 
 const clp = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' });
 const campos = [
   { name: 'nombre', label: 'Nombre y Apellido', autoComplete: 'name', maxLength: 100 },
-  { name: 'rut', label: 'RUT', autoComplete: 'off', maxLength: 16 },
   { name: 'email', label: 'Correo electrónico', autoComplete: 'email', maxLength: 200, type: 'email' },
   { name: 'telefono', label: 'Teléfono de contacto', autoComplete: 'tel', maxLength: 20, type: 'tel' }
 ];
@@ -24,7 +22,6 @@ export default function CheckoutClient({ tarjeta, transferencia }: { tarjeta: bo
   const [error, setError] = useState('');
   const [metodoPago, setMetodoPago] = useState<MetodoPago>(tarjeta ? 'tarjeta' : 'transferencia');
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
-  const [rut, setRut] = useState('');
   const [conEnvio, setConEnvio] = useState(true);
   const [region, setRegion] = useState('');
   const [comuna, setComuna] = useState('');
@@ -36,14 +33,8 @@ export default function CheckoutClient({ tarjeta, transferencia }: { tarjeta: bo
     event.preventDefault();
     if (procesando || !items.length || subtotal < 1) return;
     const datos = Object.fromEntries(new FormData(event.currentTarget));
-    const rut = normalizarRut(datos.rut);
-    if (!rut) {
-      setError('Ingresa un RUT chileno válido.');
-      event.currentTarget.querySelector<HTMLInputElement>('input[name=rut]')?.focus();
-      return;
-    }
     const productos = items.map(({ id, qty, varianteId }) => ({ id, qty, varianteId }));
-    const clave = JSON.stringify({ datos: { ...datos, rut, aceptaTerminos }, conEnvio, metodoPago, productos, total });
+    const clave = JSON.stringify({ datos: { ...datos, aceptaTerminos }, conEnvio, metodoPago, productos, total });
     const referencia = intento.current?.clave === clave ? intento.current.referencia : crypto.randomUUID();
     intento.current = { clave, referencia };
     setProcesando(true);
@@ -52,7 +43,7 @@ export default function CheckoutClient({ tarjeta, transferencia }: { tarjeta: bo
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...datos, rut, aceptaTerminos, conEnvio, metodoPago, referencia, total, items: productos })
+        body: JSON.stringify({ ...datos, aceptaTerminos, conEnvio, metodoPago, referencia, total, items: productos })
       });
       const resultado = await response.json();
       if (!response.ok) {
@@ -79,14 +70,11 @@ export default function CheckoutClient({ tarjeta, transferencia }: { tarjeta: bo
     <form onSubmit={continuar} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <fieldset disabled={procesando} className="grid min-w-0 gap-4 shop-panel rounded-xl border p-5 sm:grid-cols-2">
         <legend className="px-2 font-semibold">Datos del pedido</legend>
+        <p className="shop-muted text-sm sm:col-span-2">Usamos tus datos para el pago, los avisos del pedido y el despacho si lo eliges. Si necesitas factura, <Link href="/terminos-y-condiciones#factura" target="_blank" className="underline">consulta cómo solicitarla</Link>. Conoce tus derechos en la <Link href="/privacidad" target="_blank" className="underline">política de privacidad</Link>.</p>
         {campos.map(({ name, label, autoComplete, maxLength, type }) => (
           <label className="min-w-0" key={name}>
             <span className="mb-1 block text-sm font-medium">{label}</span>
-            {name === 'rut' ? (
-              <CampoRut name="rut" value={rut} onValueChange={setRut} required className={claseCampo} />
-            ) : (
-              <input name={name} type={type || 'text'} autoComplete={autoComplete} maxLength={maxLength} required className={claseCampo} />
-            )}
+            <input name={name} type={type || 'text'} autoComplete={autoComplete} maxLength={maxLength} required className={claseCampo} />
           </label>
         ))}
         <fieldset className="grid gap-2 sm:col-span-2 sm:grid-cols-2">
@@ -128,6 +116,7 @@ export default function CheckoutClient({ tarjeta, transferencia }: { tarjeta: bo
           <label className="sm:col-span-2">
             <span className="mb-1 block text-sm font-medium">Agregar nota <span className="shop-muted font-normal">(opcional)</span></span>
             <textarea name="nota" maxLength={500} rows={2} className={`${claseCampo} resize-y py-2`} />
+            <span className="shop-muted text-xs">Incluye solo instrucciones de entrega. Evita datos sensibles, claves o información bancaria.</span>
           </label>
         </fieldset>
       </fieldset>
@@ -171,7 +160,7 @@ export default function CheckoutClient({ tarjeta, transferencia }: { tarjeta: bo
         <label className="mb-4 flex items-start gap-2 text-xs leading-5 shop-muted">
           <input name="aceptaTerminos" type="checkbox" required checked={aceptaTerminos}
             onChange={(event) => setAceptaTerminos(event.target.checked)} className="shop-checkbox mt-0.5 size-4 shrink-0" />
-          <span>He leído y acepto los <Link href="/terminos-y-condiciones" target="_blank" className="font-semibold underline">términos y condiciones</Link>, la <Link href="/privacidad" target="_blank" className="font-semibold underline">política de privacidad</Link> y las políticas de <Link href="/despachos" target="_blank" className="font-semibold underline">despacho</Link> y <Link href="/cambios-devoluciones" target="_blank" className="font-semibold underline">cambios y garantía</Link>.</span>
+          <span>Acepto los <Link href="/terminos-y-condiciones" target="_blank" className="font-semibold underline">términos y condiciones</Link> y las políticas de <Link href="/despachos" target="_blank" className="font-semibold underline">despacho</Link> y <Link href="/cambios-devoluciones" target="_blank" className="font-semibold underline">cambios y garantía</Link>.</span>
         </label>
         {error && <p className="mb-3 text-sm shop-danger" role="alert">{error}</p>}
         <button type="submit" disabled={procesando || subtotal < 1 || !aceptaTerminos} className="shop-button min-h-12 w-full">

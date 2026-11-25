@@ -32,7 +32,7 @@ export default function Footer() {
         <nav aria-labelledby="footer-ayuda" className="shop-footer-group">
           <h2 id="footer-ayuda">Ayuda</h2>
           <Link href="/seguimiento">Seguir pedido</Link>
-          <a href={tienda.whatsappUrl} target="_blank" rel="noopener noreferrer">WhatsApp</a>
+          <a href={tienda.whatsappUrl} target="_blank" rel="noopener noreferrer">Ayuda por WhatsApp</a>
           <a href={tienda.instagramUrl} target="_blank" rel="noopener noreferrer">Instagram</a>
         </nav>
 

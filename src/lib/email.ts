@@ -58,13 +58,13 @@ async function enviar(args: Omit<EmailArgs, 'from'>, evento: string, idempotency
     const respuesta = await getResend(configuracion.key).emails.send({ ...args, from: configuracion.from }, { idempotencyKey });
     if (respuesta.error) {
       const detalle = respuesta.error.message || respuesta.error.name || 'Resend rechazó el correo.';
-      console.error(`[email] ${evento}: RESEND_RECHAZADO`, { status: respuesta.error.statusCode, detalle });
+      console.error(`[email] ${evento}: RESEND_RECHAZADO`, { status: respuesta.error.statusCode });
       return { ok: false, codigo: 'RESEND_RECHAZADO', detalle };
     }
     return { ok: true, id: respuesta.data?.id };
   } catch (error) {
     const detalle = error instanceof Error ? error.message : 'No fue posible conectar con Resend.';
-    console.error(`[email] ${evento}: RESEND_NO_DISPONIBLE`, { detalle });
+    console.error(`[email] ${evento}: RESEND_NO_DISPONIBLE`);
     return { ok: false, codigo: 'RESEND_NO_DISPONIBLE', detalle };
   }
 }

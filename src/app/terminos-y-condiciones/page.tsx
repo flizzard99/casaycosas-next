@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import LegalPage from '@/components/LegalPage';
+import { tienda } from '@/lib/config';
 
 export const metadata: Metadata = {
   title: 'Términos y condiciones',
@@ -12,7 +14,7 @@ export default function TerminosPage() {
     <LegalPage titulo="Términos y condiciones" introduccion="Estas condiciones regulan el uso de la tienda y las compras efectuadas por internet en Casa y Cosas.">
       <section>
         <h2>1. Aplicación y aceptación</h2>
-        <p>Al utilizar este sitio o confirmar una compra, la persona declara haber leído y aceptado estos términos, junto con las políticas de privacidad, despacho, retracto, cambios y garantía legal. Los derechos reconocidos por la legislación chilena de protección al consumidor prevalecen sobre cualquier estipulación incompatible.</p>
+        <p>Al confirmar una compra, la persona acepta estos términos y las políticas de despacho, retracto, cambios y garantía legal. La <Link href="/privacidad">política de privacidad</Link> explica el tratamiento de los datos personales. Los derechos reconocidos por la legislación chilena de protección al consumidor prevalecen sobre cualquier estipulación incompatible.</p>
       </section>
       <section>
         <h2>2. Productos e información</h2>
@@ -32,9 +34,10 @@ export default function TerminosPage() {
         <h2>5. Medios de pago y seguridad</h2>
         <p>Los pagos con tarjeta son procesados por Mercado Pago. Casa y Cosas no almacena números completos de tarjetas ni códigos de seguridad. En transferencias, el pedido se prepara únicamente después de verificar el abono en la cuenta informada al finalizar.</p>
       </section>
-      <section>
+      <section id="factura" className="scroll-mt-32">
         <h2>6. Documento tributario</h2>
         <p>Se emitirá el documento tributario que corresponda conforme a la normativa del Servicio de Impuestos Internos. El cliente es responsable de entregar de forma correcta y oportuna los datos requeridos cuando solicite factura.</p>
+        <p>Si necesitas factura, escríbenos por <a href={tienda.whatsappUrl} target="_blank" rel="noopener noreferrer">WhatsApp</a>. Indica el código del pedido si ya lo tienes. Te indicaremos qué datos de facturación necesitamos.</p>
       </section>
       <section>
         <h2>7. Comunicaciones y seguimiento</h2>

@@ -38,6 +38,7 @@ const ESTADOS_PEDIDO = {
   cancelado: 'Cancelados',
   expirado: 'Vencidos',
   papelera: 'Papelera (30 días)',
+  archivo: 'Archivo de papelera',
   todos: 'Todos'
 } as const;
 type FiltroPedido = keyof typeof ESTADOS_PEDIDO;
@@ -777,9 +778,9 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                                 {requiereRevision && <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-950">Revisión urgente</span>}
                               </div>
                               <p className="text-xs text-verde-noche/75">{new Date(ped.created_at).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Santiago' })}</p>
-                              {ped.eliminado_at && <p className="mt-1 text-xs font-medium text-red-700">En papelera desde {new Date(ped.eliminado_at).toLocaleDateString('es-CL', { timeZone: 'America/Santiago' })}. Se eliminará automáticamente a los 30 días.</p>}
+                              {ped.eliminado_at && <p className="mt-1 text-xs font-medium text-red-700">Retirado el {new Date(ped.eliminado_at).toLocaleDateString('es-CL', { timeZone: 'America/Santiago' })}. {filtroPedido === 'archivo' ? 'Disponible en el archivo.' : 'Se moverá al archivo a los 30 días.'}</p>}
                             </div>
-                            <span className="rounded-full bg-crema/60 px-2.5 py-1 text-xs font-semibold capitalize">{enPapelera ? 'En papelera' : ped.despachado_at ? 'Despachado' : ped.estado}</span>
+                            <span className="rounded-full bg-crema/60 px-2.5 py-1 text-xs font-semibold capitalize">{enPapelera ? (filtroPedido === 'archivo' ? 'Archivado' : 'En papelera') : ped.despachado_at ? 'Despachado' : ped.estado}</span>
                           </div>
                           <dl className="space-y-1 break-words text-sm">
                             <div><dt className="inline font-semibold">Cliente: </dt><dd className="inline">{ped.cliente_nombre || 'Sin nombre'}</dd></div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { tienda } from '@/lib/config';
 
 export default function SeguimientoForm() {
   const [codigo, setCodigo] = useState('');
@@ -50,6 +51,7 @@ export default function SeguimientoForm() {
         {procesando ? 'Buscando pedido…' : 'Consultar pedido'}
       </button>
       <p className="shop-muted text-xs">Por seguridad pedimos el correo asociado al pedido. No necesitas crear una cuenta.</p>
+      <p className="shop-muted text-xs">Si necesitas ayuda con un pedido, incluso si es antiguo y no tiene correo asociado, <a className="underline" href={tienda.whatsappUrl} target="_blank" rel="noopener noreferrer">escríbenos por WhatsApp</a>. Ten a mano el código si lo tienes.</p>
     </form>
   );
 }
