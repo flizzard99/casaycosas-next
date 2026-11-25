@@ -277,6 +277,7 @@ export type Pedido = {
   cliente_email: string;
   cliente_rut: string | null;
   costo_envio: number;
+  sin_envio: boolean;
   total: number;
   estado: 'pendiente' | 'confirmado' | 'cancelado' | 'expirado';
   created_at: string;
@@ -297,7 +298,7 @@ export type Pedido = {
 };
 
 export type DespachoPedido = { region: string; comuna: string; direccion: string; nota?: string };
-type Compra = { referencia: string; despacho: DespachoPedido; totalEsperado: number; rut: string;
+type Compra = { referencia: string; despacho: DespachoPedido | null; totalEsperado: number; rut: string;
   aceptacionLegal: { version: string; fecha: string } } & (
   { metodo: 'tarjeta'; transferencia: null } | { metodo: 'transferencia'; transferencia: DatosTransferencia }
 );
@@ -347,6 +348,7 @@ async function initializePedidosSchema() {
         ADD COLUMN IF NOT EXISTS cliente_rut TEXT,
         ADD COLUMN IF NOT EXISTS metodo_pago TEXT,
         ADD COLUMN IF NOT EXISTS costo_envio INTEGER NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS sin_envio BOOLEAN NOT NULL DEFAULT FALSE,
         ADD COLUMN IF NOT EXISTS datos_transferencia JSONB,
         ADD COLUMN IF NOT EXISTS eliminado_at TIMESTAMPTZ,
         ADD COLUMN IF NOT EXISTS pago_referencia UUID,
@@ -418,6 +420,7 @@ function formatPedido(row: Record<string, unknown>, items: PedidoItem[] = []): P
     cliente_email: (row.cliente_email as string) || '',
     cliente_rut: (row.cliente_rut as string) ?? null,
     costo_envio: (row.costo_envio as number) ?? 0,
+    sin_envio: row.sin_envio === true,
     total: (row.total as number) || 0,
     estado: (row.estado as EstadoPedido) || 'pendiente',
     created_at: row.created_at as string,
@@ -514,6 +517,8 @@ export async function crearPedido(items: ItemCompra[], clienteNombre: string, cl
     await client.query('BEGIN');
     await client.query('SELECT pg_advisory_xact_lock(440812, hashtext($1))', [compra.referencia]);
     const existente = await client.query('SELECT * FROM pedidos WHERE pago_referencia = $1', [compra.referencia]);
+    const sinEnvio = compra.despacho === null;
+    const costoEnvio = sinEnvio ? 0 : ENVIO_CHILE.precio;
     if (existente.rows.length) {
       const row = existente.rows[0];
       if (row.eliminado_at) throw new Error('El pedido fue eliminado. Recarga la página para iniciar una compra nueva.');
@@ -521,8 +526,8 @@ export async function crearPedido(items: ItemCompra[], clienteNombre: string, cl
       if (row.total !== compra.totalEsperado || row.metodo_pago !== compra.metodo || detalle.length !== items.length ||
           !items.every((item) => detalle.some((linea) => linea.producto_id === item.id && linea.qty === item.qty && (linea.variante_id ?? undefined) === item.varianteId)) ||
           row.cliente_nombre !== clienteNombre || row.cliente_whatsapp !== clienteWhatsapp || row.cliente_email !== clienteEmail || row.cliente_rut !== compra.rut ||
-          row.despacho?.region !== compra.despacho.region || row.despacho?.comuna !== compra.despacho.comuna ||
-          row.despacho?.direccion !== compra.despacho.direccion || (row.despacho?.nota ?? '') !== (compra.despacho.nota ?? '')) {
+          row.sin_envio !== sinEnvio || row.despacho?.region !== compra.despacho?.region || row.despacho?.comuna !== compra.despacho?.comuna ||
+          row.despacho?.direccion !== compra.despacho?.direccion || (row.despacho?.nota ?? '') !== (compra.despacho?.nota ?? '')) {
         throw new Error('La sesión de pago corresponde a otro carrito o despacho.');
       }
       await client.query('COMMIT');
@@ -553,19 +558,19 @@ export async function crearPedido(items: ItemCompra[], clienteNombre: string, cl
         [item.qty, p.id, JSON.stringify(actualizadas)]);
     }
 
-    total += ENVIO_CHILE.precio;
-    if (total <= ENVIO_CHILE.precio || total > 2147483647) throw new Error('Total de compra inválido');
+    if (total <= 0 || total > 2147483647 - costoEnvio) throw new Error('Total de compra inválido');
+    total += costoEnvio;
     if (total !== compra.totalEsperado) throw new Error('El precio de los productos cambió. Actualiza el carrito.');
 
     let pedidoRow: Record<string, unknown> | undefined;
     for (let intento = 0; intento < 5 && !pedidoRow; intento++) {
       const pedidoRes = await client.query(
         `INSERT INTO pedidos (codigo_publico, cliente_nombre, cliente_whatsapp, cliente_email, total, estado, pago_referencia, pago_estado, despacho,
-          cliente_rut, metodo_pago, costo_envio, datos_transferencia, aceptacion_legal)
-         VALUES ($1, $2, $3, $4, $5, 'pendiente', $6, 'pendiente', $7, $8, $9, $10, $11, $12)
+          cliente_rut, metodo_pago, costo_envio, datos_transferencia, aceptacion_legal, sin_envio)
+         VALUES ($1, $2, $3, $4, $5, 'pendiente', $6, 'pendiente', $7, $8, $9, $10, $11, $12, $13)
          ON CONFLICT (codigo_publico) DO NOTHING RETURNING *`,
         [crearCodigoPublicoPedido(), clienteNombre, clienteWhatsapp, clienteEmail, total, compra.referencia, compra.despacho,
-          compra.rut, compra.metodo, ENVIO_CHILE.precio, compra.transferencia, compra.aceptacionLegal]
+          compra.rut, compra.metodo, costoEnvio, compra.transferencia, compra.aceptacionLegal, sinEnvio]
       );
       pedidoRow = pedidoRes.rows[0];
     }
@@ -960,7 +965,7 @@ export async function despacharPedido(id: number, codigo: string): Promise<Pedid
   await ensurePedidosSchema();
   const result = await getPool().query(
     `UPDATE pedidos SET despachado_at = NOW(), codigo_despacho = NULLIF($2, ''), revisado_at = COALESCE(revisado_at, NOW())
-     WHERE id = $1 AND estado = 'confirmado' AND despachado_at IS NULL AND eliminado_at IS NULL
+     WHERE id = $1 AND estado = 'confirmado' AND despachado_at IS NULL AND eliminado_at IS NULL AND NOT sin_envio
        AND (pago_estado = 'aprobado' OR pago_referencia IS NULL) RETURNING *`,
     [id, codigo]
   );
@@ -1021,6 +1026,7 @@ export function resumenPublicoPedido(pedido: Pedido) {
     codigo: pedido.codigo_publico,
     total: pedido.total,
     costo_envio: pedido.costo_envio,
+    sin_envio: pedido.sin_envio,
     estado: pedido.estado,
     pago_estado: pedido.pago_estado,
     pago_url: pedido.metodo_pago === 'tarjeta' && pedido.estado === 'pendiente' && pedido.pago_url &&

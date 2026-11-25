@@ -25,7 +25,9 @@ const ESTADOS = {
 function estadoPedido(pedido: PedidoPublico) {
   if (pedido.pago_estado === 'revision') return ESTADOS.revision;
   if (pedido.despachado_at) return ESTADOS.despachado;
-  if (pedido.pago_estado === 'aprobado') return ESTADOS.pagado;
+  if (pedido.pago_estado === 'aprobado') return pedido.sin_envio
+    ? { ...ESTADOS.pagado, descripcion: 'Recibimos tu pago. Coordina la entrega con la tienda por WhatsApp.' }
+    : ESTADOS.pagado;
   if (pedido.estado === 'pendiente' && pedido.metodo_pago) return ESTADOS[pedido.metodo_pago];
   return ESTADOS[pedido.estado];
 }
@@ -135,6 +137,7 @@ export default function PedidoEstadoClient({ pedidoInicial, referencia }: { pedi
             <p className="mt-2 text-sm shop-muted">{estado.descripcion}</p>
             <dl className="mt-4 grid gap-3 border-t shop-divider pt-4 text-sm">
               <div><dt className="font-semibold">Medio de pago</dt><dd className="shop-muted">{medioPago}</dd></div>
+              {pedido.sin_envio && <div><dt className="font-semibold">Modalidad de entrega</dt><dd className="shop-muted">Sin envío</dd></div>}
               {pedido.destino_envio && <div><dt className="font-semibold">Destino</dt><dd className="shop-muted">{pedido.destino_envio.comuna}, {pedido.destino_envio.region}</dd></div>}
               {pedido.codigo_despacho && <div><dt className="font-semibold">Código de seguimiento</dt><dd className="break-words shop-muted">{pedido.codigo_despacho}</dd></div>}
             </dl>

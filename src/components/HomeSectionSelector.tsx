@@ -30,8 +30,8 @@ const SECCIONES = [
     titulo: 'Casa y Cosas',
     descripcion: 'Detalles especiales para regalar, disfrutar y hacer hogar.',
     href: '/remate',
-    imagen: '/oveja-logo-hd.webp',
-    alt: 'Oveja del logo de Casa y Cosas'
+    imagen: '/oveja-casa-y-cosas.webp',
+    alt: 'Oveja de Casa y Cosas con artículos para el hogar y regalos'
   }
 ] as const;
 
@@ -41,22 +41,13 @@ export default function HomeSectionSelector() {
   const router = useRouter();
   const { count, open: abrirCarrito } = useCart();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const menuRef = useRef<HTMLDialogElement>(null);
-  const [activa, setActiva] = useState<SeccionId>('matera');
+  const [activa, setActiva] = useState<SeccionId | null>(null);
   const [entrando, setEntrando] = useState<SeccionId | null>(null);
-  const [menuAbierto, setMenuAbierto] = useState(false);
   const seleccionada = SECCIONES.find(({ id }) => id === entrando);
 
   useEffect(() => () => {
     if (timer.current) clearTimeout(timer.current);
   }, []);
-
-  useEffect(() => {
-    const menu = menuRef.current;
-    if (!menu) return;
-    if (menuAbierto && !menu.open) menu.showModal();
-    if (!menuAbierto && menu.open) menu.close();
-  }, [menuAbierto]);
 
   function entrar(event: MouseEvent<HTMLAnchorElement>, seccion: typeof SECCIONES[number]) {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || entrando) return;
@@ -67,15 +58,8 @@ export default function HomeSectionSelector() {
     timer.current = setTimeout(() => router.push(seccion.href), 680);
   }
 
-  function cerrarDesdeFondo(event: MouseEvent<HTMLDialogElement>) {
-    const rect = event.currentTarget.getBoundingClientRect();
-    if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) {
-      setMenuAbierto(false);
-    }
-  }
-
   return (
-    <main className="home-selector" data-active={activa} data-entering={entrando ?? undefined}>
+    <main className="home-selector" data-active={activa ?? undefined} data-entering={entrando ?? undefined}>
       <div className="home-selector-glow" aria-hidden="true" />
       <header className="home-selector-header">
         <div className="home-selector-brand">
@@ -84,11 +68,9 @@ export default function HomeSectionSelector() {
         </div>
         <div className="home-selector-intro">
           <p>Encuentra tu espacio</p>
-          <h1>Elige tu sección</h1>
+          <h1>ELIGE TU SECCIÓN</h1>
         </div>
         <nav className="home-mini-navigation" aria-label="Navegación principal">
-          <Link href="/seguimiento">Seguimiento</Link>
-          <a href={tienda.whatsappUrl} target="_blank" rel="noopener noreferrer">Ayuda</a>
           <button type="button" className="home-cart-button" onClick={abrirCarrito}
             aria-label={count ? `Abrir carrito, ${count} productos` : 'Abrir carrito'} aria-haspopup="dialog">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
@@ -96,10 +78,6 @@ export default function HomeSectionSelector() {
               <path d="M3 6h18M16 10a4 4 0 0 1-8 0" strokeLinecap="round" />
             </svg>
             {count > 0 && <span>{count > 99 ? '99+' : count}</span>}
-          </button>
-          <button type="button" className="home-menu-toggle" aria-label={menuAbierto ? 'Cerrar menú de información' : 'Abrir menú de información'}
-            aria-expanded={menuAbierto} aria-controls="home-information-menu" onClick={() => setMenuAbierto((abierto) => !abierto)}>
-            <span aria-hidden="true"><i /><i /><i /></span>
           </button>
         </nav>
       </header>
@@ -134,27 +112,17 @@ export default function HomeSectionSelector() {
 
       <p className="home-selector-hint"><span aria-hidden="true" /> Pasa el cursor o selecciona una sección</p>
 
-      <dialog ref={menuRef} id="home-information-menu" className="home-information-menu" aria-labelledby="home-menu-title"
-        onClose={() => setMenuAbierto(false)} onClick={cerrarDesdeFondo}>
-        <div className="home-menu-heading">
-          <div>
-            <span>Casa y Cosas</span>
-            <h2 id="home-menu-title">Información de la tienda</h2>
-          </div>
-          <button type="button" onClick={() => setMenuAbierto(false)} aria-label="Cerrar menú">×</button>
-        </div>
+      <footer className="home-legal-footer">
         <nav aria-label="Políticas de la tienda">
           {ENLACES_LEGALES.map(({ href, label }) => (
-            <Link key={href} href={href} onClick={() => setMenuAbierto(false)}>
-              {label}<b aria-hidden="true">↗</b>
-            </Link>
+            <Link key={href} href={href}>{label}</Link>
           ))}
         </nav>
-        <div className="home-menu-support">
-          <Link href="/seguimiento" onClick={() => setMenuAbierto(false)}>Seguir mi pedido</Link>
-          <a href={tienda.whatsappUrl} target="_blank" rel="noopener noreferrer">Contactar por WhatsApp</a>
-        </div>
-      </dialog>
+        <nav className="home-footer-support" aria-label="Ayuda">
+          <Link href="/seguimiento">Seguimiento</Link>
+          <a href={tienda.whatsappUrl} target="_blank" rel="noopener noreferrer">Ayuda por WhatsApp</a>
+        </nav>
+      </footer>
 
       {seleccionada && (
         <div className={`home-zoom-layer home-zoom-${seleccionada.id}`} aria-live="polite" aria-label={`Abriendo ${seleccionada.titulo}`}>

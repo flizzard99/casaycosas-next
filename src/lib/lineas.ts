@@ -24,8 +24,8 @@ export const LINEAS = {
     href: '/remate',
     titulo: 'Sección Casa y Cosas',
     descripcion: 'Aquí encontrarás diferentes detalles para regalar y para tu Hogar',
-    imagen: '/oveja-portada.webp',
-    alt: '',
+    imagen: '/oveja-casa-y-cosas.webp',
+    alt: 'Oveja de Casa y Cosas con artículos para el hogar y regalos',
     grupos: ['Artículos Oficina', 'Artesanías', 'Belleza', 'Hogar', 'Juguetería', 'Perfumería', 'Otros'],
   },
 } as const;

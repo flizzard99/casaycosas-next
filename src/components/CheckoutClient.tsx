@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { claveCarrito, useCart } from '@/context/CartContext';
 import { REGIONES_CHILE } from '@/lib/geografiaChile';
 import { ENVIO_CHILE, normalizarRut, type MetodoPago } from '@/lib/checkout';
+import { tienda } from '@/lib/config';
 import CampoRut from './CampoRut';
 
 const clp = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' });
@@ -18,16 +19,18 @@ const claseCampo = 'shop-control min-h-11 w-full min-w-0 rounded-lg border px-3 
 
 export default function CheckoutClient({ tarjeta, transferencia }: { tarjeta: boolean; transferencia: boolean }) {
   const { items, total: subtotal, hydrated, removeItem } = useCart();
-  const total = subtotal + ENVIO_CHILE.precio;
   const intento = useRef<{ clave: string; referencia: string } | null>(null);
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState('');
   const [metodoPago, setMetodoPago] = useState<MetodoPago>(tarjeta ? 'tarjeta' : 'transferencia');
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
   const [rut, setRut] = useState('');
+  const [conEnvio, setConEnvio] = useState(true);
   const [region, setRegion] = useState('');
   const [comuna, setComuna] = useState('');
   const comunas = REGIONES_CHILE.find(({ nombre }) => nombre === region)?.comunas ?? [];
+  const costoEnvio = conEnvio ? ENVIO_CHILE.precio : 0;
+  const total = subtotal + costoEnvio;
 
   async function continuar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -40,7 +43,7 @@ export default function CheckoutClient({ tarjeta, transferencia }: { tarjeta: bo
       return;
     }
     const productos = items.map(({ id, qty, varianteId }) => ({ id, qty, varianteId }));
-    const clave = JSON.stringify({ datos: { ...datos, rut, aceptaTerminos }, metodoPago, productos, total });
+    const clave = JSON.stringify({ datos: { ...datos, rut, aceptaTerminos }, conEnvio, metodoPago, productos, total });
     const referencia = intento.current?.clave === clave ? intento.current.referencia : crypto.randomUUID();
     intento.current = { clave, referencia };
     setProcesando(true);
@@ -49,7 +52,7 @@ export default function CheckoutClient({ tarjeta, transferencia }: { tarjeta: bo
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...datos, rut, aceptaTerminos, metodoPago, referencia, total, items: productos })
+        body: JSON.stringify({ ...datos, rut, aceptaTerminos, conEnvio, metodoPago, referencia, total, items: productos })
       });
       const resultado = await response.json();
       if (!response.ok) {
@@ -75,7 +78,7 @@ export default function CheckoutClient({ tarjeta, transferencia }: { tarjeta: bo
   return (
     <form onSubmit={continuar} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <fieldset disabled={procesando} className="grid min-w-0 gap-4 shop-panel rounded-xl border p-5 sm:grid-cols-2">
-        <legend className="px-2 font-semibold">Datos de despacho</legend>
+        <legend className="px-2 font-semibold">Datos del pedido</legend>
         {campos.map(({ name, label, autoComplete, maxLength, type }) => (
           <label className="min-w-0" key={name}>
             <span className="mb-1 block text-sm font-medium">{label}</span>
@@ -86,33 +89,47 @@ export default function CheckoutClient({ tarjeta, transferencia }: { tarjeta: bo
             )}
           </label>
         ))}
-        <label className="min-w-0">
-          <span className="mb-1 block text-sm font-medium">Región</span>
-          <select name="region" required autoComplete="address-level1" className={`${claseCampo} truncate`}
-            value={region} onChange={(event) => { setRegion(event.target.value); setComuna(''); }}>
-            <option value="" disabled>Selecciona una región</option>
-            {REGIONES_CHILE.map(({ nombre, nombreCorto }) => (
-              <option key={nombre} value={nombre}>{nombreCorto ?? nombre}</option>
-            ))}
-          </select>
-        </label>
-        <label className="min-w-0">
-          <span className="mb-1 block text-sm font-medium">Comuna</span>
-          <select name="comuna" required autoComplete="address-level2" disabled={!region}
-            value={comuna} onChange={(event) => setComuna(event.target.value)} className={`${claseCampo} disabled:opacity-60`}>
-            <option value="" disabled>{region ? 'Selecciona una comuna' : 'Selecciona primero una región'}</option>
-            {comunas.map((nombre) => <option key={nombre} value={nombre}>{nombre}</option>)}
-          </select>
-        </label>
-        <label className="sm:col-span-2">
-          <span className="mb-1 block text-sm font-medium">Dirección</span>
-          <input name="direccion" autoComplete="street-address" maxLength={250} required className={claseCampo}
-            placeholder="Calle, número y departamento si corresponde" />
-        </label>
-        <label className="sm:col-span-2">
-          <span className="mb-1 block text-sm font-medium">Agregar nota <span className="shop-muted font-normal">(opcional)</span></span>
-          <textarea name="nota" maxLength={500} rows={2} className={`${claseCampo} resize-y py-2`} />
-        </label>
+        <fieldset className="grid gap-2 sm:col-span-2 sm:grid-cols-2">
+          <legend className="mb-2 text-sm font-semibold">Modalidad de entrega</legend>
+          {[true, false].map((opcion) => (
+            <label key={String(opcion)} className="shop-control flex min-h-12 items-center gap-2 rounded-lg border px-3 py-2 has-[:checked]:border-[var(--shop-accent)] has-[:checked]:bg-[var(--shop-subtle)]">
+              <input type="radio" name="modalidad" value={opcion ? 'envio' : 'sin-envio'} checked={conEnvio === opcion}
+                onChange={() => { setConEnvio(opcion); setError(''); }} className="shop-checkbox size-4 shrink-0" />
+              <span className="text-sm font-semibold">{opcion ? 'Con envío' : 'Sin envío'}</span>
+              <span className="shop-muted ml-auto text-xs">{clp.format(opcion ? ENVIO_CHILE.precio : 0)}</span>
+            </label>
+          ))}
+        </fieldset>
+        {!conEnvio && <p className="shop-muted text-sm sm:col-span-2">Coordina la entrega con la tienda por <a href={tienda.whatsappUrl} target="_blank" rel="noopener noreferrer" className="underline">WhatsApp</a>.</p>}
+        <fieldset disabled={!conEnvio} hidden={!conEnvio} className={conEnvio ? 'grid min-w-0 gap-4 sm:col-span-2 sm:grid-cols-2' : 'hidden'}>
+          <label className="min-w-0">
+            <span className="mb-1 block text-sm font-medium">Región</span>
+            <select name="region" required autoComplete="address-level1" className={`${claseCampo} truncate`}
+              value={region} onChange={(event) => { setRegion(event.target.value); setComuna(''); }}>
+              <option value="" disabled>Selecciona una región</option>
+              {REGIONES_CHILE.map(({ nombre, nombreCorto }) => (
+                <option key={nombre} value={nombre}>{nombreCorto ?? nombre}</option>
+              ))}
+            </select>
+          </label>
+          <label className="min-w-0">
+            <span className="mb-1 block text-sm font-medium">Comuna</span>
+            <select name="comuna" required autoComplete="address-level2" disabled={!region}
+              value={comuna} onChange={(event) => setComuna(event.target.value)} className={`${claseCampo} disabled:opacity-60`}>
+              <option value="" disabled>{region ? 'Selecciona una comuna' : 'Selecciona primero una región'}</option>
+              {comunas.map((nombre) => <option key={nombre} value={nombre}>{nombre}</option>)}
+            </select>
+          </label>
+          <label className="sm:col-span-2">
+            <span className="mb-1 block text-sm font-medium">Dirección</span>
+            <input name="direccion" autoComplete="street-address" maxLength={250} required className={claseCampo}
+              placeholder="Calle, número y departamento si corresponde" />
+          </label>
+          <label className="sm:col-span-2">
+            <span className="mb-1 block text-sm font-medium">Agregar nota <span className="shop-muted font-normal">(opcional)</span></span>
+            <textarea name="nota" maxLength={500} rows={2} className={`${claseCampo} resize-y py-2`} />
+          </label>
+        </fieldset>
       </fieldset>
 
       <section aria-labelledby="resumen-compra" className="shop-panel rounded-xl border p-5">
@@ -133,10 +150,10 @@ export default function CheckoutClient({ tarjeta, transferencia }: { tarjeta: bo
         </ul>
         <dl className="space-y-2 shop-divider border-t pt-3 text-sm">
           <div className="flex justify-between gap-3"><dt>Subtotal</dt><dd>{clp.format(subtotal)}</dd></div>
-          <div className="flex justify-between gap-3"><dt>Envío · {ENVIO_CHILE.servicio}</dt><dd>{clp.format(ENVIO_CHILE.precio)}</dd></div>
-          <div className="flex justify-between gap-3 text-base font-semibold"><dt>Total a pagar</dt><dd>{clp.format(total)}</dd></div>
+          <div className="flex justify-between gap-3"><dt>{conEnvio ? `Envío · ${ENVIO_CHILE.servicio}` : 'Sin envío'}</dt><dd>{clp.format(costoEnvio)}</dd></div>
+          <div className="flex justify-between gap-3 text-base font-semibold" aria-live="polite"><dt>Total a pagar</dt><dd>{clp.format(total)}</dd></div>
         </dl>
-        <p className="mt-2 text-xs shop-muted">Tarifa fija a todo Chile. El envío se paga junto con el pedido.</p>
+        {conEnvio && <p className="mt-2 text-xs shop-muted">Tarifa fija a todo Chile. El envío se paga junto con el pedido.</p>}
         <fieldset disabled={procesando} className="my-4 space-y-2">
           <legend className="mb-2 text-sm font-semibold">Medio de pago</legend>
           {([

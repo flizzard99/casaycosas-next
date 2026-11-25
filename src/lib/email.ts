@@ -75,7 +75,9 @@ export async function enviarEmailPedidoCreado(pedido: Pedido, estadoUrl: string)
   const pago = pedido.metodo_pago === 'transferencia'
     ? '<p>Tu pedido quedó reservado y está pendiente de transferencia. En el enlace encontrarás los datos bancarios y el plazo para pagar.</p>'
     : '<p>Tu pedido quedó registrado. Completa el pago en Mercado Pago; desde el enlace también podrás retomar el pago si cerraste la ventana.</p>';
-  const envio = pedido.costo_envio ? `<p>Envío Blue Express: ${formatoCLP.format(pedido.costo_envio)} · incluido en el total.</p>` : '';
+  const envio = pedido.sin_envio
+    ? '<p>Elegiste un pedido sin envío. Coordina la entrega con la tienda por WhatsApp.</p>'
+    : pedido.costo_envio ? `<p>Envío Blue Express: ${formatoCLP.format(pedido.costo_envio)} · incluido en el total.</p>` : '';
   const html = plantilla('Recibimos tu pedido', `${pago}<ul style="padding-left:20px">${items}</ul>${envio}`, pedido, estadoUrl);
   return enviar({ to: pedido.cliente_email, subject: `Recibimos tu pedido ${pedido.codigo_publico} · Casa y Cosas`, html }, 'pedido-creado', `pedido-${pedido.codigo_publico}-creado`);
 }

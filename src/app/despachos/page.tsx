@@ -25,7 +25,8 @@ export default function DespachosPage() {
       </section>
       <section>
         <h2>4. Dirección y recepción</h2>
-        <p>El cliente debe entregar una dirección completa, comuna, región, teléfono y correo de contacto. Antes del despacho puede solicitar una corrección; después de entregado al transportista, cualquier cambio queda sujeto a disponibilidad y costos adicionales.</p>
+        <p>Si eliges envío, debes entregar una dirección completa, comuna, región, teléfono y correo de contacto. Antes del despacho puedes solicitar una corrección. Una vez entregado al transportista, cualquier cambio queda sujeto a disponibilidad y costos adicionales.</p>
+        <p>Si eliges un pedido sin envío, el total incluye solo los productos. Coordina la entrega con la tienda por WhatsApp.</p>
         <p>Si la entrega falla por dirección incorrecta, ausencia reiterada o rechazo injustificado, el costo de un nuevo despacho podrá ser cobrado al cliente, sin afectar sus derechos legales.</p>
       </section>
       <section>

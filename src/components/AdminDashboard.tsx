@@ -787,6 +787,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                             {ped.cliente_email && <div><dt className="inline font-semibold">Correo: </dt><dd className="inline">{ped.cliente_email}</dd></div>}
                             {ped.cliente_whatsapp && <div><dt className="inline font-semibold">Teléfono: </dt><dd className="inline">{ped.cliente_whatsapp}</dd></div>}
                             {ped.despacho && <div><dt className="inline font-semibold">{ped.costo_envio ? `Despacho ${ENVIO_CHILE.servicio}: ` : 'Despacho por pagar: '}</dt><dd className="inline">{ped.despacho.direccion}, {ped.despacho.comuna}, {ped.despacho.region}</dd></div>}
+                            {ped.sin_envio && <div><dt className="inline font-semibold">Entrega: </dt><dd className="inline">Sin envío · coordinar con cliente</dd></div>}
                             {ped.despacho?.nota && <div><dt className="inline font-semibold">Nota: </dt><dd className="inline whitespace-pre-wrap">{ped.despacho.nota}</dd></div>}
                             {ped.codigo_despacho && <div><dt className="inline font-semibold">Seguimiento: </dt><dd className="inline">{ped.codigo_despacho}</dd></div>}
                             <div><dt className="inline font-semibold">Pago: </dt>
@@ -817,7 +818,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                                 className="min-h-10 flex-1 rounded-lg border border-red-200 px-2 text-sm font-semibold text-red-700 disabled:opacity-50"><span className="inline-flex items-center gap-1"><AdminIcon name="cerrar" /> Cancelar</span></button>
                             </div>
                           )}
-                          {!enPapelera && ped.estado === 'confirmado' && ped.pago_estado !== 'revision' && !ped.despachado_at && (
+                          {!enPapelera && !ped.sin_envio && ped.estado === 'confirmado' && ped.pago_estado !== 'revision' && !ped.despachado_at && (
                             <form onSubmit={(event) => {
                               event.preventDefault();
                               registrarDespacho(ped.id, String(new FormData(event.currentTarget).get('codigo') || ''));

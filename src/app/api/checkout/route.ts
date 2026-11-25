@@ -42,21 +42,28 @@ export async function POST(req: NextRequest) {
   const nombre = texto(body?.nombre, 100);
   const email = texto(body?.email, 200);
   const telefono = texto(body?.telefono, 20);
-  const destino = validarDestinoChile(texto(body?.region, 100), texto(body?.comuna, 100));
-  const direccion = texto(body?.direccion, 250);
-  const rut = normalizarRut(body?.rut);
-  const nota = texto(body?.nota, 500);
 
   if (!esReferenciaDeCompra(body?.referencia) || !nombre || !/^\S+@[^\s@]+\.[^\s@]+$/.test(email) ||
-      !/^\+?[0-9 ()-]{8,19}$/.test(telefono) || !direccion) {
-    return NextResponse.json({ error: 'Revisa los datos de contacto y despacho.' }, { status: 400 });
+      !/^\+?[0-9 ()-]{8,19}$/.test(telefono)) {
+    return NextResponse.json({ error: 'Revisa los datos de contacto.' }, { status: 400 });
   }
-  if (!destino) {
-    return NextResponse.json({ error: 'Selecciona una comuna que pertenezca a la región de despacho.' }, { status: 400 });
+  if (body.conEnvio !== undefined && typeof body.conEnvio !== 'boolean') {
+    return NextResponse.json({ error: 'Selecciona una modalidad de entrega válida.' }, { status: 400 });
   }
+  const rut = normalizarRut(body.rut);
   if (!rut) return NextResponse.json({ error: 'Ingresa un RUT chileno válido.' }, { status: 400 });
-  if (body?.nota !== undefined && (typeof body.nota !== 'string' || body.nota.trim().length > 500)) {
-    return NextResponse.json({ error: 'La nota admite hasta 500 caracteres.' }, { status: 400 });
+  let despacho = null;
+  if (body.conEnvio !== false) {
+    const destino = validarDestinoChile(texto(body.region, 100), texto(body.comuna, 100));
+    const direccion = texto(body.direccion, 250);
+    if (!destino || !direccion) {
+      return NextResponse.json({ error: 'Ingresa la dirección y una comuna válida para la región seleccionada.' }, { status: 400 });
+    }
+    if (body.nota !== undefined && (typeof body.nota !== 'string' || body.nota.trim().length > 500)) {
+      return NextResponse.json({ error: 'La nota admite hasta 500 caracteres.' }, { status: 400 });
+    }
+    const nota = texto(body.nota, 500);
+    despacho = { ...destino, direccion, ...(nota && { nota }) };
   }
   const items = body.items;
   if (!Array.isArray(items) || !items.length || items.length > 50 ||
@@ -76,7 +83,7 @@ export async function POST(req: NextRequest) {
     }
     const datosPago = transferencia ? { metodo: 'transferencia' as const, transferencia } : { metodo: 'tarjeta' as const, transferencia: null };
     const pedido = await crearPedido(items, nombre, telefono, email, {
-      ...datosPago, referencia, rut, despacho: { ...destino, direccion, ...(nota && { nota }) }, totalEsperado: body.total,
+      ...datosPago, referencia, rut, despacho, totalEsperado: body.total,
       aceptacionLegal: { version: VERSION_LEGAL, fecha: new Date().toISOString() }
     });
     for (const id of new Set(pedido.items.map((item) => item.producto_id))) revalidatePath(`/producto/${id}`);
