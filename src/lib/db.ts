@@ -4,7 +4,7 @@ import { categoriaDefinida, type Linea } from './lineas';
 import { MAX_DESTACADOS, TITULO_DESTACADOS } from './destacados';
 import { nombreConVariante } from './variantes';
 import { precioActual } from './precios';
-import { ENVIO_CHILE, TRANSFERENCIA_RESERVA_HORAS, type DatosTransferencia, type MetodoPago } from './checkout';
+import { ENVIO_CHILE, MARGEN_CONFIRMACION_TARJETA_MINUTOS, TRANSFERENCIA_RESERVA_HORAS, type DatosTransferencia, type MetodoPago } from './checkout';
 import type { Config, DisenoSeccion, FeaturedConfig, Producto, ProductoInput, Variante } from './types';
 
 export function parseIdOrBadRequest(id: string): number | null {
@@ -482,10 +482,25 @@ const RESTAURAR_STOCK_RESERVADO = `
 async function expirarPedidosViejos(db: Pick<Pool, 'query'>): Promise<void> {
   await db.query(`WITH pedidos_liberados AS (
       UPDATE pedidos SET estado = 'expirado'
-      WHERE estado = 'pendiente' AND eliminado_at IS NULL AND created_at <= NOW() -
+      WHERE estado = 'pendiente' AND eliminado_at IS NULL AND pago_estado IS DISTINCT FROM 'aprobado' AND created_at <= NOW() -
         (CASE WHEN pago_referencia IS NULL OR metodo_pago = 'transferencia' THEN $1::integer ELSE $2::integer END * INTERVAL '1 minute')
       RETURNING id
     ), ${RESTAURAR_STOCK_RESERVADO} SELECT id FROM stock_liberado`, [TRANSFERENCIA_RESERVA_HORAS * 60, COMPRA_EXPIRACION_MINUTOS]);
+}
+
+let ultimaRevisionInventario = 0;
+let revisionInventario: Promise<void> | undefined;
+
+async function revisarReservasDeInventario(pool: Pool) {
+  if (revisionInventario) return revisionInventario;
+  if (Date.now() - ultimaRevisionInventario < 15_000) return;
+
+  revisionInventario = ensurePedidosSchema()
+    .then(() => expirarPedidosViejos(pool))
+    .then(() => { ultimaRevisionInventario = Date.now(); })
+    .catch(() => { console.error('[inventario] No se pudieron revisar las reservas vencidas.'); })
+    .finally(() => { revisionInventario = undefined; });
+  return revisionInventario;
 }
 
 export async function getDatosTransferencia(): Promise<DatosTransferencia | null> {
@@ -742,6 +757,7 @@ function formatProducto(row: Record<string, unknown>): Producto {
 export async function getProductosPublicos(): Promise<Producto[]> {
   await ensureSchema();
   const pool = getPool();
+  await revisarReservasDeInventario(pool);
   const result = await pool.query(
     `SELECT id, name, description, category, subcategoria, image_url, instagram_url, price, stock, visible, remate, precio_oferta, variantes, created_at, images[1:1] AS images
      FROM productos WHERE visible = TRUE AND fusionado_en IS NULL ORDER BY created_at DESC`
@@ -753,6 +769,7 @@ export async function getProductosPublicos(): Promise<Producto[]> {
 export async function getProductosAdmin(): Promise<Producto[]> {
   await ensureSchema();
   const pool = getPool();
+  await revisarReservasDeInventario(pool);
   const result = await pool.query(`SELECT * FROM productos WHERE fusionado_en IS NULL ORDER BY created_at DESC`);
   return result.rows.map(formatProducto);
 }
@@ -760,6 +777,7 @@ export async function getProductosAdmin(): Promise<Producto[]> {
 export async function getProductoById(id: number): Promise<Producto | null> {
   await ensureSchema();
   const pool = getPool();
+  await revisarReservasDeInventario(pool);
   const result = await pool.query(
     `SELECT id, name, description, category, subcategoria, image_url, instagram_url, price, stock, visible, remate, precio_oferta, variantes, created_at, images[1:10] AS images
      FROM productos WHERE id = COALESCE((SELECT fusionado_en FROM productos WHERE id = $1), $1)`,
@@ -1022,6 +1040,8 @@ export async function restaurarPedido(id: number): Promise<Pedido | null> {
 }
 
 export function resumenPublicoPedido(pedido: Pedido) {
+  const creado = new Date(pedido.created_at).getTime();
+  const cierreTarjeta = creado + (COMPRA_EXPIRACION_MINUTOS - MARGEN_CONFIRMACION_TARJETA_MINUTOS) * 60000;
   return {
     codigo: pedido.codigo_publico,
     total: pedido.total,
@@ -1029,8 +1049,10 @@ export function resumenPublicoPedido(pedido: Pedido) {
     sin_envio: pedido.sin_envio,
     estado: pedido.estado,
     pago_estado: pedido.pago_estado,
-    pago_url: pedido.metodo_pago === 'tarjeta' && pedido.estado === 'pendiente' && pedido.pago_url &&
+    pago_url: pedido.metodo_pago === 'tarjeta' && pedido.estado === 'pendiente' &&
+      pedido.pago_estado === 'pendiente' && Date.now() < cierreTarjeta && pedido.pago_url &&
       /^https:\/\/([a-z0-9-]+\.)*mercadopago\.(cl|com)(\/|$)/i.test(pedido.pago_url) ? pedido.pago_url : null,
+    pago_disponible_hasta: pedido.metodo_pago === 'tarjeta' ? cierreTarjeta : null,
     metodo_pago: pedido.metodo_pago,
     datos_transferencia: pedido.metodo_pago === 'transferencia' && pedido.estado === 'pendiente' ? pedido.datos_transferencia : null,
     created_at: pedido.created_at,
@@ -1038,7 +1060,7 @@ export function resumenPublicoPedido(pedido: Pedido) {
     destino_envio: pedido.pago_referencia && pedido.despacho ? { comuna: pedido.despacho.comuna, region: pedido.despacho.region } : null,
     despachado_at: pedido.pago_estado !== 'revision' ? pedido.despachado_at : null,
     codigo_despacho: pedido.pago_estado === 'aprobado' ? pedido.codigo_despacho : null,
-    expiracionAt: new Date(pedido.created_at).getTime() +
+    expiracionAt: creado +
       (pedido.metodo_pago === 'tarjeta' ? COMPRA_EXPIRACION_MINUTOS : TRANSFERENCIA_RESERVA_HORAS * 60) * 60000
   };
 }
@@ -1083,8 +1105,9 @@ export async function obtenerEnlaceDePago(pedido: Pedido, referencia: string, cr
     await client.query('BEGIN');
     const { rows } = await client.query(
       `SELECT pago_url FROM pedidos WHERE id = $1 AND pago_referencia = $2 AND estado = 'pendiente' AND eliminado_at IS NULL
-       AND pago_estado = 'pendiente' AND metodo_pago IS DISTINCT FROM 'transferencia' FOR UPDATE`,
-      [pedido.id, referencia]
+       AND pago_estado = 'pendiente' AND metodo_pago IS DISTINCT FROM 'transferencia'
+       AND created_at + ($3::integer * INTERVAL '1 minute') > NOW() FOR UPDATE`,
+      [pedido.id, referencia, COMPRA_EXPIRACION_MINUTOS - MARGEN_CONFIRMACION_TARJETA_MINUTOS]
     );
     let url: string | null = rows[0]?.pago_url ?? null;
     if (rows.length && !url) {

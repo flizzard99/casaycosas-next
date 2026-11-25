@@ -40,6 +40,7 @@ export default function PedidoEstadoClient({ pedidoInicial, referencia, retornoP
   const [noDisponible, setNoDisponible] = useState(false);
   const [pagoRechazado, setPagoRechazado] = useState(false);
   const transferenciaPendiente = pedido.metodo_pago === 'transferencia' && pedido.estado === 'pendiente';
+  const tarjetaPendiente = pedido.metodo_pago === 'tarjeta' && pedido.estado === 'pendiente' && pedido.pago_estado === 'pendiente';
   const verificarRetorno = Boolean(retornoPago && pagoId && referencia && !pagoRechazado &&
     pedido.pago_estado !== 'aprobado' && pedido.pago_estado !== 'revision');
 
@@ -88,10 +89,10 @@ export default function PedidoEstadoClient({ pedidoInicial, referencia, retornoP
     }
     if (retornoPago) void consultar();
     const interval = setInterval(consultar, espera);
-    const reloj = transferenciaPendiente ? setInterval(() => setAhora(Date.now()), 1000) : undefined;
+    const reloj = transferenciaPendiente || tarjetaPendiente ? setInterval(() => setAhora(Date.now()), 1000) : undefined;
     return () => { controller.abort(); clearInterval(interval); clearInterval(reloj); };
   }, [noDisponible, pedido.estado, pedido.metodo_pago, pedido.despachado_at, pedidoInicial.codigo,
-    transferenciaPendiente, fetchEstado, retornoPago, verificarRetorno, pagoId, referencia]);
+    transferenciaPendiente, tarjetaPendiente, fetchEstado, retornoPago, verificarRetorno, pagoId, referencia]);
 
   const { items, hydrated, clear } = useCart();
   const compraRegistrada = transferenciaPendiente || pedido.pago_estado === 'aprobado';
@@ -117,6 +118,7 @@ export default function PedidoEstadoClient({ pedidoInicial, referencia, retornoP
       : estadoBase;
   const medioPago = pedido.metodo_pago === 'tarjeta' ? 'Tarjeta · Mercado Pago' : pedido.metodo_pago === 'transferencia' ? 'Transferencia bancaria' : 'Coordinado con la tienda';
   const minutosRestantes = Math.max(0, Math.ceil((pedido.expiracionAt - (ahora ?? pedido.expiracionAt)) / 60000));
+  const plazoTarjetaCerrado = pedido.pago_disponible_hasta !== null && ahora !== null && ahora >= pedido.pago_disponible_hasta;
   const datosTransferencia = transferenciaPendiente && (ahora === null || minutosRestantes > 0) ? pedido.datos_transferencia : null;
   const mensaje = `Hola, escribo por el pedido ${pedido.codigo}.`;
 
@@ -179,7 +181,17 @@ export default function PedidoEstadoClient({ pedidoInicial, referencia, retornoP
               {pedido.destino_envio && <div><dt className="font-semibold">Destino</dt><dd className="shop-muted">{pedido.destino_envio.comuna}, {pedido.destino_envio.region}</dd></div>}
               {pedido.codigo_despacho && <div><dt className="font-semibold">Código de seguimiento</dt><dd className="break-words shop-muted">{pedido.codigo_despacho}</dd></div>}
             </dl>
-            {pedido.pago_url && (!retornoPago || pagoRechazado) && (
+            {tarjetaPendiente && ahora !== null && (
+              <p className="mt-3 text-sm shop-muted">
+                {minutosRestantes > 0
+                  ? `Reserva de stock: quedan ${minutosRestantes} min. Si el pago no se confirma, las unidades vuelven al catálogo.`
+                  : 'El plazo de reserva terminó. Estamos actualizando el estado del pedido.'}
+              </p>
+            )}
+            {tarjetaPendiente && plazoTarjetaCerrado && !esperandoPago && (
+              <p className="mt-2 text-sm shop-muted">El enlace de pago venció. Si ya pagaste, espera la confirmación.</p>
+            )}
+            {pedido.pago_url && !plazoTarjetaCerrado && (!retornoPago || pagoRechazado) && (
               <a href={pedido.pago_url} className="shop-button mt-4 w-full" rel="nofollow">Continuar pago en Mercado Pago</a>
             )}
           </section>

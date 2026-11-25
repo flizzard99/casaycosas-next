@@ -1,7 +1,7 @@
 import 'server-only';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { COMPRA_EXPIRACION_MINUTOS, type Pedido } from './db';
-import { ENVIO_CHILE, rutaSeguimiento } from './checkout';
+import { ENVIO_CHILE, MARGEN_CONFIRMACION_TARJETA_MINUTOS, rutaSeguimiento } from './checkout';
 import { origenTienda } from './origenTienda';
 
 const REFERENCIA = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
@@ -84,7 +84,8 @@ export async function crearPreferencia(pedido: Pedido, referencia: string, orige
     throw new MercadoPagoError('MP_MODO_INCORRECTO', 'MP_SANDBOX está activado, pero el Access Token no corresponde al modo de prueba.');
   }
   const seguimiento = origen + rutaSeguimiento(pedido.codigo_publico, referencia);
-  const expiracion = new Date(new Date(pedido.created_at).getTime() + (COMPRA_EXPIRACION_MINUTOS - 5) * 60000);
+  const expiracion = new Date(new Date(pedido.created_at).getTime() +
+    (COMPRA_EXPIRACION_MINUTOS - MARGEN_CONFIRMACION_TARJETA_MINUTOS) * 60000);
   if (expiracion.getTime() <= Date.now()) throw new Error('La sesión de pago ha expirado');
 
   const items = pedido.items.map((item) => ({
