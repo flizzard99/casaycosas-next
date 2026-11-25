@@ -9,5 +9,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const id = Number(valor);
   if (!/^\d+$/.test(valor) || id < 1 || id > 2147483647) return new Response(null, { status: 404 });
   const referencias = req.nextUrl.searchParams.getAll('ref');
-  redirect(rutaSeguimiento(id, referencias.length === 1 ? referencias[0] : undefined));
+  const destino = new URL(rutaSeguimiento(id, referencias.length === 1 ? referencias[0] : undefined), req.nextUrl.origin);
+  for (const clave of ['payment_id', 'collection_id', 'status', 'collection_status', 'mp_result']) {
+    const valores = req.nextUrl.searchParams.getAll(clave);
+    if (valores.length === 1) destino.searchParams.set(clave, valores[0]);
+  }
+  redirect(destino.pathname + destino.search);
 }

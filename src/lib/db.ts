@@ -1101,7 +1101,7 @@ export async function obtenerEnlaceDePago(pedido: Pedido, referencia: string, cr
   }
 }
 
-export async function registrarPagoMercadoPago(pago: { referencia: string; id: string; total: number; moneda: string; estado: string }) {
+export async function registrarPagoMercadoPago(pago: { referencia: string; id: string; total: number; moneda: string; estado: string }, codigoEsperado?: string) {
   await ensureSchema();
   await ensurePedidosSchema();
   const client = await getPool().connect();
@@ -1109,8 +1109,9 @@ export async function registrarPagoMercadoPago(pago: { referencia: string; id: s
     await client.query('BEGIN');
     const { rows } = await client.query(
       `SELECT *, created_at + ($2::integer * INTERVAL '1 minute') <= NOW() AS vencido FROM pedidos
-       WHERE pago_referencia = $1 AND metodo_pago IS DISTINCT FROM 'transferencia' FOR UPDATE`,
-      [pago.referencia, COMPRA_EXPIRACION_MINUTOS]
+       WHERE pago_referencia = $1 AND metodo_pago IS DISTINCT FROM 'transferencia'
+         AND ($3::text IS NULL OR codigo_publico = $3) FOR UPDATE`,
+      [pago.referencia, COMPRA_EXPIRACION_MINUTOS, codigoEsperado ?? null]
     );
     const pedido = rows[0];
     let confirmado: Pedido | null = null;

@@ -44,3 +44,13 @@ export function normalizarRut(valor: unknown): string | null {
 export function rutaSeguimiento(codigo: string | number, referencia?: string | null) {
   return `/mi-pedido/${encodeURIComponent(String(codigo))}${referencia ? `?ref=${encodeURIComponent(referencia)}` : ''}`;
 }
+
+export function retornoMercadoPago(parametros: Record<string, string | string[] | undefined>) {
+  const pagoId = [parametros.payment_id, parametros.collection_id]
+    .find((valor): valor is string => typeof valor === 'string' && /^\d{1,30}$/.test(valor));
+  const resultado = parametros.mp_result;
+  const estado = parametros.status ?? parametros.collection_status;
+  const regreso = Boolean(pagoId || resultado === 'success' || resultado === 'pending' || resultado === 'failure' ||
+    estado === 'approved' || estado === 'pending' || estado === 'in_process' || estado === 'rejected');
+  return { regreso, pagoId };
+}

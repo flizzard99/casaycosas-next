@@ -32,11 +32,16 @@ function estadoPedido(pedido: PedidoPublico) {
   return ESTADOS[pedido.estado];
 }
 
-export default function PedidoEstadoClient({ pedidoInicial, referencia }: { pedidoInicial: PedidoPublico; referencia?: string }) {
+export default function PedidoEstadoClient({ pedidoInicial, referencia, retornoPago, pagoId }: {
+  pedidoInicial: PedidoPublico; referencia?: string; retornoPago?: boolean; pagoId?: string;
+}) {
   const [pedido, setPedido] = useState(pedidoInicial);
   const [ahora, setAhora] = useState<number | null>(null);
   const [noDisponible, setNoDisponible] = useState(false);
+  const [pagoRechazado, setPagoRechazado] = useState(false);
   const transferenciaPendiente = pedido.metodo_pago === 'transferencia' && pedido.estado === 'pendiente';
+  const verificarRetorno = Boolean(retornoPago && pagoId && referencia && !pagoRechazado &&
+    pedido.pago_estado !== 'aprobado' && pedido.pago_estado !== 'revision');
 
   const fetchEstado = useCallback(async (signal: AbortSignal) => {
     try {
@@ -51,15 +56,42 @@ export default function PedidoEstadoClient({ pedidoInicial, referencia }: { pedi
   }, [pedidoInicial.codigo, referencia]);
 
   useEffect(() => {
-    if (noDisponible || (pedido.estado !== 'pendiente' && (pedido.estado !== 'confirmado' || pedido.despachado_at))) return;
+    const seguirPedido = pedido.estado === 'pendiente' || (pedido.estado === 'confirmado' && !pedido.despachado_at);
+    if (noDisponible || (!seguirPedido && !verificarRetorno)) return;
     const controller = new AbortController();
     const espera = pedido.estado === 'pendiente' && pedido.metodo_pago === 'tarjeta' ? 10000 : 20000;
-    const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') void fetchEstado(controller.signal);
-    }, espera);
+    let verificaciones = 0;
+    let consultando = false;
+    async function consultar() {
+      if (consultando || document.visibilityState !== 'visible') return;
+      consultando = true;
+      try {
+        if (verificarRetorno && verificaciones < 3) {
+          verificaciones += 1;
+          const respuesta = await fetch(`/api/pedido/${encodeURIComponent(pedidoInicial.codigo)}`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: controller.signal,
+            body: JSON.stringify({ referencia, pagoId })
+          });
+          if (respuesta.ok) {
+            const resultado = await respuesta.json();
+            setPedido(resultado.pedido);
+            setPagoRechazado(resultado.reintentarPago === true);
+            return;
+          }
+        }
+        if (!controller.signal.aborted) await fetchEstado(controller.signal);
+      } catch {
+        if (!controller.signal.aborted) await fetchEstado(controller.signal);
+      } finally {
+        consultando = false;
+      }
+    }
+    if (retornoPago) void consultar();
+    const interval = setInterval(consultar, espera);
     const reloj = transferenciaPendiente ? setInterval(() => setAhora(Date.now()), 1000) : undefined;
     return () => { controller.abort(); clearInterval(interval); clearInterval(reloj); };
-  }, [noDisponible, pedido.estado, pedido.metodo_pago, pedido.despachado_at, transferenciaPendiente, fetchEstado]);
+  }, [noDisponible, pedido.estado, pedido.metodo_pago, pedido.despachado_at, pedidoInicial.codigo,
+    transferenciaPendiente, fetchEstado, retornoPago, verificarRetorno, pagoId, referencia]);
 
   const { items, hydrated, clear } = useCart();
   const compraRegistrada = transferenciaPendiente || pedido.pago_estado === 'aprobado';
@@ -76,7 +108,13 @@ export default function PedidoEstadoClient({ pedidoInicial, referencia }: { pedi
     }
   }, [clear, compraRegistrada, hydrated, items, referencia, noDisponible]);
 
-  const estado = estadoPedido(pedido);
+  const esperandoPago = retornoPago && !pagoRechazado && pedido.estado === 'pendiente' && pedido.pago_estado === 'pendiente';
+  const estadoBase = estadoPedido(pedido);
+  const estado = esperandoPago
+    ? { ...estadoBase, descripcion: 'Estamos verificando el resultado con Mercado Pago. No vuelvas a pagar mientras se confirma.' }
+    : pagoRechazado && pedido.estado === 'pendiente' && pedido.pago_estado === 'pendiente'
+      ? { ...estadoBase, etiqueta: 'Pago rechazado', descripcion: 'Mercado Pago rechazó este intento. Puedes volver a intentarlo.' }
+      : estadoBase;
   const medioPago = pedido.metodo_pago === 'tarjeta' ? 'Tarjeta · Mercado Pago' : pedido.metodo_pago === 'transferencia' ? 'Transferencia bancaria' : 'Coordinado con la tienda';
   const minutosRestantes = Math.max(0, Math.ceil((pedido.expiracionAt - (ahora ?? pedido.expiracionAt)) / 60000));
   const datosTransferencia = transferenciaPendiente && (ahora === null || minutosRestantes > 0) ? pedido.datos_transferencia : null;
@@ -141,7 +179,7 @@ export default function PedidoEstadoClient({ pedidoInicial, referencia }: { pedi
               {pedido.destino_envio && <div><dt className="font-semibold">Destino</dt><dd className="shop-muted">{pedido.destino_envio.comuna}, {pedido.destino_envio.region}</dd></div>}
               {pedido.codigo_despacho && <div><dt className="font-semibold">Código de seguimiento</dt><dd className="break-words shop-muted">{pedido.codigo_despacho}</dd></div>}
             </dl>
-            {pedido.pago_url && (
+            {pedido.pago_url && (!retornoPago || pagoRechazado) && (
               <a href={pedido.pago_url} className="shop-button mt-4 w-full" rel="nofollow">Continuar pago en Mercado Pago</a>
             )}
           </section>

@@ -104,7 +104,11 @@ export async function crearPreferencia(pedido: Pedido, referencia: string, orige
       items,
       external_reference: referencia,
       payer: { email: pedido.cliente_email },
-      back_urls: { success: seguimiento, pending: seguimiento, failure: seguimiento },
+      back_urls: {
+        success: `${seguimiento}&mp_result=success`,
+        pending: `${seguimiento}&mp_result=pending`,
+        failure: `${seguimiento}&mp_result=failure`
+      },
       notification_url: `${origen}/api/pagos/mercadopago?source_news=webhooks`,
       auto_return: 'approved',
       expires: true,
@@ -145,6 +149,7 @@ export function verificarWebhookMercadoPago(req: Request, id: string) {
 }
 
 export async function verificarPagoMercadoPago(id: string) {
+  if (!/^\d{1,30}$/.test(id)) return null;
   const pago = await consultarMercadoPago(`/v1/payments/${id}`);
   const produccion = process.env.MP_SANDBOX !== 'true';
   if (String(pago.id) !== id || !esReferenciaDeCompra(pago.external_reference) || pago.live_mode !== produccion) {
